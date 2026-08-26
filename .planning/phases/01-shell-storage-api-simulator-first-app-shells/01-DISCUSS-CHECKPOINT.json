@@ -1,0 +1,34 @@
+{
+  "phase": "1",
+  "phase_name": "Shell, Storage API & Simulator-First App Shells",
+  "timestamp": "2026-08-26T00:00:00Z",
+  "areas_completed": ["Boot Identity / Splash", "HAL / Board Abstraction", "Storage/Content API"],
+  "areas_remaining": ["Conteúdo mockado no simulador"],
+  "decisions": {
+    "Boot Identity / Splash": [
+      {"question": "O que aparece na tela de splash de boot?", "answer": "Logo + nome, com fade-in", "options_presented": ["Logo + nome, estático", "Logo + nome, com fade-in", "Logo + tagline"]},
+      {"question": "Quanto tempo o splash fica na tela antes de ir pra home?", "answer": "Usuário pediu barriga de carregamento real (~2s) e sugeriu checar wifi/OTA/sync no boot — redirecionado como scope creep (Fases 6/7/8), guardado como ideia adiada. Duração ficou definida como ~2s com barra de carregamento.", "options_presented": ["Tempo fixo curto (~1.2-1.5s)", "Tempo fixo, tocar pula", "Mais longo (~2.5-3s)"]},
+      {"question": "A barra de carregamento do splash deve refletir o quê?", "answer": "Progresso real da Storage API", "options_presented": ["Progresso real da Storage API", "Progresso simulado por tempo"]},
+      {"question": "Um toque na tela durante o carregamento pula direto pra home?", "answer": "Não, sempre completa", "options_presented": ["Sim, toque pula", "Não, sempre completa"]}
+    ],
+    "HAL / Board Abstraction": [
+      {"question": "Qual o contrato da interface de board?", "answer": "Explícito: display + input separados (board_display_init, board_input_init, board_tick)", "options_presented": ["Mínimo: init + tick", "Explícito: display + input separados"]},
+      {"question": "Onde ficam os arquivos de board na árvore de código?", "answer": "Delegado a Claude — decidido: src/board/native_sdl/ e src/board/waveshare_s3_35/ (pastas dedicadas por board)", "options_presented": ["src/board/native_sdl/, src/board/waveshare_s3_35/", "src/ratimos/board_native_sdl.c + board_waveshare_s3_35.c"]},
+      {"question": "O board_waveshare_s3_35 na Fase 1 deve ser o quê?", "answer": "Esqueleto compilando (stub) — implementa a interface com TODOs, prova que app code compila igual contra os dois boards, sem ambiente esp32s3 ativo no platformio.ini ainda", "options_presented": ["Esqueleto compilando (stub)", "Não criar ainda"]},
+      {"question": "main.c genérico único ou por board?", "answer": "Único e genérico — sem código específico de SDL2 nele, só chama a interface de board", "options_presented": ["main.c genérico e único", "main.c por board"]}
+    ],
+    "Storage/Content API": [
+      {"question": "Que tipos de conteúdo a API precisa expor na Fase 1?", "answer": "Fotos, faixas, cartas, lista de jogos, + settings do config", "options_presented": ["Fotos, faixas, cartas, jogos-lista", "Os 4 acima + settings do config"]},
+      {"question": "Síncrona ou assíncrona?", "answer": "Síncrona agora, assíncrona só quando SD/rede real exigirem (Fases 5/7)", "options_presented": ["Síncrona agora, assíncrona depois", "Já assíncrona por callback"]},
+      {"question": "Onde fica na árvore de código?", "answer": "src/storage/ — camada de infraestrutura irmã de board/, fora da UI (ratimos/)", "options_presented": ["src/ratimos/storage/", "src/storage/"]}
+    ]
+  },
+  "deferred_ideas": [
+    "Splash de boot verificando wifi (auto-conectar em rede já conhecida) e checando atualização/conteúdo novo (OTA/sync) durante o carregamento — pertence às Fases 6 (WiFi Provisioning), 7 (Cloud Content Sync) e 8 (OTA), não à Fase 1 (simulador, sem stack de rede)."
+  ],
+  "canonical_refs": [
+    ".planning/PROJECT.md",
+    ".planning/ROADMAP.md",
+    ".planning/REQUIREMENTS.md"
+  ]
+}
