@@ -34,7 +34,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. From the home screen, user can open any of the 5 sections (jogos/musica/album/cartas/config) and return to home
   3. All 5 app screens read their content exclusively through the shared Storage/Content API (no app code touches SD/NVS/WiFi directly)
   4. The native SDL2 HAL (`board_native_sdl`) mirrors the structure of the eventual real HAL (`board_waveshare_s3_35`), so app code compiles unchanged against both
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 01-01-PLAN.md — Board/HAL split, storage core & boot splash (tracer: board+storage+splash+cartas)
+- [ ] 01-02-PLAN.md — Visual identity palette repaint (D-17) & shared row-list truncation
+- [ ] 01-03-PLAN.md — Expand storage to all 5 domains, wire remaining 4 apps, final phase-gate UAT
 **UI hint**: yes
 
 ### Phase 2: Sync Protocol, Security Model & Cloud Backend
@@ -148,7 +152,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Shell, Storage API & Simulator-First App Shells | 0/TBD | Not started | - |
+| 1. Shell, Storage API & Simulator-First App Shells | 0/3 | Not started | - |
 | 2. Sync Protocol, Security Model & Cloud Backend | 0/TBD | Not started | - |
 | 3. Hardware Bring-Up — Display, Touch, Boot & Partition Scheme | 0/TBD | Not started | - |
 | 4. Power Management — Battery, PMIC, RTC | 0/TBD | Not started | - |
