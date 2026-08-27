@@ -63,7 +63,20 @@ Plans:
   3. Every backend request/response in the protocol client goes over HTTPS; no endpoint is reachable over plaintext HTTP
   4. A "what's new" endpoint returns pending letters/photos/music for a given device token, verified against the real Supabase project from a PC-native build
 
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Tracer: devices schema+RLS, register-device Edge Function, native_curl HTTP client (D-04/D-05/D-08)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-02-PLAN.md — content_items+ota_releases schema, whats-new Edge Function, seed data (D-10/D-11/D-12/D-13)
+- [ ] 02-03-PLAN.md — sync_client.h/.c (cJSON-backed whats-new client) + offline unit suite
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 02-04-PLAN.md — Full auth-reject matrix, HTTPS-only guarantee & live RLS proof against the real project
 
 ### Phase 3: Hardware Bring-Up — Display, Touch, Boot & Partition Scheme
 
@@ -190,7 +203,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Shell, Storage API & Simulator-First App Shells | 3/3 | Complete    | 2026-08-27 |
-| 2. Sync Protocol, Security Model & Cloud Backend | 0/TBD | Not started | - |
+| 2. Sync Protocol, Security Model & Cloud Backend | 0/4 | Not started | - |
 | 3. Hardware Bring-Up — Display, Touch, Boot & Partition Scheme | 0/TBD | Not started | - |
 | 4. Power Management — Battery, PMIC, RTC | 0/TBD | Not started | - |
 | 5. Audio, Storage & Camera Bring-Up | 0/TBD | Not started | - |
