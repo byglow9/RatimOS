@@ -1,0 +1,2 @@
+Carta de teste 3
+Este e um conteudo de exemplo, generico, para testar a leitura de cartas via Storage API.

@@ -1,27 +1,26 @@
 /*
- * RatimOS — ponto de entrada do simulador de PC (Fase 0 do plano).
- * Roda a UI inteira numa janela SDL2, sem precisar de nenhuma placa.
+ * RatimOS — ponto de entrada generico (D-08).
+ *
+ * Nao conhece SDL2 nem nenhum detalhe de placa especifico — so chama o
+ * contrato de src/board/board.h. A variante linkada (native_sdl hoje,
+ * waveshare_s3_35 na Fase 3) e decidida em tempo de build por
+ * platformio.ini's build_src_filter.
  */
-#include <SDL2/SDL.h>
 #include "lvgl.h"
-#include "ratimos/theme.h"
+#include "board/board.h"
 #include "ratimos/home_screen.h"
 
 int main(void)
 {
     lv_init();
-    lv_tick_set_cb(SDL_GetTicks);
-
-    lv_display_t * disp = lv_sdl_window_create(RATIMOS_SCREEN_W, RATIMOS_SCREEN_H);
-    lv_indev_t * mouse = lv_sdl_mouse_create();
-    (void) disp;
-    (void) mouse;
+    board_display_init();
+    board_input_init();
 
     ratimos_home_screen_show(NULL);
 
     while (1) {
         uint32_t idle = lv_timer_handler();
-        SDL_Delay(idle > 0 ? idle : 5);
+        board_tick(idle);
     }
 
     return 0;
