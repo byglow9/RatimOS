@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 1
 current_phase_name: Shell, Storage API & Simulator-First App Shells
-status: executing
-stopped_at: Completed 01-02-PLAN.md (palette repaint + row-list truncation)
-last_updated: "2026-08-27T18:57:34.495Z"
+status: verifying
+stopped_at: Completed 01-03-PLAN.md (Storage API expansion, remaining app wiring, phase-gate UAT) — Phase 1 complete
+last_updated: "2026-08-27T19:16:15.830Z"
 last_activity: 2026-08-27
 last_activity_desc: Phase 1 execution started
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-08-26)
 
 Phase: 1 (Shell, Storage API & Simulator-First App Shells) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-27 — Phase 1 execution started
 
-Progress: [███████░░░] 67%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [███████░░░] 67%
 |------|----------|-------|-------|
 | Phase 1 P1 | 55min | 2 tasks | 19 files |
 | Phase 01 P02 | 6min | 2 tasks | 2 files |
+| Phase 1 P3 | 25min | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 01-01: jogos/musica/album/config still share the same screen-rebuild-every-visit leak pattern that crashed cartas — deferred to plan 01-03 (deferred-items.md), out of this plan's file scope
 - [Phase ?]: D-17: Repainted RatimOS shell palette from Phase-0 placeholder to logo-sampled hex values (theme.h single edit point) — landed in Phase 1 instead of deferred to Phase 9
 - [Phase ?]: row_list.c title/subtitle labels now use LV_LABEL_LONG_MODE_DOTS with lv_pct(100) width to prevent overflow when real fixture titles land in plan 01-03
+- [Phase ?]: 01-03: Screen-cache-once leak fix (from 01-01's cartas_app.c) applied to jogos/musica/album/config app screens, closing the cross-app LVGL heap-exhaustion pattern deferred since 01-01
+- [Phase ?]: 01-03: All 5 Storage/Content API domains now real (photos/tracks/games/settings joining letters); games.c intentionally skips the file-backed manifest pattern since games ship compiled into firmware, not synced content
+- [Phase ?]: 01-03: Phase 1 complete — user confirmed all 4 ROADMAP success criteria via the phase-gate manual UAT (splash, 5-section navigation, storage-API-only content, board/HAL structural parity)
 
 ### Pending Todos
 
@@ -100,6 +104,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-27T18:57:34.484Z
-Stopped at: Completed 01-02-PLAN.md (palette repaint + row-list truncation)
+Last session: 2026-08-27T19:16:15.819Z
+Stopped at: Completed 01-03-PLAN.md (Storage API expansion, remaining app wiring, phase-gate UAT) — Phase 1 complete
 Resume file: None
