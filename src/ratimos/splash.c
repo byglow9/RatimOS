@@ -7,10 +7,11 @@
 /*
  * Tabela de passos de boot (D-02/D-03): cada passo e trabalho REAL de
  * inicializacao da Storage API, um por tick do lv_timer -- nunca um timer
- * cosmetico. Projetada para extensao: o plano 01-03 so precisa acrescentar
- * mais entradas aqui (index_photos/tracks/games/settings); o periodo do
- * timer e derivado de SPLASH_TOTAL_MS / SPLASH_STEP_COUNT, entao a duracao
- * total do splash continua ~2s (D-02) sem tocar na logica do timer abaixo.
+ * cosmetico. Extensivel: o plano 01-03 acrescenta as 4 entradas restantes
+ * (index_photos/tracks/games/settings) abaixo das 2 ja existentes de 01-01;
+ * o periodo do timer e derivado de SPLASH_TOTAL_MS / SPLASH_STEP_COUNT,
+ * entao a duracao total do splash continua ~2s (D-02) sem tocar na logica
+ * do timer abaixo.
  */
 typedef struct {
     void (*fn)(void);
@@ -19,6 +20,10 @@ typedef struct {
 static const splash_step_t s_steps[] = {
     { ratimos_storage_mount },
     { ratimos_storage_index_letters },
+    { ratimos_storage_index_photos },
+    { ratimos_storage_index_tracks },
+    { ratimos_storage_index_games },
+    { ratimos_storage_index_settings },
 };
 
 #define SPLASH_STEP_COUNT ((int) (sizeof(s_steps) / sizeof(s_steps[0])))

@@ -1,0 +1,2 @@
+Foto de teste 2
+Este e um conteudo de exemplo, generico, para testar a leitura de fotos via Storage API.

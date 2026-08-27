@@ -1,0 +1,2 @@
+Faixa de teste 1
+Este e um conteudo de exemplo, generico, para testar a leitura de faixas via Storage API.
