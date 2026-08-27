@@ -10,6 +10,12 @@
 #include "board/board.h"
 #include "ratimos/splash.h"
 
+/* PlatformIO's native test runner (test_build_src = yes, platformio.ini)
+ * pulls in every src/*.c file matched by build_src_filter alongside the
+ * test file's own main() -- guard this one with the UNIT_TEST macro
+ * PlatformIO auto-defines for test builds, so `pio test` doesn't hit a
+ * duplicate-main link error against test/test_storage/test_storage.c. */
+#ifndef UNIT_TEST
 int main(void)
 {
     lv_init();
@@ -25,3 +31,4 @@ int main(void)
 
     return 0;
 }
+#endif
