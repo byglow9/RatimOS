@@ -39,6 +39,7 @@ O dispositivo tem que funcionar de verdade no dia a dia dela — offline, com as
 - As fotos de referência mostram um projeto de terceiros ("colombiaOS") rodando num ESP32 clássico com painel touch resistivo genérico (família "TPM408") e um D-pad soldado numa PCB customizada — serviu de inspiração de estética e estrutura de menu, não é hardware do usuário.
 - Pesquisa de hardware já feita e decidida: telas 4.3"/4.8" de baixo custo (RGB paralelo) não sobram GPIO pra câmera no ESP32-S3; a Waveshare 3.5" usa QSPI e tem interface de câmera onboard, RTC dedicado (PCF85063), codec de áudio dedicado (ES8311), PMIC (AXP2101) — por isso foi a escolha.
 - Já existe um shell inicial em PlatformIO + LVGL rodando no simulador SDL2 do PC (Fase 0 do plano original), com as 5 telas navegáveis (ainda sem lógica real).
+- **Fase 1 completa (2026-08-27):** shell agora roda de ponta a ponta no simulador — splash de boot real com a logo oficial (fade-in + barra de progresso ligada à indexação de conteúdo), navegação home↔5 seções, e todos os 5 apps lendo exclusivamente através de uma Storage/Content API compartilhada (não mais dados hardcoded). HAL de board separado (`board_native_sdl` real, `board_waveshare_s3_35` como stub que compila) prova que o código dos apps compila igual pros dois lados antes do hardware chegar. Conteúdo dos apps ainda é 100% fixture/placeholder (jogos não são jogáveis de verdade, fotos/músicas/cartas são mock) — isso é esperado, real virá nas Fases 5-7.
 
 ## Constraints
 
@@ -58,6 +59,7 @@ O dispositivo tem que funcionar de verdade no dia a dia dela — offline, com as
 | Conectividade online com backend na nuvem (não modo local-only) | Requisito central do usuário: continuar mandando conteúdo novo e atualizações depois de entregar o presente, sem acesso físico ao aparelho | — Pending |
 | Kit comercial pronto em vez de PCB customizado do zero | Usuário não tem experiência em eletrônica; reduz uma dimensão inteira de risco/aprendizado (design de PCB, soldagem SMD) | — Pending |
 | PlatformIO + Arduino core + LVGL (não ESP-IDF puro de cara) | Curva de aprendizado mais suave pra quem nunca fez embarcado; dá pra migrar partes pra ESP-IDF depois se precisar | — Pending |
+| Paleta de cores oficial derivada da logo real (D-17, Fase 1), adiantada da Fase 9 | Usuário trouxe a arte final da logo (torre/xadrez + "RatimOS" em gradiente roxo/vermelho) e pediu pra já repintar o sistema inteiro agora em vez de esperar a fase de identidade visual | Implementado — fundo `#000000`, acento `#e6010f`, tons violeta `#2a123f`/`#4e2277`, amostrados por pixel da logo |
 
 ## Evolution
 
@@ -77,4 +79,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-26 after initialization*
+*Last updated: 2026-08-27 after Phase 1 completion*
