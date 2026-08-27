@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 1
 current_phase_name: Shell, Storage API & Simulator-First App Shells
 status: executing
-stopped_at: Completed 01-01-PLAN.md (board/HAL split, Storage API core, real boot splash)
-last_updated: "2026-08-27T16:00:13.074Z"
+stopped_at: Completed 01-02-PLAN.md (palette repaint + row-list truncation)
+last_updated: "2026-08-27T18:57:34.495Z"
 last_activity: 2026-08-27
 last_activity_desc: Phase 1 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-26)
 ## Current Position
 
 Phase: 1 (Shell, Storage API & Simulator-First App Shells) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-08-27 — Phase 1 execution started
 
-Progress: [███░░░░░░░] 33%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [███░░░░░░░] 33%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 1 P1 | 55min | 2 tasks | 19 files |
+| Phase 01 P02 | 6min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 01-01: cartas_app.c caches its built screen (build-once, like home_screen.c) to stop an LVGL heap-exhaustion crash from rebuilding a new screen on every visit
 - [Phase ?]: 01-01: LV_MEM_SIZE raised to 512KB in lv_conf.h for native_sim only (LVGL's 64KB default was never tuned for this retained multi-screen UI); Phase 3 must define its own hardware-measured value
 - [Phase ?]: 01-01: jogos/musica/album/config still share the same screen-rebuild-every-visit leak pattern that crashed cartas — deferred to plan 01-03 (deferred-items.md), out of this plan's file scope
+- [Phase ?]: D-17: Repainted RatimOS shell palette from Phase-0 placeholder to logo-sampled hex values (theme.h single edit point) — landed in Phase 1 instead of deferred to Phase 9
+- [Phase ?]: row_list.c title/subtitle labels now use LV_LABEL_LONG_MODE_DOTS with lv_pct(100) width to prevent overflow when real fixture titles land in plan 01-03
 
 ### Pending Todos
 
@@ -97,6 +100,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-27T16:00:13.063Z
-Stopped at: Completed 01-01-PLAN.md (board/HAL split, Storage API core, real boot splash)
+Last session: 2026-08-27T18:57:34.484Z
+Stopped at: Completed 01-02-PLAN.md (palette repaint + row-list truncation)
 Resume file: None
