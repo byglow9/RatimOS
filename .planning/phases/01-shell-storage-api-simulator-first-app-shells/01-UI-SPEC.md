@@ -13,6 +13,8 @@ created: 2026-08-27
 
 **Platform note:** RatimOS is an embedded LVGL 9.5 / PlatformIO-native project (C, SDL2 simulator), not a web/React stack. The shadcn initialization gate does not apply — there is no `components.json`/npm design-system tooling in this repo, and none is planned. This UI-SPEC adapts the standard GSD template's intent (spacing/typography/color/copy contracts) to the project's existing hand-rolled LVGL theme layer (`src/ratimos/theme.c/.h`), which was already established in the Phase 0 baseline and is confirmed here rather than re-invented.
 
+**Primary visual anchor:** on the home screen, the 5 section tiles (jogos/musica/album/cartas/config) draw the eye first via panel fill + accent-colored round letter-badge; the topbar (brand wordmark) and bottombar (back hint) are secondary chrome that frame the tiles but never compete with them for attention.
+
 ---
 
 ## Design System
@@ -29,7 +31,7 @@ created: 2026-08-27
 
 ## Spacing Scale
 
-**Exception declared up front:** this project's Phase-0 baseline already established a **2px-multiple micro-scale** (4/6/8/10) rather than the standard 4/8/16/24/32/48/64 8-point scale, because the physical target is a 320×480 3.5" panel where 8px increments consume proportionally more of the available width than on a desktop/mobile web canvas. Phase 1 preserves this convention unchanged for all existing shell/app code, and the new splash screen follows the same scale for consistency. Larger tokens (16/24) are reserved for the few genuinely major layout breaks (splash logo-to-bar gap, screen-edge content padding).
+**Approved locked exception — D-16 (`01-CONTEXT.md`):** this project's Phase-0 baseline already established a **2px-multiple micro-scale** (4/6/8/10) rather than the standard 4/8/16/24/32/48/64 8-point scale, because the physical target is a 320×480 3.5" panel where 8px increments consume proportionally more of the available width than on a desktop/mobile web canvas. This is not an inline spec-writer rationalization — it is logged as **D-16, a project-level locked decision** in `01-CONTEXT.md`, overriding the generic GSD 8-point-scale default for this project going forward. Phase 1 preserves this convention unchanged for all existing shell/app code, and the new splash screen follows the same scale for consistency. Larger tokens (16/24) are reserved for the few genuinely major layout breaks (splash logo-to-bar gap, screen-edge content padding).
 
 | Token | Value | Usage |
 |-------|-------|-------|
@@ -85,7 +87,7 @@ Existing empty-state copy pattern (Phase 0 baseline, Portuguese, lowercase, casu
 
 | Element | Copy |
 |---------|------|
-| Primary CTA (tap-to-open, not a button — tile/row tap) | "toque para abrir" — standardize spelling across apps (existing code mixes "pra"/"para": `musica_app.c` uses "toque na musica", `cartas_app.c` uses "toque pra ler", `jogos_app.c` uses "toque para abrir", `album_app.c` uses "toque pra abrir"). Non-blocking cleanup if these files are touched this phase; not a required rewrite if they aren't. |
+| Primary CTA (tap-to-open, not a button — tile/row tap) | **Canonical form: "toque para abrir"** — this is now the locked, standardized string for all 4 apps. Existing code currently mixes forms (`jogos_app.c` already uses "toque para abrir"; `album_app.c` uses "toque pra abrir"; `cartas_app.c` uses "toque pra ler"; `musica_app.c` uses "toque na musica"). Whenever any of these 3 non-conforming files is touched this phase (wiring to the Storage API), update its hint string to "toque para abrir" for consistency. Not a required standalone rewrite if a file isn't otherwise touched, but do not introduce any further variation. |
 | Empty state heading — cartas (existing) | "nenhuma carta ainda" |
 | Empty state body — cartas (existing) | "chegam aqui quando sincronizadas" |
 | Empty state heading — musica (existing) | "nenhuma musica ainda" |
