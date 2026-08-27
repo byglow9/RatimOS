@@ -12,6 +12,24 @@
 
 #define LV_COLOR_DEPTH 16
 
+/*
+ * LVGL's builtin allocator default (LV_MEM_SIZE, when not overridden here)
+ * is 64KB — sized for tiny embedded demos, not a retained multi-screen app.
+ * This project's app/screen files (src/ratimos/apps/*.c) build a brand-new
+ * lv_obj_t screen on every visit with no delete-on-navigate-away, so heap
+ * usage grows unboundedly across a session; confirmed via reproduction that
+ * 64KB is exhausted (`lv_realloc: couldn't reallocate memory`) after only
+ * ~3-4 repeated visits to a single app screen. native_sim runs on a PC with
+ * abundant RAM, so a generous bump here costs nothing and buys headroom for
+ * the remaining Phase 1 plans (more storage domains, more rendered rows).
+ * NOTE: this value is native_sim-only — Phase 3's esp32s3 environment must
+ * define its own hardware-measured LV_MEM_SIZE (and the screen-retention
+ * leak itself should get a proper fix, e.g. cache-or-delete-on-navigate,
+ * before shipping to real hardware with real RAM limits).
+ */
+#define LV_USE_STDLIB_MALLOC LV_STDLIB_BUILTIN
+#define LV_MEM_SIZE (512 * 1024U)
+
 #define LV_USE_OS LV_OS_NONE
 
 /* Driver de janela/mouse para rodar a UI no PC (Fase 0 do plano) */
