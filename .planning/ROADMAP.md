@@ -13,7 +13,7 @@ RatimOS is built as a stack of horizontal technical layers, sequenced by physica
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Shell, Storage API & Simulator-First App Shells** - Home menu navigation and RatimOS boot identity run end-to-end in the PC simulator, with all 5 apps wired to a shared Storage/Content API
+- [x] **Phase 1: Shell, Storage API & Simulator-First App Shells** - Home menu navigation and RatimOS boot identity run end-to-end in the PC simulator, with all 5 apps wired to a shared Storage/Content API (completed 2026-08-27)
 - [ ] **Phase 2: Sync Protocol, Security Model & Cloud Backend** - Supabase backend and per-device HTTPS token authentication exist and are provably secure, tested from a PC build
 - [ ] **Phase 3: Hardware Bring-Up — Display, Touch, Boot & Partition Scheme** - Firmware runs on the real board for the first time with working display/touch, verified stylus compatibility, and an OTA-ready partition table
 - [ ] **Phase 4: Power Management — Battery, PMIC, RTC** - Device runs on its own battery with accurate charge state and correct persistent timekeeping
@@ -189,7 +189,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Shell, Storage API & Simulator-First App Shells | 3/3 | In Progress|  |
+| 1. Shell, Storage API & Simulator-First App Shells | 3/3 | Complete    | 2026-08-27 |
 | 2. Sync Protocol, Security Model & Cloud Backend | 0/TBD | Not started | - |
 | 3. Hardware Bring-Up — Display, Touch, Boot & Partition Scheme | 0/TBD | Not started | - |
 | 4. Power Management — Battery, PMIC, RTC | 0/TBD | Not started | - |
