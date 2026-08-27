@@ -382,17 +382,19 @@ size_t ratimos_storage_list_letters(ratimos_letter_t * out, size_t max_count);
 | A3 | `board_tick(uint32_t idle_time_ms)` is the right signature (idle time passed in from `lv_timer_handler()`'s return value) | Pattern 1 | Low — alternative signatures (no-arg `board_tick(void)` with SDL_Delay hardcoded inside, idle time read via a separate getter) are functionally equivalent; this is an implementation-detail choice within Claude's discretion per CONTEXT.md, not a locked decision. |
 | A4 | Splash timer step period (~330ms × 6 steps ≈ 2s) is an acceptable way to hit "~2s" (D-02) | Pattern 2 | Low — D-02 says "~2s," not an exact figure; any reasonable per-step pacing (250-400ms) satisfies it. Exact number of storage-init steps (5 vs 6) is also a reasonable implementation choice. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does "stock-style placeholder images" (D-14) require actual pixel rendering, or is a placeholder tile + title metadata sufficient for Phase 1?**
    - What we know: ALBUM-01 (real thumbnail grid + full-screen view) is traced to Phase 5, not Phase 1; no JPEG/PNG decoder is part of this phase's stack per CLAUDE.md's own sequencing (JPEGDEC tied to camera/SD bring-up).
    - What's unclear: Whether the user's mental model for "success" on this phase includes seeing generic stock photos actually rendered in the album grid vs. just labeled placeholder tiles proving the Storage API wiring.
    - Recommendation: Default to metadata-only fixtures + the existing placeholder-tile pattern (already in `album_app.c`) fed by real counts/titles from the Storage API. If the user pushes back during `/gsd-verify-work`, adding a minimal raw-pixel-format (not JPEG) loader is a small follow-up, not a re-plan.
+   - **Resolved:** 01-03-PLAN.md Task 1 settled this per the recommendation — `photos.c` is metadata-only (title/id read from `assets/mock/photos/*.txt`'s first line), rendered through the existing placeholder-tile pattern in `album_app.c` (Task 2), with no image-decode dependency added.
 
 2. **Should `board_waveshare_s3_35`'s "compiles as a translation unit" requirement (D-07) be verified via an ad-hoc `gcc -fsyntax-only` step, or is there a preferred PlatformIO-native way to syntax-check a file that isn't part of any active build environment?**
    - What we know: No `esp32s3` PlatformIO environment exists yet (explicitly deferred); `native_sim`'s `build_src_filter` must exclude the stub to avoid duplicate-symbol linking.
    - What's unclear: Whether the planner wants this as a manual one-off verification command (documented in the plan) or a scripted check (e.g., a Makefile target or CI step) — the latter is more durable but may be over-engineering for a single-developer, no-CI project at this stage.
    - Recommendation: A manual `gcc -fsyntax-only` command in the plan's verification steps is sufficient for Phase 1; revisit if/when CI is ever introduced.
+   - **Resolved:** 01-01-PLAN.md Task 2's `<verify>` settled this per the recommendation — a manual `gcc -fsyntax-only -std=gnu11 -Isrc src/board/waveshare_s3_35/board.c` command runs alongside `pio test`/`pio run` in that task's automated verify step; no Makefile/CI target was added.
 
 ## Environment Availability
 
