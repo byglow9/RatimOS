@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 1
 current_phase_name: Shell, Storage API & Simulator-First App Shells
 status: executing
-stopped_at: Phase 1 UI-SPEC approved (palette repainted from official logo, D-17)
-last_updated: "2026-08-27T14:58:11.620Z"
-last_activity: 2026-08-26
-last_activity_desc: Roadmap created (10 phases, horizontal-layer structure driven by hardware dependency)
+stopped_at: Completed 01-01-PLAN.md (board/HAL split, Storage API core, real boot splash)
+last_updated: "2026-08-27T16:00:13.074Z"
+last_activity: 2026-08-27
+last_activity_desc: Phase 1 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
+  completed_plans: 1
 ---
 
 # Project State
@@ -27,12 +27,12 @@ See: .planning/PROJECT.md (updated 2026-08-26)
 
 ## Current Position
 
-Phase: 1 of 10 (Shell, Storage API & Simulator-First App Shells)
-Plan: 0 of TBD in current phase
+Phase: 1 (Shell, Storage API & Simulator-First App Shells) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-08-26 — Roadmap created (10 phases, horizontal-layer structure driven by hardware dependency)
+Last activity: 2026-08-27 — Phase 1 execution started
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -54,6 +54,11 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 1 P1 | 55min | 2 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -65,6 +70,9 @@ Recent decisions affecting current work:
 - [Roadmap]: Horizontal Layers project mode chosen explicitly by user — phases sequenced by hardware/physical dependency (simulator-first → display/touch → power → audio/storage/camera → wifi/OTA/integration stress test → visual/games → security last), not vertical feature slices
 - [Roadmap]: Security hardening (Secure Boot + Flash Encryption) is unconditionally the final phase (10) since it burns irreversible eFuses and must follow a proven OTA rollback (Phase 8)
 - [Roadmap]: Camera bring-up (Phase 5) deliberately sequenced after audio/storage since it's the highest-complexity hardware integration per research
+- [Phase ?]: 01-01: cartas_app.c caches its built screen (build-once, like home_screen.c) to stop an LVGL heap-exhaustion crash from rebuilding a new screen on every visit
+- [Phase ?]: 01-01: LV_MEM_SIZE raised to 512KB in lv_conf.h for native_sim only (LVGL's 64KB default was never tuned for this retained multi-screen UI); Phase 3 must define its own hardware-measured value
+- [Phase ?]: 01-01: jogos/musica/album/config still share the same screen-rebuild-every-visit leak pattern that crashed cartas — deferred to plan 01-03 (deferred-items.md), out of this plan's file scope
 
 ### Pending Todos
 
@@ -89,6 +97,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-27T14:27:00.605Z
-Stopped at: Phase 1 UI-SPEC approved (palette repainted from official logo, D-17)
-Resume file: .planning/phases/01-shell-storage-api-simulator-first-app-shells/01-UI-SPEC.md
+Last session: 2026-08-27T16:00:13.063Z
+Stopped at: Completed 01-01-PLAN.md (board/HAL split, Storage API core, real boot splash)
+Resume file: None

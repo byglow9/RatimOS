@@ -9,9 +9,9 @@ Requirements for the gift delivery. Each maps to roadmap phases.
 
 ### Shell / Navegação
 
-- [ ] **SHELL-01**: User can navigate from home to any of the 5 sections (jogos/musica/album/cartas/config) and back
+- [x] **SHELL-01**: User can navigate from home to any of the 5 sections (jogos/musica/album/cartas/config) and back
 - [ ] **SHELL-02**: Home screen shows battery level and current time at all times
-- [ ] **SHELL-03**: Device boots directly into the home screen with a RatimOS boot identity, not a stock/blank screen
+- [x] **SHELL-03**: Device boots directly into the home screen with a RatimOS boot identity, not a stock/blank screen
 
 ### Entrada (Touch/Stylus)
 
@@ -108,9 +108,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SHELL-01 | Phase 1 | Pending |
+| SHELL-01 | Phase 1 | Complete |
 | SHELL-02 | Phase 4 | Pending |
-| SHELL-03 | Phase 1 | Pending |
+| SHELL-03 | Phase 1 | Complete |
 | INPUT-01 | Phase 3 | Pending |
 | INPUT-02 | Phase 3 | Pending |
 | POWER-01 | Phase 4 | Pending |
@@ -142,6 +142,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VISUAL-01 | Phase 9 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 32 total (corrected from earlier "27" placeholder — 27 was an early estimate before all categories were finalized; the 32 REQ-IDs actually listed above are the authoritative set)
 - Mapped to phases: 32/32 ✓
 - Unmapped: 0 ✓
