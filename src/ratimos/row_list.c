@@ -28,11 +28,15 @@ lv_obj_t * ratimos_row_create(lv_obj_t * parent,
     lv_obj_t * title_lbl = lv_label_create(text_col);
     lv_label_set_text(title_lbl, title);
     lv_obj_set_style_text_color(title_lbl, RATIMOS_COLOR_TEXT, 0);
+    lv_obj_set_width(title_lbl, lv_pct(100));
+    lv_label_set_long_mode(title_lbl, LV_LABEL_LONG_MODE_DOTS);
 
     if (subtitle) {
         lv_obj_t * sub_lbl = lv_label_create(text_col);
         lv_label_set_text(sub_lbl, subtitle);
         lv_obj_set_style_text_color(sub_lbl, RATIMOS_COLOR_TEXT_MUTED, 0);
+        lv_obj_set_width(sub_lbl, lv_pct(100));
+        lv_label_set_long_mode(sub_lbl, LV_LABEL_LONG_MODE_DOTS);
     }
 
     if (click_cb) {
