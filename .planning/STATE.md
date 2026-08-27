@@ -5,8 +5,8 @@ milestone_name: milestone
 current_phase: 1
 current_phase_name: Shell, Storage API & Simulator-First App Shells
 status: planning
-stopped_at: Phase 1 research + validation strategy done, blocked on UI-SPEC before planning
-last_updated: "2026-08-26T21:03:09.275Z"
+stopped_at: Phase 1 UI-SPEC approved (palette repainted from official logo, D-17)
+last_updated: "2026-08-27T14:27:00.616Z"
 last_activity: 2026-08-26
 last_activity_desc: Roadmap created (10 phases, horizontal-layer structure driven by hardware dependency)
 progress:
@@ -89,6 +89,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-26T21:03:09.265Z
-Stopped at: Phase 1 research + validation strategy done, blocked on UI-SPEC before planning
-Resume file: .planning/phases/01-shell-storage-api-simulator-first-app-shells/01-RESEARCH.md
+Last session: 2026-08-27T14:27:00.605Z
+Stopped at: Phase 1 UI-SPEC approved (palette repainted from official logo, D-17)
+Resume file: .planning/phases/01-shell-storage-api-simulator-first-app-shells/01-UI-SPEC.md
