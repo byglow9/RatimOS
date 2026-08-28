@@ -8,8 +8,9 @@
  *
  * Contrato unico, sincrono e sem alocacao dinamica para ler o conteudo
  * pendente de um device, espelhando o estilo de content_api.h. Compoe com
- * src/sync/http/http_client.h (D-05) -- este arquivo nunca inclui cJSON.h
- * nem conhece detalhes de parsing JSON, isso fica confinado a sync_client.c.
+ * src/sync/http/http_client.h (D-05) -- este arquivo nunca inclui a
+ * biblioteca de parsing JSON nem conhece seus tipos, isso fica confinado a
+ * sync_client.c.
  *
  * Esta fase (02-03) so declara o contrato de leitura em andamento
  * (whats-new, D-10) -- o fluxo de registro de device (register-device)
