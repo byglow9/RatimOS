@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 2
-current_phase_name: Sync Protocol, Security Model & Cloud Backend
+current_phase: 02
+current_phase_name: sync-protocol-security-model-cloud-backend
 status: executing
-stopped_at: Phase 2 context gathered
-last_updated: "2026-08-27T21:00:54.976Z"
-last_activity: 2026-08-27
-last_activity_desc: Phase 1 execution started
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-08-28T13:05:29.402Z"
+last_activity: 2026-08-28
+last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 7
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-26)
 
 **Core value:** O dispositivo tem que funcionar de verdade no dia a dia dela — offline, com as 5 seções estáveis — e continuar "vivo" depois de entregue, recebendo conteúdo novo e atualizações remotamente.
-**Current focus:** Phase 1 — Shell, Storage API & Simulator-First App Shells
+**Current focus:** Phase 02 — sync-protocol-security-model-cloud-backend
 
 ## Current Position
 
-Phase: 2 — Sync Protocol, Security Model & Cloud Backend
-Plan: Not started
+Phase: 02 (sync-protocol-security-model-cloud-backend) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-08-27 — Phase 1 complete, transitioned to Phase 2
+Last activity: 2026-08-28 — Phase 02 execution started
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 57%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [██████████] 100%
 | Phase 1 P1 | 55min | 2 tasks | 19 files |
 | Phase 01 P02 | 6min | 2 tasks | 2 files |
 | Phase 1 P3 | 25min | 3 tasks | 16 files |
+| Phase 02 P01 | 28min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 01-03: Screen-cache-once leak fix (from 01-01's cartas_app.c) applied to jogos/musica/album/config app screens, closing the cross-app LVGL heap-exhaustion pattern deferred since 01-01
 - [Phase ?]: 01-03: All 5 Storage/Content API domains now real (photos/tracks/games/settings joining letters); games.c intentionally skips the file-backed manifest pattern since games ship compiled into firmware, not synced content
 - [Phase ?]: 01-03: Phase 1 complete — user confirmed all 4 ROADMAP success criteria via the phase-gate manual UAT (splash, 5-section navigation, storage-API-only content, board/HAL structural parity)
+- [Phase ?]: 02-01: Package-legitimacy checkpoint for @supabase/supabase-js resolved as a confirmed false positive (25M+ weekly downloads, official supabase GitHub org)
+- [Phase ?]: 02-01: Rule 3 auto-fix -- added a second migration granting service_role explicit table privileges on devices, since 'Automatically expose new tables' being disabled (D-02) also suppressed the default table-level GRANT, causing 42501 permission-denied before RLS was ever reached
 
 ### Pending Todos
 
@@ -104,6 +107,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-27T20:11:52.222Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-sync-protocol-security-model-cloud-backend/02-CONTEXT.md
+Last session: 2026-08-28T13:05:29.390Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: None

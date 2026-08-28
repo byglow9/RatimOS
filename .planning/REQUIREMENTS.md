@@ -66,8 +66,8 @@ Requirements for the gift delivery. Each maps to roadmap phases.
 
 ### Segurança
 
-- [ ] **SEC-01**: Every request between device and backend is authenticated with a unique per-device token, never a shared/global credential
-- [ ] **SEC-02**: All device-backend communication uses HTTPS/TLS, never plaintext HTTP
+- [x] **SEC-01**: Every request between device and backend is authenticated with a unique per-device token, never a shared/global credential
+- [x] **SEC-02**: All device-backend communication uses HTTPS/TLS, never plaintext HTTP
 - [ ] **SEC-03**: Device has Secure Boot and Flash Encryption enabled before being delivered as a gift
 - [ ] **SEC-04**: No wifi password, API key, or token is stored in plaintext in firmware source or on removable media (SD card)
 
@@ -135,8 +135,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OTA-01 | Phase 8 | Pending |
 | OTA-02 | Phase 8 | Pending |
 | OTA-03 | Phase 3 | Pending |
-| SEC-01 | Phase 2 | Pending |
-| SEC-02 | Phase 2 | Pending |
+| SEC-01 | Phase 2 | Complete |
+| SEC-02 | Phase 2 | Complete |
 | SEC-03 | Phase 10 | Pending |
 | SEC-04 | Phase 10 | Pending |
 | VISUAL-01 | Phase 9 | Pending |
