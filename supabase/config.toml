@@ -7,3 +7,6 @@
 
 [functions.register-device]
 verify_jwt = false
+
+[functions.whats-new]
+verify_jwt = false
