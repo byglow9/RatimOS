@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Shell, Storage API & Simulator-First App Shells** - Home menu navigation and RatimOS boot identity run end-to-end in the PC simulator, with all 5 apps wired to a shared Storage/Content API (completed 2026-08-27)
 - [x] **Phase 2: Sync Protocol, Security Model & Cloud Backend** - Supabase backend and per-device HTTPS token authentication exist and are provably secure, tested from a PC build (completed 2026-08-28)
-- [ ] **Phase 02.1: Visual Identity & Games (Simulator-Buildable Scope)** *(INSERTED)* - RatimOS's own palette/icons and 2 complete, playable games, built and tested entirely in the simulator while waiting for hardware
+- [ ] **Phase 02.1: Visual Identity & Games (Simulator-Buildable Scope)** *(INSERTED)* - RatimOS's own palette/icons plus 5 playable games (sudoku, paciência, termo, cruzadinha, conexo) and a daily-completion garden/castle progression system, all built and tested entirely in the simulator while waiting for hardware
 - [ ] **Phase 3: Hardware Bring-Up — Display, Touch, Boot & Partition Scheme** - Firmware runs on the real board for the first time with working display/touch, verified stylus compatibility, and an OTA-ready partition table
 - [ ] **Phase 4: Power Management — Battery, PMIC, RTC** - Device runs on its own battery with accurate charge state and correct persistent timekeeping
 - [ ] **Phase 5: Audio, Storage & Camera Bring-Up** - Music playback, photo album, and letters work against real on-device storage, with camera capture
@@ -80,16 +80,20 @@ Plans:
 
 ### Phase 02.1: Visual Identity & Games (Simulator-Buildable Scope) (INSERTED)
 
-**Goal:** RatimOS's own color palette, typography, and icon set (visually distinct from colombiaOS), plus 2 complete, playable board/card games — all built and fully tested in the `native_sdl` simulator using mouse-as-touch input, so this work doesn't have to wait for the physical board.
-**Requirements**: VISUAL-01, JOGOS-01, JOGOS-02
+**Goal:** RatimOS's own color palette, typography, and icon set (visually distinct from colombiaOS), plus a full suite of playable games (Sudoku, Paciência/Klondike, Termo, Cruzadinha, Conexo) with a persistent daily-completion reward system (garden/castle progression) — all built and fully tested in the `native_sdl` simulator using mouse-as-touch input, so this work doesn't have to wait for the physical board.
+**Requirements**: VISUAL-01, JOGOS-01, JOGOS-02, JOGOS-03, JOGOS-04, JOGOS-05, PROGRESSAO-01
 **Depends on:** Phase 2 (no physical hardware needed for this scope)
 **Success Criteria** (what must be TRUE):
 
   1. RatimOS uses its own color palette, typography, and icon set, visually distinct from the colombiaOS reference project (confirmed by side-by-side comparison, no copied assets)
-  2. User can play at least 2 complete, simple board/card games (e.g. sudoku, paciência) fully using simulated touch (mouse) input in `native_sdl`
-  3. In-progress game state (e.g. a partially solved sudoku board) is not lost when navigating away to another app and back
+  2. User can play Sudoku (9x9, 3 difficulty levels, daily mode) and Paciência (Klondike) fully using simulated touch (mouse) input in `native_sdl`
+  3. User can play Termo, a real crossword (Cruzadinha), and Conexo (group 16 words into 4 categories) fully using simulated touch input
+  4. In-progress game state (e.g. a partially solved sudoku board) is not lost when navigating away to another app and back, for every game
+  5. Completing a daily-mode game grows a persistent visual reward (garden/castle progression) that survives across sessions
 
 **Note:** Final confirmation that these games work with real finger/stylus touch on the physical FT6336 panel is explicitly OUT of scope here — it rides on Phase 3's existing passive-stylus verification once the board arrives. This phase only proves the game logic/UI/persistence, through the same touch-driver abstraction Phase 1 established (mouse-as-touch on `native_sdl`; the real touch driver is a drop-in swap at the call site).
+
+**Note on scope:** this phase significantly exceeds the original "2 simple games" scope, by explicit user choice during discuss-phase (2026-08-28) — it now bundles 5 games plus a new gamification/progression system that the user flagged as needing substantial research. Expect this phase's research and planning to be proportionally larger and likely multi-wave/multi-session.
 
 **Plans:** 0 plans
 

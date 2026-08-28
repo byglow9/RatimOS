@@ -26,8 +26,15 @@ Requirements for the gift delivery. Each maps to roadmap phases.
 
 ### Jogos
 
-- [ ] **JOGOS-01**: User can play at least 2 complete, simple board/card games (e.g. sudoku, paciência) fully with touch/stylus input
-- [ ] **JOGOS-02**: In-progress game state is not lost when navigating away and back
+- [ ] **JOGOS-01**: User can play Sudoku (9x9, 3 difficulty levels, daily mode with infinitely-generated or progressive puzzles) and Paciência (Klondike) fully with touch/stylus input
+- [ ] **JOGOS-02**: In-progress game state is not lost when navigating away and back, for every game
+- [ ] **JOGOS-03**: User can play Termo (Wordle-style word-guessing game with per-letter correctness feedback)
+- [ ] **JOGOS-04**: User can play a real crossword puzzle (grid of intersecting words, each with a numbered clue)
+- [ ] **JOGOS-05**: User can play Conexo (NYT Connections-style: group 16 words into 4 hidden thematic categories)
+
+### Progressão
+
+- [ ] **PROGRESSAO-01**: Completing a daily-mode game grows a persistent visual reward (garden growing or castle being built room by room) that survives across sessions
 
 ### Musica
 
@@ -118,6 +125,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | POWER-03 | Phase 4 | Pending |
 | JOGOS-01 | Phase 02.1 | Pending |
 | JOGOS-02 | Phase 02.1 | Pending |
+| JOGOS-03 | Phase 02.1 | Pending |
+| JOGOS-04 | Phase 02.1 | Pending |
+| JOGOS-05 | Phase 02.1 | Pending |
+| PROGRESSAO-01 | Phase 02.1 | Pending |
 | MUSICA-01 | Phase 5 | Pending |
 | MUSICA-02 | Phase 5 | Pending |
 | ALBUM-01 | Phase 5 | Pending |
