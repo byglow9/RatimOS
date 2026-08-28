@@ -101,7 +101,7 @@ None yet.
 ### Blockers/Concerns
 
 - [Phase 3]: Passive-stylus compatibility with the FT6336 capacitive touch panel is unverified — may force a redesign of the "cartas" handwriting UX around finger-sized targets. Must be resolved before any stylus-dependent UI ships.
-- [Phase 10]: Secure Boot v2 + Flash Encryption workflow under PlatformIO+Arduino (vs raw ESP-IDF) is community-reported friction, not officially documented — needs a dedicated rehearsal on disposable hardware before this phase is planned in detail.
+- [Phase 9]: Secure Boot v2 + Flash Encryption workflow under PlatformIO+Arduino (vs raw ESP-IDF) is community-reported friction, not officially documented — needs a dedicated rehearsal on disposable hardware before this phase is planned in detail. (Renumbered from Phase 10 when old Phase 9 was removed and 02.1 was inserted, 2026-08-28.)
 - [Requirements]: REQUIREMENTS.md traceability section originally stated "27 total" v1 requirements; actual count of listed REQ-IDs is 32. Roadmap covers all 32 present in the document — corrected in traceability table.
 
 ## Deferred Items
