@@ -5,3 +5,4 @@
 .env
 .env.*
 supabase/.temp/
+.planning/research/.cache/
