@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: sync-protocol-security-model-cloud-backend
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-08-28T13:05:29.402Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-08-28T13:14:30.126Z"
 last_activity: 2026-08-28
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 7
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-26)
 ## Current Position
 
 Phase: 02 (sync-protocol-security-model-cloud-backend) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-08-28 — Phase 02 execution started
 
-Progress: [██████░░░░] 57%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [██████░░░░] 57%
 | Phase 01 P02 | 6min | 2 tasks | 2 files |
 | Phase 1 P3 | 25min | 3 tasks | 16 files |
 | Phase 02 P01 | 28min | 3 tasks | 10 files |
+| Phase 02 P02 | 10min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 01-03: Phase 1 complete — user confirmed all 4 ROADMAP success criteria via the phase-gate manual UAT (splash, 5-section navigation, storage-API-only content, board/HAL structural parity)
 - [Phase ?]: 02-01: Package-legitimacy checkpoint for @supabase/supabase-js resolved as a confirmed false positive (25M+ weekly downloads, official supabase GitHub org)
 - [Phase ?]: 02-01: Rule 3 auto-fix -- added a second migration granting service_role explicit table privileges on devices, since 'Automatically expose new tables' being disabled (D-02) also suppressed the default table-level GRANT, causing 42501 permission-denied before RLS was ever reached
+- [Phase ?]: 02-02: Rule 2 auto-fix -- proactively added service_role grants for content_items/ota_releases in Task 1's own migration, anticipating the identical 42501 permission-denied issue Plan 1 hit on devices
+- [Phase ?]: 02-02: Rule 1 cleanup -- removed supabase functions new's scaffolded deno.json/.npmrc for whats-new (unused import-map boilerplate) to match register-device's single-index.ts structure
 
 ### Pending Todos
 
@@ -107,6 +110,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-28T13:05:29.390Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-08-28T13:14:30.113Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
