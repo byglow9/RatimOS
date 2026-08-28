@@ -14,6 +14,7 @@
 #include "sync/sync_client.h"
 
 #define REGISTER_DEVICE_URL "https://bhqscupdrgfuwitbtlui.supabase.co/functions/v1/register-device"
+#define WHATS_NEW_URL "https://bhqscupdrgfuwitbtlui.supabase.co/functions/v1/whats-new"
 #define SUPABASE_BASE_URL "https://bhqscupdrgfuwitbtlui.supabase.co"
 
 /* Token sintaticamente valido (formato UUID) mas nunca registrado via
@@ -96,6 +97,24 @@ void test_whats_new_wrong_token_rejected(void)
     TEST_ASSERT_EQUAL_UINT(0, n);
 }
 
+void test_https_transport_succeeds(void)
+{
+    const char *device_token = getenv("TEST_DEVICE_TOKEN");
+    TEST_ASSERT_NOT_NULL_MESSAGE(device_token,
+        "TEST_DEVICE_TOKEN must be set in the environment (see .env) to run this test");
+
+    /* Chama ratimos_sync_http_get diretamente (nao via sync_client.h) contra
+     * a URL real do whats-new -- prova que a verificacao de certificado TLS
+     * padrao do libcurl realmente funciona em tempo de execucao contra o
+     * certificado real da Supabase, nao apenas que as opcoes corretas estao
+     * setadas no codigo-fonte (SEC-02). */
+    ratimos_http_response_t out;
+    int rc = ratimos_sync_http_get(WHATS_NEW_URL, device_token, &out);
+
+    TEST_ASSERT_EQUAL_INT(0, rc);
+    TEST_ASSERT_NOT_EQUAL(0, out.status_code);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -104,5 +123,6 @@ int main(void)
     RUN_TEST(test_whats_new_valid_token_returns_pending_items);
     RUN_TEST(test_whats_new_no_token_rejected);
     RUN_TEST(test_whats_new_wrong_token_rejected);
+    RUN_TEST(test_https_transport_succeeds);
     return UNITY_END();
 }
