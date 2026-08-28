@@ -1,0 +1,9 @@
+# Phase 2 Plan 1 (D-08/D-09, RESEARCH.md Pitfall 2): this project's device
+# tokens are opaque, not Supabase-issued JWTs, so the platform's JWT gateway
+# must never run in front of these functions -- each handler validates its
+# own header manually. Re-verify verify_jwt = false after every
+# `supabase functions deploy` (known CLI issue: this setting can be silently
+# reset on function updates).
+
+[functions.register-device]
+verify_jwt = false

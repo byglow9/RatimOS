@@ -1,0 +1,13 @@
+-- Phase 2 Plan 1 (Rule 3 auto-fix, blocking issue found during Task 2):
+--
+-- The `devices` table (previous migration) enables RLS with zero
+-- anon/authenticated policies by design (D-09/T-2-06 default-deny). However,
+-- this project's "Automatically expose new tables" setting is disabled
+-- (D-02), which also suppresses the standard default-privilege grant that
+-- normally runs on new tables -- so even `service_role`, which is meant to
+-- bypass RLS entirely and be the SOLE access path per D-09, had no
+-- table-level grant at all and every Edge Function insert/select failed
+-- with Postgres error 42501 "permission denied for table devices" before
+-- ever reaching an RLS check. This grant restores service_role's intended
+-- full access; anon/authenticated remain ungranted (still default-deny).
+grant select, insert, update, delete on devices to service_role;
