@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 02
 current_phase_name: sync-protocol-security-model-cloud-backend
-status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-08-28T13:24:28.562Z"
+status: verifying
+stopped_at: Completed 02-04-PLAN.md -- Phase 2 all 4/4 plans done, ready for phase-gate verification
+last_updated: "2026-08-28T13:31:54.558Z"
 last_activity: 2026-08-28
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-08-26)
 
 Phase: 02 (sync-protocol-security-model-cloud-backend) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-28 — Phase 02 execution started
 
-Progress: [█████████░] 86%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [█████████░] 86%
 | Phase 02 P01 | 28min | 3 tasks | 10 files |
 | Phase 02 P02 | 10min | 3 tasks | 5 files |
 | Phase 02 P03 | 9min | 2 tasks | 4 files |
+| Phase 02 P04 | 5min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 02-02: Rule 1 cleanup -- removed supabase functions new's scaffolded deno.json/.npmrc for whats-new (unused import-map boilerplate) to match register-device's single-index.ts structure
 - [Phase ?]: 02-03: cJSON confined to sync_client.c only, sync_client.h stays dependency-free (mirrors content_api.h); extern-testable ratimos_sync_parse_items verified by an offline Unity suite with zero network dependency
 - [Phase ?]: 02-03: Rule 1 auto-fix -- reworded sync_client.h's doc comment to avoid naming cJSON directly after it accidentally failed the plan's own grep-based cJSON-confinement acceptance check
+- [Phase ?]: 02-04: RLS live-proof came back as a genuine 42501 permission-denied error on all 3 tables (devices/content_items/ota_releases) for the anon publishable-key role, not just an empty [] array -- stronger than either pre-approved acceptance outcome required
+- [Phase ?]: 02-04: 'Another device's token' ROADMAP criterion tested via a never-registered-but-syntactically-valid token literal (assumption_delta, D-12 single-device architecture preserved) rather than provisioning a second real device
 
 ### Pending Todos
 
@@ -113,6 +116,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-28T13:24:28.549Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-08-28T13:31:54.546Z
+Stopped at: Completed 02-04-PLAN.md -- Phase 2 all 4/4 plans done, ready for phase-gate verification
 Resume file: None

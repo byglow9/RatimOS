@@ -63,7 +63,7 @@ Plans:
   3. Every backend request/response in the protocol client goes over HTTPS; no endpoint is reachable over plaintext HTTP
   4. A "what's new" endpoint returns pending letters/photos/music for a given device token, verified against the real Supabase project from a PC-native build
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans executed
 Plans:
 **Wave 1**
 
@@ -76,7 +76,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 02-04-PLAN.md — Full auth-reject matrix, HTTPS-only guarantee & live RLS proof against the real project
+- [x] 02-04-PLAN.md — Full auth-reject matrix, HTTPS-only guarantee & live RLS proof against the real project
 
 ### Phase 3: Hardware Bring-Up — Display, Touch, Boot & Partition Scheme
 
@@ -203,7 +203,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Shell, Storage API & Simulator-First App Shells | 3/3 | Complete    | 2026-08-27 |
-| 2. Sync Protocol, Security Model & Cloud Backend | 3/4 | In Progress|  |
+| 2. Sync Protocol, Security Model & Cloud Backend | 4/4 | In Progress|  |
 | 3. Hardware Bring-Up — Display, Touch, Boot & Partition Scheme | 0/TBD | Not started | - |
 | 4. Power Management — Battery, PMIC, RTC | 0/TBD | Not started | - |
 | 5. Audio, Storage & Camera Bring-Up | 0/TBD | Not started | - |
