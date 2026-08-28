@@ -116,8 +116,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | POWER-01 | Phase 4 | Pending |
 | POWER-02 | Phase 4 | Pending |
 | POWER-03 | Phase 4 | Pending |
-| JOGOS-01 | Phase 9 | Pending |
-| JOGOS-02 | Phase 9 | Pending |
+| JOGOS-01 | Phase 02.1 | Pending |
+| JOGOS-02 | Phase 02.1 | Pending |
 | MUSICA-01 | Phase 5 | Pending |
 | MUSICA-02 | Phase 5 | Pending |
 | ALBUM-01 | Phase 5 | Pending |
@@ -137,9 +137,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OTA-03 | Phase 3 | Pending |
 | SEC-01 | Phase 2 | Complete |
 | SEC-02 | Phase 2 | Complete |
-| SEC-03 | Phase 10 | Pending |
-| SEC-04 | Phase 10 | Pending |
-| VISUAL-01 | Phase 9 | Pending |
+| SEC-03 | Phase 9 | Pending |
+| SEC-04 | Phase 9 | Pending |
+| VISUAL-01 | Phase 02.1 | Pending |
 
 **Coverage:**
 

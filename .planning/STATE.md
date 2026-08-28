@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 3
-current_phase_name: Hardware Bring-Up — Display, Touch, Boot & Partition Scheme
+current_phase: "02.1"
+current_phase_name: Visual Identity & Games (Simulator-Buildable Scope)
 status: planning
 stopped_at: Completed 02-04-PLAN.md -- Phase 2 all 4/4 plans done, ready for phase-gate verification
 last_updated: "2026-08-28T13:48:43.412Z"
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-08-26)
 
 ## Current Position
 
-Phase: 3 — Hardware Bring-Up — Display, Touch, Boot & Partition Scheme
+Phase: 02.1 — Visual Identity & Games (Simulator-Buildable Scope)
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-08-28 — Phase 02 complete, transitioned to Phase 3
+Last activity: 2026-08-28 — Phase 02 complete; Phase 02.1 inserted ahead of Phase 3 (games/visual identity need no physical hardware, unlike Phases 3-8); old Phase 9 removed (scope absorbed by 02.1), old Phase 10 renumbered to Phase 9
 
 Progress: [██████████] 100%
 

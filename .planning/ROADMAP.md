@@ -2,7 +2,7 @@
 
 ## Overview
 
-RatimOS is built as a stack of horizontal technical layers, sequenced by physical hardware dependency and risk rather than as independent end-to-end feature slices. Everything that can be validated on a PC simulator (shell navigation, storage abstraction, sync protocol, backend, security model) comes first, at zero hardware risk. Once the Waveshare ESP32-S3-Touch-LCD-3.5 board arrives, bring-up proceeds in strict dependency order: display/touch (needed to see anything), power/RTC (needed for safety and correct timestamps), then audio/storage/camera (needed for real content), then WiFi provisioning (needed before any sync), then cloud sync, then OTA plus a full concurrent-subsystems stress test. Visual identity and games are lower-risk content work slotted in once the core plumbing is stable. Security hardening (Secure Boot + Flash Encryption) is deliberately the very last phase, since it burns irreversible eFuses and must only happen after OTA rollback has been proven — the device can never be physically retrieved to fix a brick.
+RatimOS is built as a stack of horizontal technical layers, sequenced by physical hardware dependency and risk rather than as independent end-to-end feature slices. Everything that can be validated on a PC simulator (shell navigation, storage abstraction, sync protocol, backend, security model) comes first, at zero hardware risk. Phase 02.1 (Visual Identity & Games) was inserted right after Phase 2 for the same reason — its game logic, UI, and palette work need no physical hardware at all, so it doesn't have to wait behind the hardware bring-up phases; only the final real-touch/stylus confirmation for these games rides on Phase 3's proven touch input, once the board exists. Once the Waveshare ESP32-S3-Touch-LCD-3.5 board arrives, bring-up proceeds in strict dependency order: display/touch (needed to see anything), power/RTC (needed for safety and correct timestamps), then audio/storage/camera (needed for real content), then WiFi provisioning (needed before any sync), then cloud sync, then OTA plus a full concurrent-subsystems stress test. Security hardening (Secure Boot + Flash Encryption) is deliberately the very last phase, since it burns irreversible eFuses and must only happen after OTA rollback has been proven — the device can never be physically retrieved to fix a brick.
 
 ## Phases
 
@@ -15,14 +15,14 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Shell, Storage API & Simulator-First App Shells** - Home menu navigation and RatimOS boot identity run end-to-end in the PC simulator, with all 5 apps wired to a shared Storage/Content API (completed 2026-08-27)
 - [x] **Phase 2: Sync Protocol, Security Model & Cloud Backend** - Supabase backend and per-device HTTPS token authentication exist and are provably secure, tested from a PC build (completed 2026-08-28)
+- [ ] **Phase 02.1: Visual Identity & Games (Simulator-Buildable Scope)** *(INSERTED)* - RatimOS's own palette/icons and 2 complete, playable games, built and tested entirely in the simulator while waiting for hardware
 - [ ] **Phase 3: Hardware Bring-Up — Display, Touch, Boot & Partition Scheme** - Firmware runs on the real board for the first time with working display/touch, verified stylus compatibility, and an OTA-ready partition table
 - [ ] **Phase 4: Power Management — Battery, PMIC, RTC** - Device runs on its own battery with accurate charge state and correct persistent timekeeping
 - [ ] **Phase 5: Audio, Storage & Camera Bring-Up** - Music playback, photo album, and letters work against real on-device storage, with camera capture
 - [ ] **Phase 6: WiFi Provisioning & Settings** - User can get the device onto her wifi and control brightness/volume/info entirely from the device, no hardcoded credentials
 - [ ] **Phase 7: Cloud Content Sync** - New letters/photos/music sent from the backend arrive on the device and are visibly flagged as new, without breaking offline use
 - [ ] **Phase 8: OTA & Concurrent Integration Stress Test** - Firmware updates itself safely over the air with proven rollback, and the device survives every subsystem running together
-- [ ] **Phase 9: Visual Identity & Games** - RatimOS has its own bespoke look and 2 complete, playable board/card games
-- [ ] **Phase 10: Security Hardening (Secure Boot + Flash Encryption)** - Device is irreversibly locked down before delivery, only after every other system is proven stable
+- [ ] **Phase 9: Security Hardening (Secure Boot + Flash Encryption)** - Device is irreversibly locked down before delivery, only after every other system is proven stable
 
 ## Phase Details
 
@@ -77,6 +77,25 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion)*
 
 - [x] 02-04-PLAN.md — Full auth-reject matrix, HTTPS-only guarantee & live RLS proof against the real project
+
+### Phase 02.1: Visual Identity & Games (Simulator-Buildable Scope) (INSERTED)
+
+**Goal:** RatimOS's own color palette, typography, and icon set (visually distinct from colombiaOS), plus 2 complete, playable board/card games — all built and fully tested in the `native_sdl` simulator using mouse-as-touch input, so this work doesn't have to wait for the physical board.
+**Requirements**: VISUAL-01, JOGOS-01, JOGOS-02
+**Depends on:** Phase 2 (no physical hardware needed for this scope)
+**Success Criteria** (what must be TRUE):
+
+  1. RatimOS uses its own color palette, typography, and icon set, visually distinct from the colombiaOS reference project (confirmed by side-by-side comparison, no copied assets)
+  2. User can play at least 2 complete, simple board/card games (e.g. sudoku, paciência) fully using simulated touch (mouse) input in `native_sdl`
+  3. In-progress game state (e.g. a partially solved sudoku board) is not lost when navigating away to another app and back
+
+**Note:** Final confirmation that these games work with real finger/stylus touch on the physical FT6336 panel is explicitly OUT of scope here — it rides on Phase 3's existing passive-stylus verification once the board arrives. This phase only proves the game logic/UI/persistence, through the same touch-driver abstraction Phase 1 established (mouse-as-touch on `native_sdl`; the real touch driver is a drop-in swap at the call site).
+
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 02.1 to break down)
 
 ### Phase 3: Hardware Bring-Up — Display, Touch, Boot & Partition Scheme
 
@@ -168,24 +187,10 @@ Plans:
 
 **Plans**: TBD
 
-### Phase 9: Visual Identity & Games
-
-**Goal**: RatimOS looks and plays like a finished, bespoke product — its own visual identity and complete, playable games.
-**Depends on**: Phase 8 (sequenced after core plumbing to avoid restyling UI mid-flight; only hard technical dependency is Phase 3's proven touch/stylus input)
-**Requirements**: VISUAL-01, JOGOS-01, JOGOS-02
-**Success Criteria** (what must be TRUE):
-
-  1. RatimOS uses its own color palette, typography, and icon set, visually distinct from the colombiaOS reference project (confirmed by side-by-side comparison, no copied assets)
-  2. User can play at least 2 complete, simple board/card games (e.g. sudoku, paciência) fully using touch and stylus input
-  3. In-progress game state (e.g. a partially solved sudoku board) is not lost when navigating away to another app and back
-
-**Plans**: TBD
-**UI hint**: yes
-
-### Phase 10: Security Hardening (Secure Boot + Flash Encryption)
+### Phase 9: Security Hardening (Secure Boot + Flash Encryption)
 
 **Goal**: The gift device is irreversibly locked down before delivery, with no recoverable path back to an unsecured state, and only after every other system has been proven stable.
-**Depends on**: Phase 9 (sequenced last; hard technical dependency is Phase 8's proven OTA rollback — Secure Boot/Flash Encryption must never be attempted before rollback is proven)
+**Depends on**: Phase 8 (sequenced last; hard technical dependency is Phase 8's proven OTA rollback — Secure Boot/Flash Encryption must never be attempted before rollback is proven)
 **Requirements**: SEC-03, SEC-04
 **Success Criteria** (what must be TRUE):
 
@@ -198,20 +203,20 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10
+Phases execute in numeric order: 1 → 2 → 02.1 → 3 → 4 → 5 → 6 → 7 → 8 → 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Shell, Storage API & Simulator-First App Shells | 3/3 | Complete    | 2026-08-27 |
 | 2. Sync Protocol, Security Model & Cloud Backend | 4/4 | Complete    | 2026-08-28 |
+| 02.1. Visual Identity & Games (Simulator-Buildable Scope) *(INSERTED)* | 0/TBD | Not started | - |
 | 3. Hardware Bring-Up — Display, Touch, Boot & Partition Scheme | 0/TBD | Not started | - |
 | 4. Power Management — Battery, PMIC, RTC | 0/TBD | Not started | - |
 | 5. Audio, Storage & Camera Bring-Up | 0/TBD | Not started | - |
 | 6. WiFi Provisioning & Settings | 0/TBD | Not started | - |
 | 7. Cloud Content Sync | 0/TBD | Not started | - |
 | 8. OTA & Concurrent Integration Stress Test | 0/TBD | Not started | - |
-| 9. Visual Identity & Games | 0/TBD | Not started | - |
-| 10. Security Hardening (Secure Boot + Flash Encryption) | 0/TBD | Not started | - |
+| 9. Security Hardening (Secure Boot + Flash Encryption) | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-08-26*
