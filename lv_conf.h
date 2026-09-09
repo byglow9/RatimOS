@@ -47,6 +47,22 @@
 #define LV_FONT_MONTSERRAT_28 1
 #define LV_FONT_DEFAULT &lv_font_montserrat_14
 
+/*
+ * Tier Heading/Display (D-08) -- fontes pixel/bitmap proprias geradas por
+ * tools/convert_title_font.sh (src/ratimos/fonts/ratimos_font_title_16.c
+ * e _20.c). Corpo de texto (LV_FONT_DEFAULT acima) continua em
+ * Montserrat, inalterado.
+ */
+#define LV_FONT_CUSTOM_DECLARE \
+    LV_FONT_DECLARE(ratimos_font_title_16) \
+    LV_FONT_DECLARE(ratimos_font_title_20)
+
+/* lv_font_conv emite bitmaps de glifo comprimidos por padrao (menor
+ * footprint em flash, o que importa no ESP32-S3 real) -- sem isto os
+ * dois fonts acima falham silenciosamente ao desenhar cada glifo
+ * ("Couldn't get the bitmap of a glyph"). */
+#define LV_USE_FONT_COMPRESSED 1
+
 #define LV_USE_LOG 1
 #define LV_LOG_LEVEL LV_LOG_LEVEL_WARN
 #define LV_LOG_PRINTF 1

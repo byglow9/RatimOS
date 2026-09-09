@@ -1,5 +1,6 @@
 #include "status_bar.h"
 #include "theme.h"
+#include "fonts/ratimos_fonts.h"
 
 static lv_obj_t * bar_row_create(lv_obj_t * parent, lv_coord_t height)
 {
@@ -46,6 +47,11 @@ void ratimos_sectionbar_create(lv_obj_t * parent, const char * label)
     lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
     lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
+    /* LV_SYMBOL_OK fica na fonte padrao (Montserrat) -- fontes pixel
+     * convertidas via lv_font_conv nao trazem os glifos de icone da area
+     * de uso privado do LVGL, entao trocar a fonte deste label renderizaria
+     * uma caixa vazia no lugar do check. So' o label de titulo ao lado
+     * adota o tier Heading (D-08). */
     lv_obj_t * dots = lv_label_create(row);
     lv_label_set_text(dots, LV_SYMBOL_OK);
     lv_obj_set_style_text_color(dots, RATIMOS_COLOR_ACCENT, 0);
@@ -53,6 +59,7 @@ void ratimos_sectionbar_create(lv_obj_t * parent, const char * label)
     lv_obj_t * title = lv_label_create(row);
     lv_label_set_text(title, label);
     lv_obj_set_style_text_color(title, RATIMOS_COLOR_TEXT, 0);
+    lv_obj_set_style_text_font(title, &ratimos_font_title_16, 0);
     lv_obj_set_style_pad_left(title, 6, 0);
 }
 

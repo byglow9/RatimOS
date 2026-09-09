@@ -9,3 +9,8 @@ supabase/.temp/
 
 # progresso de jogo escrito em runtime — diferente de assets/mock/ (versionado), nunca commitar
 assets/save/
+
+# TTF fonte de terceiros usada por tools/convert_title_font.sh -- so o C
+# gerado (src/ratimos/fonts/*.c) e commitado, nunca o binario da fonte
+# (D-08 / 02.1-02): baixe de novo com o link no README ao lado.
+assets/fonts/source/
