@@ -1,0 +1,16 @@
+{
+  "symbol_prefix": "ratimos_progress",
+  "images": [
+    { "id": "castle_stage_00_terreno_vazio", "file": "castle_stage_00_terreno_vazio.png", "w": 288, "h": 180 },
+    { "id": "castle_stage_01_alicerce", "file": "castle_stage_01_alicerce.png", "w": 288, "h": 180 },
+    { "id": "castle_stage_02_muros_canteiro", "file": "castle_stage_02_muros_canteiro.png", "w": 288, "h": 180 },
+    { "id": "castle_stage_03_torres_florindo", "file": "castle_stage_03_torres_florindo.png", "w": 288, "h": 180 },
+    { "id": "castle_stage_04_bandeira_jardim_cheio", "file": "castle_stage_04_bandeira_jardim_cheio.png", "w": 288, "h": 180 },
+    { "id": "castle_stage_05_completo", "file": "castle_stage_05_completo.png", "w": 288, "h": 180 },
+    { "id": "unlock_sudoku_roseira", "file": "unlock_sudoku_roseira.png", "w": 32, "h": 32 },
+    { "id": "unlock_paciencia_bandeira", "file": "unlock_paciencia_bandeira.png", "w": 32, "h": 32 },
+    { "id": "unlock_termo_arvore", "file": "unlock_termo_arvore.png", "w": 32, "h": 32 },
+    { "id": "unlock_cruzadinha_fonte", "file": "unlock_cruzadinha_fonte.png", "w": 32, "h": 32 },
+    { "id": "unlock_conexo_portao", "file": "unlock_conexo_portao.png", "w": 32, "h": 32 }
+  ]
+}

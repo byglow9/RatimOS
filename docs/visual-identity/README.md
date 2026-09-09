@@ -28,6 +28,17 @@ below names the reference project this identity is inspired by but not copied fr
 | Heading font, 16px | `src/ratimos/fonts/ratimos_font_title_16.c` | `tools/convert_title_font.sh` (wraps `lv_font_conv@1.5.3`) | *Press Start 2P* by The Press Start 2P Project Authors (Cody "CodeMan38" Boisclair), sourced from the Google Fonts `google/fonts` repository | **OFL** (SIL Open Font License 1.1) — permissive, no attribution obligation beyond retaining the license itself; the source TTF is not committed (`assets/fonts/source/` is gitignored), only the generated bitmap C output |
 | Display font, 20px | `src/ratimos/fonts/ratimos_font_title_20.c` | `tools/convert_title_font.sh` (wraps `lv_font_conv@1.5.3`) | Same as above — same TTF, converted at a second size | **OFL** (SIL Open Font License 1.1) |
 | Body font (Montserrat) | LVGL bundled font (`lv_font_montserrat_14`) | — (bundled with LVGL, unchanged by this phase) | Julieta Ulanovsky / Google Fonts, bundled with the LVGL library this project already depends on | OFL, pre-existing project dependency, not a new asset introduced by this phase |
+| Progression stage `castle_stage_00_terreno_vazio` | `assets/progress/castle_stage_00_terreno_vazio.png` | `tools/generate_progress_art.py` + `tools/convert_images.py` | Procedurally drawn (bare walled grounds, no structure), plan 02.1-03 | Project-owned |
+| Progression stage `castle_stage_01_alicerce` | `assets/progress/castle_stage_01_alicerce.png` | `tools/generate_progress_art.py` + `tools/convert_images.py` | Procedurally drawn (foundation stones laid) | Project-owned |
+| Progression stage `castle_stage_02_muros_canteiro` | `assets/progress/castle_stage_02_muros_canteiro.png` | `tools/generate_progress_art.py` + `tools/convert_images.py` | Procedurally drawn (walls raised, first garden bed) | Project-owned |
+| Progression stage `castle_stage_03_torres_florindo` | `assets/progress/castle_stage_03_torres_florindo.png` | `tools/generate_progress_art.py` + `tools/convert_images.py` | Procedurally drawn (towers raised, first blooms) | Project-owned |
+| Progression stage `castle_stage_04_bandeira_jardim_cheio` | `assets/progress/castle_stage_04_bandeira_jardim_cheio.png` | `tools/generate_progress_art.py` + `tools/convert_images.py` | Procedurally drawn (flag flying, full garden) | Project-owned |
+| Progression stage `castle_stage_05_completo` | `assets/progress/castle_stage_05_completo.png` | `tools/generate_progress_art.py` + `tools/convert_images.py` | Procedurally drawn (complete castle, fullest garden) | Project-owned |
+| Unlock `unlock_sudoku_roseira` | `assets/progress/unlock_sudoku_roseira.png` | `tools/generate_progress_art.py` + `tools/convert_images.py` | Procedurally drawn (rose bush motif), sudoku's exclusive unlock (D-05) | Project-owned |
+| Unlock `unlock_paciencia_bandeira` | `assets/progress/unlock_paciencia_bandeira.png` | `tools/generate_progress_art.py` + `tools/convert_images.py` | Procedurally drawn (pennant motif), paciência's exclusive unlock (D-05) | Project-owned |
+| Unlock `unlock_termo_arvore` | `assets/progress/unlock_termo_arvore.png` | `tools/generate_progress_art.py` + `tools/convert_images.py` | Procedurally drawn (small tree motif), termo's exclusive unlock (D-05) | Project-owned |
+| Unlock `unlock_cruzadinha_fonte` | `assets/progress/unlock_cruzadinha_fonte.png` | `tools/generate_progress_art.py` + `tools/convert_images.py` | Procedurally drawn (fountain motif), cruzadinha's exclusive unlock (D-05) | Project-owned |
+| Unlock `unlock_conexo_portao` | `assets/progress/unlock_conexo_portao.png` | `tools/generate_progress_art.py` + `tools/convert_images.py` | Procedurally drawn (arched gate motif), conexo's exclusive unlock (D-05) | Project-owned |
 
 ## Distinctness vs colombiaOS
 
@@ -82,6 +93,14 @@ python3 tools/convert_images.py --manifest assets/icons/manifest.json \
 # Title font: download Press Start 2P (OFL) into the gitignored assets/fonts/source/
 # directory, then convert both sizes
 tools/convert_title_font.sh assets/fonts/source/PressStart2P-Regular.ttf
+
+# Progression (castelo/jardim) art: regenerate the 11 source PNGs, then recompile
+# the LVGL descriptors -- same convert_images.py pipeline as the icons above,
+# reused unmodified (plan 02.1-03)
+python3 tools/generate_progress_art.py
+python3 tools/convert_images.py --manifest assets/progress/manifest.json \
+    --out-c src/ratimos/progress_images.c --out-h src/ratimos/progress_images.h \
+    --guard RATIMOS_PROGRESS_IMAGES_H
 ```
 
 Both pipelines are deterministic — running either command twice in a row produces

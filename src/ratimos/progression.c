@@ -10,6 +10,8 @@
  */
 #include "progression.h"
 
+#include "progress_images.h"
+
 /* Manifesto v1 (RESEARCH.md, Follow-up Round 2, secao 3): ~30 dias / 6
  * estagios discretos, confirmado por D-06a. Os indices 6..31 permanecem
  * zero-inicializados e inertes -- uma atualizacao futura sobe stage_count e
@@ -105,4 +107,9 @@ const char * ratimos_progression_unlock_asset_id(ratimos_game_kind_t game)
         return NULL;
     }
     return s_unlock_asset_ids[game];
+}
+
+const lv_image_dsc_t * ratimos_progress_image_by_id(const char * asset_id)
+{
+    return ratimos_progress_by_id(asset_id);
 }

@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "lvgl.h"
+
 #include "../storage/content_api.h"
 
 /*
@@ -19,10 +21,11 @@
  *   - `manifest_version` so sobe numa mudanca de LAYOUT que quebre
  *     compatibilidade -- nunca por causa do crescimento de `stage_count`.
  *   - `asset_id` e uma chave de STRING resolvida em tempo de execucao contra
- *     uma tabela de imagens (ratimos_progress_image_by_id(), adicionada pelo
- *     plano 02.1-03 Tarefa 2), nao um ponteiro compilado nem um valor de
- *     enum -- assim uma imagem nova entra junto com sua propria linha de
- *     manifest, sem exigir nenhum switch/case novo em lugar nenhum.
+ *     a tabela de imagens de progressao (funcao de lookup declarada mais
+ *     abaixo neste arquivo, adicionada pelo plano 02.1-03 Tarefa 2), nao um
+ *     ponteiro compilado nem um valor de enum -- assim uma imagem nova entra
+ *     junto com sua propria linha de manifest, sem exigir nenhum switch/case
+ *     novo em lugar nenhum.
  *   - Um save gravado sob um `stage_count` menor continua valido depois de
  *     uma atualizacao: `shared_completions` e sempre comparado contra
  *     `threshold`, nunca "switchado" num numero de estagio fixo -- o
@@ -67,5 +70,13 @@ bool ratimos_progression_is_complete(uint16_t shared_completions);
 /* Id do desbloqueio decorativo exclusivo de `game` (D-05). Faz bounds-check
  * contra RATIMOS_GAME_COUNT antes de indexar; retorna NULL fora do intervalo. */
 const char * ratimos_progression_unlock_asset_id(ratimos_game_kind_t game);
+
+/* Resolve um asset_id do manifesto (estagio ou desbloqueio) para o
+ * descritor de imagem LVGL compilado -- delegacao fina para
+ * ratimos_progress_by_id() (gerado por progress_images.c/.h) para que
+ * chamadores dependam do modulo de progressao, nunca do arquivo gerado
+ * diretamente. Retorna NULL para um id NULL ou sem correspondencia --
+ * quem chama DEVE tratar NULL como "nao renderiza nada", nunca desreferenciar. */
+const lv_image_dsc_t * ratimos_progress_image_by_id(const char * asset_id);
 
 #endif
