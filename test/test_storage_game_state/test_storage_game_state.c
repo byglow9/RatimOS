@@ -30,6 +30,71 @@
 static const char * const CONEXO_SAVE_PATH = "assets/save/conexo.bin";
 static const char * const CONEXO_SAVE_TMP_PATH = "assets/save/conexo.bin.tmp";
 
+/* Espelha o layout PRIVADO de save_record_t em game_state.c (cabecalho fixo
+ * + blob de RATIMOS_GAME_STATE_BLOB_SIZE bytes, sem padding -- travado la
+ * pelo _Static_assert(sizeof(save_record_t) == 16 + BLOB_SIZE)). So existe
+ * aqui para os testes de corrupcao de campo unico do Task 3 (magic errado,
+ * used estourado, game_kind fora do range, checksum quebrado) poderem
+ * escrever um registro do TAMANHO CORRETO com um unico campo adulterado --
+ * mutacao direta de arquivo explicitamente permitida pelo plano so para
+ * este proposito, sempre contra CONEXO_SAVE_PATH. */
+typedef struct {
+    uint32_t magic;
+    uint16_t format_version;
+    uint16_t game_kind;
+    uint32_t used;
+    uint32_t checksum;
+    uint8_t bytes[RATIMOS_GAME_STATE_BLOB_SIZE];
+} test_save_record_t;
+
+_Static_assert(sizeof(test_save_record_t) == 16 + RATIMOS_GAME_STATE_BLOB_SIZE,
+               "test_save_record_t saiu de sincronia com o layout privado de game_state.c");
+
+static void write_valid_conexo_save(void)
+{
+    ratimos_game_state_t state;
+    memset(&state, 0, sizeof(state));
+    state.used = 10;
+    for (size_t i = 0; i < state.used; i++) {
+        state.bytes[i] = (uint8_t) (i + 1);
+    }
+    TEST_ASSERT_TRUE(ratimos_storage_save_game_state(RATIMOS_GAME_CONEXO, &state));
+}
+
+static void read_conexo_record(test_save_record_t * out)
+{
+    FILE * f = fopen(CONEXO_SAVE_PATH, "rb");
+    TEST_ASSERT_NOT_NULL(f);
+    TEST_ASSERT_EQUAL_UINT(sizeof(*out), fread(out, 1, sizeof(*out), f));
+    fclose(f);
+}
+
+static void write_conexo_record(const test_save_record_t * rec)
+{
+    FILE * f = fopen(CONEXO_SAVE_PATH, "wb");
+    TEST_ASSERT_NOT_NULL(f);
+    TEST_ASSERT_EQUAL_UINT(sizeof(*rec), fwrite(rec, 1, sizeof(*rec), f));
+    fclose(f);
+}
+
+static void assert_get_returns_invalid_and_zeroed_for_kind(ratimos_game_kind_t kind)
+{
+    ratimos_game_state_t out;
+    memset(&out, 0xFF, sizeof(out));
+    ratimos_game_state_status_t status = ratimos_storage_get_game_state(kind, &out);
+
+    TEST_ASSERT_EQUAL_INT(RATIMOS_GAME_STATE_INVALID, status);
+    TEST_ASSERT_EQUAL_UINT(0, out.used);
+    for (size_t i = 0; i < RATIMOS_GAME_STATE_BLOB_SIZE; i++) {
+        TEST_ASSERT_EQUAL_UINT8(0, out.bytes[i]);
+    }
+}
+
+static void assert_get_returns_invalid_and_zeroed(void)
+{
+    assert_get_returns_invalid_and_zeroed_for_kind(RATIMOS_GAME_CONEXO);
+}
+
 void setUp(void)
 {
     ratimos_storage_index_game_state();
@@ -212,6 +277,85 @@ void test_record_daily_win_rejects_out_of_range_game(void)
     TEST_ASSERT_EQUAL_UINT16(0, p.shared_completions);
 }
 
+/* ------------------------------------------------------------------------
+ * Task 3 — endurecimento do blob de save: validacao campo a campo (T-02.1-01
+ * DoS / T-02.1-02 Tampering). Cada teste grava um save valido pela API
+ * publica, adultera UM campo especifico via fopen local (tamanho do registro
+ * sempre correto, exceto no teste de truncamento), e confirma que a leitura
+ * rejeita com *out zerado -- nunca um crash, nunca leitura fora dos limites.
+ * ------------------------------------------------------------------------ */
+
+void test_wrong_magic_returns_invalid_and_zeroed(void)
+{
+    write_valid_conexo_save();
+
+    test_save_record_t rec;
+    read_conexo_record(&rec);
+    rec.magic = 0xDEADBEEFu; /* so o magic muda -- resto do registro intacto */
+    write_conexo_record(&rec);
+
+    assert_get_returns_invalid_and_zeroed();
+}
+
+void test_truncated_to_half_length_returns_invalid_and_zeroed(void)
+{
+    write_valid_conexo_save();
+
+    test_save_record_t rec;
+    read_conexo_record(&rec);
+
+    FILE * f = fopen(CONEXO_SAVE_PATH, "wb");
+    TEST_ASSERT_NOT_NULL(f);
+    TEST_ASSERT_EQUAL_UINT(sizeof(rec) / 2, fwrite(&rec, 1, sizeof(rec) / 2, f));
+    fclose(f);
+
+    assert_get_returns_invalid_and_zeroed();
+}
+
+void test_used_field_exceeding_blob_size_returns_invalid_and_zeroed(void)
+{
+    write_valid_conexo_save();
+
+    test_save_record_t rec;
+    read_conexo_record(&rec);
+    rec.used = (uint32_t) RATIMOS_GAME_STATE_BLOB_SIZE + 1u; /* checksum continua batendo com bytes[] */
+    write_conexo_record(&rec);
+
+    assert_get_returns_invalid_and_zeroed();
+}
+
+void test_stored_game_kind_out_of_range_returns_invalid_and_zeroed(void)
+{
+    write_valid_conexo_save();
+
+    test_save_record_t rec;
+    read_conexo_record(&rec);
+    rec.game_kind = (uint16_t) RATIMOS_GAME_COUNT; /* fora do range, nunca deve indexar a tabela */
+    write_conexo_record(&rec);
+
+    assert_get_returns_invalid_and_zeroed();
+}
+
+void test_checksum_mismatch_after_byte_tamper_returns_invalid_and_zeroed(void)
+{
+    write_valid_conexo_save();
+
+    test_save_record_t rec;
+    read_conexo_record(&rec);
+    rec.bytes[0] = (uint8_t) (rec.bytes[0] + 1); /* blob muda, checksum gravado nao acompanha */
+    write_conexo_record(&rec);
+
+    assert_get_returns_invalid_and_zeroed();
+}
+
+void test_get_game_state_rejects_out_of_range_kind_without_touching_disk(void)
+{
+    /* Nenhum save gravado nesta chamada de proposito -- se o bounds-check
+     * nao acontecer ANTES de tocar disco, isso indexaria s_state_paths fora
+     * dos limites em vez de simplesmente devolver INVALID. */
+    assert_get_returns_invalid_and_zeroed_for_kind((ratimos_game_kind_t) RATIMOS_GAME_COUNT);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -225,5 +369,11 @@ int main(void)
     RUN_TEST(test_record_daily_win_increments_and_sets_unlock_flag);
     RUN_TEST(test_record_daily_win_twice_increments_counter_but_flag_stays_one);
     RUN_TEST(test_record_daily_win_rejects_out_of_range_game);
+    RUN_TEST(test_wrong_magic_returns_invalid_and_zeroed);
+    RUN_TEST(test_truncated_to_half_length_returns_invalid_and_zeroed);
+    RUN_TEST(test_used_field_exceeding_blob_size_returns_invalid_and_zeroed);
+    RUN_TEST(test_stored_game_kind_out_of_range_returns_invalid_and_zeroed);
+    RUN_TEST(test_checksum_mismatch_after_byte_tamper_returns_invalid_and_zeroed);
+    RUN_TEST(test_get_game_state_rejects_out_of_range_kind_without_touching_disk);
     return UNITY_END();
 }
