@@ -95,13 +95,13 @@ Plans:
 
 **Note on scope:** this phase significantly exceeds the original "2 simple games" scope, by explicit user choice during discuss-phase (2026-08-28) — it now bundles 5 games plus a new gamification/progression system that the user flagged as needing substantial research. Expect this phase's research and planning to be proportionally larger and likely multi-wave/multi-session.
 
-**Plans:** 8 plans
+**Plans:** 1/8 plans executed
 
 Plans:
 
 **Wave 1**
 
-- [ ] 02.1-01-PLAN.md — Tracer: write-capable game-state storage domain + Conexo end-to-end + shared progression counter (D-01/D-02/D-05/D-09/D-10/D-11)
+- [x] 02.1-01-PLAN.md — Tracer: write-capable game-state storage domain + Conexo end-to-end + shared progression counter (D-01/D-02/D-05/D-09/D-10/D-11)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -243,7 +243,7 @@ Phases execute in numeric order: 1 → 2 → 02.1 → 3 → 4 → 5 → 6 → 7 
 |-------|----------------|--------|-----------|
 | 1. Shell, Storage API & Simulator-First App Shells | 3/3 | Complete    | 2026-08-27 |
 | 2. Sync Protocol, Security Model & Cloud Backend | 4/4 | Complete    | 2026-08-28 |
-| 02.1. Visual Identity & Games (Simulator-Buildable Scope) *(INSERTED)* | 0/8 | Not started | - |
+| 02.1. Visual Identity & Games (Simulator-Buildable Scope) *(INSERTED)* | 1/8 | In Progress|  |
 | 3. Hardware Bring-Up — Display, Touch, Boot & Partition Scheme | 0/TBD | Not started | - |
 | 4. Power Management — Battery, PMIC, RTC | 0/TBD | Not started | - |
 | 5. Audio, Storage & Camera Bring-Up | 0/TBD | Not started | - |

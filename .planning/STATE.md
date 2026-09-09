@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02.1
 current_phase_name: Visual Identity & Games (Simulator-Buildable Scope)
 status: executing
-stopped_at: Phase 02.1 UI-SPEC approved
-last_updated: "2026-09-09T13:23:31.207Z"
-last_activity: 2026-08-28
-last_activity_desc: Phase 02 execution started
+stopped_at: Completed 02.1-01-PLAN.md
+last_updated: "2026-09-09T18:15:49.318Z"
+last_activity: 2026-09-09
+last_activity_desc: Phase 02.1 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 15
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-26)
 
 **Core value:** O dispositivo tem que funcionar de verdade no dia a dia dela — offline, com as 5 seções estáveis — e continuar "vivo" depois de entregue, recebendo conteúdo novo e atualizações remotamente.
-**Current focus:** Phase 02 — sync-protocol-security-model-cloud-backend
+**Current focus:** Phase 02.1 — Visual Identity & Games (Simulator-Buildable Scope)
 
 ## Current Position
 
-Phase: 02.1 — Visual Identity & Games (Simulator-Buildable Scope)
-Plan: Not started
+Phase: 02.1 (Visual Identity & Games (Simulator-Buildable Scope)) — EXECUTING
+Plan: 2 of 8
 Status: Ready to execute
-Last activity: 2026-08-28 — Phase 02 complete; Phase 02.1 inserted ahead of Phase 3 (games/visual identity need no physical hardware, unlike Phases 3-8); old Phase 9 removed (scope absorbed by 02.1), old Phase 10 renumbered to Phase 9
+Last activity: 2026-09-09 — Phase 02.1 execution started
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 53%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [██████████] 100%
 | Phase 02 P02 | 10min | 3 tasks | 5 files |
 | Phase 02 P03 | 9min | 2 tasks | 4 files |
 | Phase 02 P04 | 5min | 3 tasks | 1 files |
+| Phase 02.1 P01 | 50min | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,10 @@ Recent decisions affecting current work:
 - [Phase ?]: 02-03: Rule 1 auto-fix -- reworded sync_client.h's doc comment to avoid naming cJSON directly after it accidentally failed the plan's own grep-based cJSON-confinement acceptance check
 - [Phase ?]: 02-04: RLS live-proof came back as a genuine 42501 permission-denied error on all 3 tables (devices/content_items/ota_releases) for the anon publishable-key role, not just an empty [] array -- stronger than either pre-approved acceptance outcome required
 - [Phase ?]: 02-04: 'Another device's token' ROADMAP criterion tested via a never-registered-but-syntactically-valid token literal (assumption_delta, D-12 single-device architecture preserved) rather than provisioning a second real device
+- [Phase ?]: 02.1-01: game_state.c is the first write-capable Storage/Content API domain — atomic temp+rename writes, validate-every-field-before-trust reads, clamped/normalized progression (T-02.1-01/02 mitigated)
+- [Phase ?]: 02.1-01: ratimos_conexo_start() internally preserves the puzzle_history ring buffer across its own state reset so callers never manually save/restore it across a 'novo jogo' or corrupted-save recovery
+- [Phase ?]: 02.1-01: daily-win recording lives in a standalone LVGL-free ratimos_conexo_record_win_if_needed() engine function (not inlined in the screen callback) so the once-only guard is directly unit-testable
+- [Phase ?]: 02.1-01: two unrun-verify items logged to WINDOWS.md — the plan's interactive simulator tap-through acceptance criteria could not be executed (no GUI input-simulation tooling in this sandbox); substituted with 29 passing unit tests + a headless no-crash smoke run, needs human UAT before phase close
 
 ### Pending Todos
 
@@ -117,6 +122,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-28T15:42:22.093Z
-Stopped at: Phase 02.1 UI-SPEC approved
-Resume file: .planning/phases/02.1-visual-identity-games/02.1-UI-SPEC.md
+Last session: 2026-09-09T18:15:49.302Z
+Stopped at: Completed 02.1-01-PLAN.md
+Resume file: None
