@@ -98,7 +98,12 @@ void ratimos_conexo_start(ratimos_conexo_state_t * state, uint16_t puzzle_index,
         return;
     }
 
+    /* O anel de historico precisa sobreviver a este reset -- e ele que faz
+     * "novo jogo" (e a primeira vez apos um save invalido) evitar repetir o
+     * quebra-cabeca anterior. Todo o resto do tabuleiro comeca zerado. */
+    ratimos_puzzle_history_t history = state->history;
     memset(state, 0, sizeof(*state));
+    state->history = history;
     state->puzzle_index = puzzle_index;
 
     ratimos_conexo_puzzle_t puzzle;
@@ -185,6 +190,23 @@ ratimos_conexo_submit_t ratimos_conexo_submit(ratimos_conexo_state_t * state,
     return (best == 3) ? RATIMOS_CONEXO_SUBMIT_ONE_AWAY : RATIMOS_CONEXO_SUBMIT_WRONG;
 }
 
+/* Chama a Storage API diretamente (PROGRESSAO-01) -- nao depende de LVGL,
+ * entao a suite Unity testa a regra "conta uma unica vez" sem precisar de
+ * tela nenhuma. Uma derrota (finished == 2) nunca soma o castelo. */
+bool ratimos_conexo_record_win_if_needed(ratimos_conexo_state_t * state)
+{
+    if (!state || state->finished != 1 || state->daily_win_recorded) {
+        return false;
+    }
+
+    if (!ratimos_storage_record_daily_win(RATIMOS_GAME_CONEXO)) {
+        return false;
+    }
+
+    state->daily_win_recorded = 1;
+    return true;
+}
+
 /* ------------------------------------------------------------------------
  * Tela (LVGL) — cache-once, igual a jogos_app.c / cartas_app.c.
  *
@@ -209,7 +231,9 @@ static lv_obj_t * s_grid = NULL;
 static lv_obj_t * s_tiles[CONEXO_TILE_COUNT];
 static lv_obj_t * s_tile_labels[CONEXO_TILE_COUNT];
 static lv_obj_t * s_banner_label = NULL;
+static lv_obj_t * s_castle_label = NULL;
 static lv_obj_t * s_mistakes_label = NULL;
+static lv_obj_t * s_confirm_overlay = NULL;
 
 static ratimos_conexo_state_t s_state;
 static ratimos_conexo_puzzle_t s_puzzle;
@@ -294,12 +318,15 @@ static void render_board(void)
         lv_label_set_text(s_banner_label, "categorias completas!");
         lv_obj_set_style_text_color(s_banner_label, RATIMOS_COLOR_TEXT, 0);
         lv_obj_clear_flag(s_banner_label, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
     } else if (s_state.finished == 2) {
         lv_label_set_text(s_banner_label, "quase la - aqui estao as categorias");
         lv_obj_set_style_text_color(s_banner_label, RATIMOS_COLOR_TEXT_MUTED, 0);
         lv_obj_clear_flag(s_banner_label, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
     } else {
         lv_obj_add_flag(s_banner_label, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
     }
 }
 
@@ -338,6 +365,9 @@ static void submit_clicked_cb(lv_event_t * e)
 {
     (void) e;
     ratimos_conexo_submit(&s_state, &s_puzzle);
+    /* Vitoria (JOGOS-05) soma o castelo (PROGRESSAO-01) exatamente uma vez
+     * por board -- o guard fica dentro da propria funcao do motor. */
+    ratimos_conexo_record_win_if_needed(&s_state);
     persist_state();
     render_board();
 }
@@ -353,10 +383,46 @@ static void shuffle_clicked_cb(lv_event_t * e)
     render_board();
 }
 
-static lv_obj_t * make_pill(lv_obj_t * parent, const char * text, lv_color_t bg, lv_event_cb_t cb)
+/* Sorteia o proximo quebra-cabeca evitando o historico recente (D-11),
+ * inicia o motor preservando esse historico e persiste o board novo na
+ * hora. Usado tanto pelo primeiro play quanto pelo "novo jogo" manual. */
+static void start_new_board(void)
+{
+    size_t index = ratimos_puzzle_pick(&s_state.history, ratimos_conexo_puzzle_count(),
+                                       ratimos_daily_seed(RATIMOS_GAME_CONEXO));
+    ratimos_conexo_get_puzzle(index, &s_puzzle);
+    ratimos_conexo_start(&s_state, (uint16_t) index, ratimos_daily_seed(RATIMOS_GAME_CONEXO));
+    ratimos_puzzle_history_push(&s_state.history, (uint16_t) index);
+    persist_state();
+}
+
+static void confirm_cancel_cb(lv_event_t * e)
+{
+    (void) e;
+    lv_obj_add_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
+}
+
+static void confirm_restart_cb(lv_event_t * e)
+{
+    (void) e;
+    lv_obj_add_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
+    /* So apaga o TABULEIRO salvo -- a progressao ja conquistada nunca
+     * regride por causa de um reset manual (proibicao do plano). */
+    ratimos_storage_clear_game_state(RATIMOS_GAME_CONEXO);
+    start_new_board();
+    render_board();
+}
+
+static void novo_jogo_clicked_cb(lv_event_t * e)
+{
+    (void) e;
+    lv_obj_clear_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
+}
+
+static lv_obj_t * make_pill_w(lv_obj_t * parent, const char * text, lv_color_t bg, lv_event_cb_t cb, lv_coord_t width)
 {
     lv_obj_t * pill = ratimos_panel_create(parent);
-    lv_obj_set_size(pill, PILL_W, PILL_H);
+    lv_obj_set_size(pill, width, PILL_H);
     lv_obj_set_style_pad_all(pill, 0, 0);
     lv_obj_set_style_bg_color(pill, bg, 0);
     lv_obj_set_style_radius(pill, PILL_H / 2, 0);
@@ -370,6 +436,11 @@ static lv_obj_t * make_pill(lv_obj_t * parent, const char * text, lv_color_t bg,
     lv_obj_center(label);
 
     return pill;
+}
+
+static lv_obj_t * make_pill(lv_obj_t * parent, const char * text, lv_color_t bg, lv_event_cb_t cb)
+{
+    return make_pill_w(parent, text, bg, cb, PILL_W);
 }
 
 /* Decide o estado inicial: restaura um save valido, comeca limpo quando nao
@@ -389,11 +460,7 @@ static bool load_or_start_state(void)
         status = RATIMOS_GAME_STATE_INVALID; /* tamanho do blob nao bate com esta versao */
     }
 
-    size_t index = ratimos_puzzle_pick(NULL, ratimos_conexo_puzzle_count(),
-                                       ratimos_daily_seed(RATIMOS_GAME_CONEXO));
-    ratimos_conexo_get_puzzle(index, &s_puzzle);
-    ratimos_conexo_start(&s_state, (uint16_t) index, ratimos_daily_seed(RATIMOS_GAME_CONEXO));
-    persist_state();
+    start_new_board();
 
     return status == RATIMOS_GAME_STATE_INVALID;
 }
@@ -477,6 +544,15 @@ static lv_obj_t * build_conexo_screen(void)
     lv_obj_set_style_text_align(s_banner_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_add_flag(s_banner_label, LV_OBJ_FLAG_HIDDEN);
 
+    /* Linha "+1 no castelo" (PROGRESSAO-01): so aparece junto do banner de
+     * vitoria, nunca no banner de derrota/revelacao. */
+    s_castle_label = lv_label_create(shell.content);
+    lv_label_set_text(s_castle_label, "+1 no castelo");
+    lv_obj_set_width(s_castle_label, lv_pct(100));
+    lv_obj_set_style_text_align(s_castle_label, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_color(s_castle_label, RATIMOS_COLOR_TEXT_MUTED, 0);
+    lv_obj_add_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
+
     s_mistakes_label = lv_label_create(shell.content);
     lv_label_set_text(s_mistakes_label, "erros: 0/4");
     lv_obj_set_style_text_color(s_mistakes_label, RATIMOS_COLOR_TEXT_MUTED, 0);
@@ -485,12 +561,47 @@ static lv_obj_t * build_conexo_screen(void)
     lv_obj_remove_style_all(actions);
     lv_obj_set_width(actions, lv_pct(100));
     lv_obj_set_height(actions, LV_SIZE_CONTENT);
-    lv_obj_set_flex_flow(actions, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_flow(actions, LV_FLEX_FLOW_ROW_WRAP);
+    lv_obj_set_style_pad_row(actions, 8, 0);
     lv_obj_set_style_pad_column(actions, 8, 0);
     lv_obj_clear_flag(actions, LV_OBJ_FLAG_SCROLLABLE);
 
     make_pill(actions, "embaralhar", RATIMOS_COLOR_PANEL, shuffle_clicked_cb);
     make_pill(actions, "enviar", RATIMOS_COLOR_ACCENT, submit_clicked_cb);
+    make_pill(actions, "novo jogo", RATIMOS_COLOR_PANEL, novo_jogo_clicked_cb);
+
+    /* Dialogo de confirmacao destrutiva (Copywriting Contract): montado uma
+     * unica vez, escondido ate "novo jogo" ser tocado. Filho de shell.screen
+     * (nao de shell.content) para flutuar por cima do resto da tela. */
+    s_confirm_overlay = ratimos_panel_create(shell.screen);
+    lv_obj_set_size(s_confirm_overlay, 260, 150);
+    lv_obj_align(s_confirm_overlay, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_flex_flow(s_confirm_overlay, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(s_confirm_overlay, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(s_confirm_overlay, 12, 0);
+    lv_obj_clear_flag(s_confirm_overlay, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(s_confirm_overlay);
+
+    lv_obj_t * confirm_msg = lv_label_create(s_confirm_overlay);
+    lv_label_set_text(confirm_msg,
+                      "comecar de novo? seu progresso atual nesse jogo sera perdido.");
+    lv_obj_set_width(confirm_msg, lv_pct(100));
+    lv_label_set_long_mode(confirm_msg, LV_LABEL_LONG_MODE_WRAP);
+    lv_obj_set_style_text_align(confirm_msg, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_color(confirm_msg, RATIMOS_COLOR_TEXT, 0);
+
+    lv_obj_t * confirm_actions = lv_obj_create(s_confirm_overlay);
+    lv_obj_remove_style_all(confirm_actions);
+    lv_obj_set_width(confirm_actions, lv_pct(100));
+    lv_obj_set_height(confirm_actions, LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(confirm_actions, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(confirm_actions, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(confirm_actions, 8, 0);
+    lv_obj_clear_flag(confirm_actions, LV_OBJ_FLAG_SCROLLABLE);
+
+    make_pill_w(confirm_actions, "cancelar", RATIMOS_COLOR_PANEL, confirm_cancel_cb, 100);
+    make_pill_w(confirm_actions, "recomecar", RATIMOS_COLOR_ACCENT, confirm_restart_cb, 100);
 
     render_board();
 

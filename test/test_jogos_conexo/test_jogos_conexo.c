@@ -11,8 +11,22 @@
 
 #include "ratimos/apps/jogos/conexo.h"
 #include "ratimos/apps/jogos/conexo_puzzles.h"
+#include "storage/content_api.h"
 
-void setUp(void) {}
+/* Task 2 acrescenta ratimos_conexo_record_win_if_needed(), que chama a
+ * Storage API de verdade -- por isso setUp() agora reseta o dominio
+ * game_state exatamente como test_storage_game_state.c faz, para nao vazar
+ * progressao/board de um teste pro outro. */
+void setUp(void)
+{
+    ratimos_storage_index_game_state();
+    ratimos_storage_clear_game_state(RATIMOS_GAME_CONEXO);
+
+    ratimos_progression_state_t zero;
+    memset(&zero, 0, sizeof(zero));
+    ratimos_storage_save_progression(&zero);
+}
+
 void tearDown(void) {}
 
 static void load_puzzle(ratimos_conexo_puzzle_t * out)
@@ -237,6 +251,144 @@ void test_shuffle_preserves_group_membership(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(before, after_shuffle, 16);
 }
 
+/* ------------------------------------------------------------------------
+ * Task 2 — banco de 5 quebra-cabecas, selecao sem repeticao, vitoria/derrota
+ * e progressao diaria.
+ * ------------------------------------------------------------------------ */
+
+void test_puzzle_count_is_5(void)
+{
+    TEST_ASSERT_EQUAL_UINT(5, ratimos_conexo_puzzle_count());
+}
+
+void test_every_puzzle_has_four_distinct_nonempty_words_per_group(void)
+{
+    size_t count = ratimos_conexo_puzzle_count();
+
+    for (size_t p = 0; p < count; p++) {
+        ratimos_conexo_puzzle_t puzzle;
+        TEST_ASSERT_TRUE(ratimos_conexo_get_puzzle(p, &puzzle));
+
+        for (int g = 0; g < 4; g++) {
+            for (int w = 0; w < 4; w++) {
+                TEST_ASSERT_TRUE(puzzle.groups[g].words[w][0] != '\0');
+                for (int w2 = w + 1; w2 < 4; w2++) {
+                    TEST_ASSERT_TRUE(strcmp(puzzle.groups[g].words[w], puzzle.groups[g].words[w2]) != 0);
+                }
+            }
+        }
+    }
+}
+
+void test_puzzle_pick_avoids_history_loaded_index(void)
+{
+    ratimos_puzzle_history_t history;
+    memset(&history, 0, sizeof(history));
+
+    size_t count = ratimos_conexo_puzzle_count();
+    TEST_ASSERT_TRUE(count >= 4);
+
+    /* Marca metade do banco como recente (indices 0 e 1) -- deixa candidatos
+     * livres de sobra (>=2 de 5) para que 16 tentativas praticamente nunca
+     * esgotem sem achar um, evitando um teste estatisticamente franzino.
+     * `ratimos_puzzle_pick` so cai no fallback de repetir apos esgotar as
+     * tentativas (limite de escala documentado em puzzle_history.h) -- essa
+     * franja nao e o que este teste quer exercitar. */
+    ratimos_puzzle_history_push(&history, 0);
+    ratimos_puzzle_history_push(&history, 1);
+
+    for (uint32_t seed = 1; seed <= 20; seed++) {
+        size_t picked = ratimos_puzzle_pick(&history, count, seed);
+        TEST_ASSERT_TRUE(picked != 0 && picked != 1);
+    }
+}
+
+static void solve_all_groups(ratimos_conexo_state_t * state, const ratimos_conexo_puzzle_t * puzzle)
+{
+    for (uint8_t g = 0; g < 4; g++) {
+        uint8_t slots[4];
+        slots_of_group(state, g, slots);
+        state->selected_count = 4;
+        memcpy(state->selected, slots, 4);
+        ratimos_conexo_submit_t r = ratimos_conexo_submit(state, puzzle);
+        TEST_ASSERT_EQUAL_INT(RATIMOS_CONEXO_SUBMIT_CORRECT, r);
+    }
+}
+
+void test_full_game_win_sets_finished_one_and_records_win(void)
+{
+    ratimos_conexo_puzzle_t puzzle;
+    load_puzzle(&puzzle);
+
+    ratimos_conexo_state_t state;
+    ratimos_conexo_start(&state, 0, 314);
+    solve_all_groups(&state, &puzzle);
+
+    TEST_ASSERT_EQUAL_UINT8(1, state.finished);
+    TEST_ASSERT_EQUAL_UINT8(0, state.mistakes);
+    TEST_ASSERT_EQUAL_UINT8(0, state.daily_win_recorded); /* ainda nao contado */
+
+    ratimos_progression_state_t before;
+    TEST_ASSERT_TRUE(ratimos_storage_get_progression(&before));
+
+    TEST_ASSERT_TRUE(ratimos_conexo_record_win_if_needed(&state));
+    TEST_ASSERT_EQUAL_UINT8(1, state.daily_win_recorded);
+
+    ratimos_progression_state_t after;
+    TEST_ASSERT_TRUE(ratimos_storage_get_progression(&after));
+    TEST_ASSERT_EQUAL_UINT16((uint16_t) (before.shared_completions + 1), after.shared_completions);
+    TEST_ASSERT_EQUAL_UINT8(1, after.game_exclusive_unlocked[RATIMOS_GAME_CONEXO]);
+}
+
+void test_record_win_twice_increments_shared_completions_by_one_total(void)
+{
+    ratimos_conexo_puzzle_t puzzle;
+    load_puzzle(&puzzle);
+
+    ratimos_conexo_state_t state;
+    ratimos_conexo_start(&state, 0, 271);
+    solve_all_groups(&state, &puzzle);
+    TEST_ASSERT_EQUAL_UINT8(1, state.finished);
+
+    TEST_ASSERT_TRUE(ratimos_conexo_record_win_if_needed(&state));
+    /* Reentrar numa tela ja vencida (segunda chamada) nunca soma de novo. */
+    TEST_ASSERT_FALSE(ratimos_conexo_record_win_if_needed(&state));
+
+    ratimos_progression_state_t p;
+    TEST_ASSERT_TRUE(ratimos_storage_get_progression(&p));
+    TEST_ASSERT_EQUAL_UINT16(1, p.shared_completions); /* setUp zera antes de cada teste */
+}
+
+void test_loss_does_not_record_daily_win(void)
+{
+    ratimos_conexo_puzzle_t puzzle;
+    load_puzzle(&puzzle);
+
+    ratimos_conexo_state_t state;
+    ratimos_conexo_start(&state, 0, 161);
+
+    uint8_t g0[4];
+    uint8_t g1[4];
+    slots_of_group(&state, 0, g0);
+    slots_of_group(&state, 1, g1);
+
+    for (int i = 0; i < RATIMOS_CONEXO_MAX_MISTAKES; i++) {
+        state.selected_count = 4;
+        state.selected[0] = g0[0];
+        state.selected[1] = g0[1];
+        state.selected[2] = g1[0];
+        state.selected[3] = g1[1];
+        ratimos_conexo_submit(&state, &puzzle);
+    }
+
+    TEST_ASSERT_EQUAL_UINT8(2, state.finished);
+    TEST_ASSERT_FALSE(ratimos_conexo_record_win_if_needed(&state));
+
+    ratimos_progression_state_t p;
+    TEST_ASSERT_TRUE(ratimos_storage_get_progression(&p));
+    TEST_ASSERT_EQUAL_UINT16(0, p.shared_completions);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -247,5 +399,11 @@ int main(void)
     RUN_TEST(test_mistake_ceiling_reaches_finished_revealed_and_stops_recording_wins);
     RUN_TEST(test_solved_order_preserved_across_serialize_deserialize_round_trip);
     RUN_TEST(test_shuffle_preserves_group_membership);
+    RUN_TEST(test_puzzle_count_is_5);
+    RUN_TEST(test_every_puzzle_has_four_distinct_nonempty_words_per_group);
+    RUN_TEST(test_puzzle_pick_avoids_history_loaded_index);
+    RUN_TEST(test_full_game_win_sets_finished_one_and_records_win);
+    RUN_TEST(test_record_win_twice_increments_shared_completions_by_one_total);
+    RUN_TEST(test_loss_does_not_record_daily_win);
     return UNITY_END();
 }

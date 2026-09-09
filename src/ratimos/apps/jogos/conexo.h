@@ -1,6 +1,7 @@
 #ifndef RATIMOS_JOGOS_CONEXO_H
 #define RATIMOS_JOGOS_CONEXO_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "lvgl.h"
@@ -37,6 +38,15 @@ typedef struct {
 
     uint8_t mistakes;
     uint8_t finished;                 /* 0 jogando / 1 venceu / 2 revelado */
+
+    /* Evita contar a vitoria diaria duas vezes ao reentrar numa tela ja
+     * vencida (persistido, entao sobrevive a um relaunch). */
+    uint8_t daily_win_recorded;
+
+    /* Anel de quebra-cabecas recentes (compartilhado com outros jogos de
+     * banco): sobrevive ao save/restore para que "novo jogo" nao repita o
+     * mesmo quebra-cabeca de imediato. */
+    ratimos_puzzle_history_t history;
 } ratimos_conexo_state_t;
 
 typedef enum {
@@ -54,6 +64,14 @@ ratimos_conexo_submit_t ratimos_conexo_submit(ratimos_conexo_state_t * state,
 /* Permuta apenas os slots de grupos ainda NAO resolvidos. Nunca muda a que
  * grupo uma palavra pertence. */
 void ratimos_conexo_shuffle(ratimos_conexo_state_t * state, uint32_t seed);
+
+/* Registra a vitoria diaria (PROGRESSAO-01) EXATAMENTE uma vez por board
+ * vencido: no-op (retorna false) se o jogo ainda nao foi vencido, se ja foi
+ * revelado por derrota, ou se essa vitoria ja tinha sido contada antes --
+ * reentrar numa tela ja vencida nunca soma o castelo de novo. Chama a
+ * Storage API diretamente (sem LVGL), entao e testavel pela suite Unity sem
+ * precisar renderizar nada. */
+bool ratimos_conexo_record_win_if_needed(ratimos_conexo_state_t * state);
 
 /* Tela do jogo (cache-once, igual a jogos_app.c). */
 void ratimos_conexo_show(lv_event_t * e);

@@ -19,6 +19,42 @@ static const ratimos_conexo_puzzle_t s_puzzles[] = {
             { "coisas que voam", RATIMOS_CONEXO_DIFF_PURPLE, { "pipa", "balao", "abelha", "aviao" } },
         },
     },
+    {
+        "conexo-002",
+        {
+            { "animais de estimacao", RATIMOS_CONEXO_DIFF_YELLOW, { "cachorro", "gato", "hamster", "coelho" } },
+            { "sentimentos", RATIMOS_CONEXO_DIFF_GREEN, { "alegria", "saudade", "carinho", "ternura" } },
+            { "partes da casa", RATIMOS_CONEXO_DIFF_BLUE, { "cozinha", "quintal", "varanda", "quarto" } },
+            { "doces", RATIMOS_CONEXO_DIFF_PURPLE, { "brigadeiro", "beijinho", "pudim", "sorvete" } },
+        },
+    },
+    {
+        "conexo-003",
+        {
+            { "clima", RATIMOS_CONEXO_DIFF_YELLOW, { "chuva", "sol", "vento", "neve" } },
+            { "estacoes do ano", RATIMOS_CONEXO_DIFF_GREEN, { "verao", "outono", "inverno", "primavera" } },
+            { "corpo celeste", RATIMOS_CONEXO_DIFF_BLUE, { "lua", "estrela", "planeta", "cometa" } },
+            { "musica", RATIMOS_CONEXO_DIFF_PURPLE, { "melodia", "ritmo", "acorde", "refrao" } },
+        },
+    },
+    {
+        "conexo-004",
+        {
+            { "esportes", RATIMOS_CONEXO_DIFF_YELLOW, { "futebol", "natacao", "corrida", "ciclismo" } },
+            { "profissoes", RATIMOS_CONEXO_DIFF_GREEN, { "medico", "professor", "engenheiro", "artista" } },
+            { "transportes", RATIMOS_CONEXO_DIFF_BLUE, { "carro", "onibus", "bicicleta", "trem" } },
+            { "planetas", RATIMOS_CONEXO_DIFF_PURPLE, { "mercurio", "venus", "marte", "jupiter" } },
+        },
+    },
+    {
+        "conexo-005",
+        {
+            { "sobremesas", RATIMOS_CONEXO_DIFF_YELLOW, { "pudim", "sorvete", "torta", "bolo" } },
+            { "partes do dia", RATIMOS_CONEXO_DIFF_GREEN, { "manha", "tarde", "noite", "madrugada" } },
+            { "moveis", RATIMOS_CONEXO_DIFF_BLUE, { "sofa", "cama", "mesa", "cadeira" } },
+            { "sentimentos bons", RATIMOS_CONEXO_DIFF_PURPLE, { "gratidao", "esperanca", "coragem", "alegria" } },
+        },
+    },
 };
 
 size_t ratimos_conexo_puzzle_count(void)
