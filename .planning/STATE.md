@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02.1
 current_phase_name: Visual Identity & Games (Simulator-Buildable Scope)
 status: executing
-stopped_at: Completed 02.1-02-PLAN.md
-last_updated: "2026-09-09T18:47:01.484Z"
+stopped_at: Completed 02.1-03-PLAN.md
+last_updated: "2026-09-09T19:25:44.993Z"
 last_activity: 2026-09-09
 last_activity_desc: Phase 02.1 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 15
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-26)
 ## Current Position
 
 Phase: 02.1 (Visual Identity & Games (Simulator-Buildable Scope)) — EXECUTING
-Plan: 3 of 8
+Plan: 4 of 8
 Status: Ready to execute
 Last activity: 2026-09-09 — Phase 02.1 execution started
 
-Progress: [██████░░░░] 60%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [██████░░░░] 60%
 | Phase 02 P04 | 5min | 3 tasks | 1 files |
 | Phase 02.1 P01 | 50min | 3 tasks | 18 files |
 | Phase 02.1 P02 | 50min | 3 tasks | 22 files |
+| Phase 02.1 P03 | 65min | 3 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 02.1-02: Icon art authored via a committed procedural script (tools/generate_icon_art.py) instead of an external pixel-art editor (Piskel/Aseprite) -- stronger provenance auditability
 - [Phase ?]: 02.1-02: Press Start 2P locked immediately -- lv_font_conv's first run confirmed full PT-BR accented-glyph coverage (24/24 symbols, 0 missing-glyph warnings), Pixel Operator fallback never needed
 - [Phase ?]: 02.1-02: colombiaOS is named exactly once in the whole repo (docs/visual-identity/README.md's Distinctness section) -- every other file uses generic wording to satisfy the plan's zero-hits-elsewhere acceptance gate
+- [Phase ?]: 02.1-03: asset_id[32] (RESEARCH's proposed size) bumped to asset_id[40] before first commit -- the plan's own stage-04 id (37 chars) did not fit in 32 bytes
+- [Phase ?]: 02.1-03: castelo_app.c is the first cache-once screen that must REFRESH on every visit (not just cache) since its content genuinely changes as the shared counter grows
+- [Phase ?]: 02.1-03: per-game exclusive unlock motifs (D-05, Claude's discretion) -- rose bush/pennant/small tree/fountain/gate for sudoku/paciencia/termo/cruzadinha/conexo
 
 ### Pending Todos
 
@@ -126,6 +130,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-09T18:47:01.468Z
-Stopped at: Completed 02.1-02-PLAN.md
+Last session: 2026-09-09T19:25:44.977Z
+Stopped at: Completed 02.1-03-PLAN.md
 Resume file: None
