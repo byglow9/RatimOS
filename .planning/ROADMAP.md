@@ -95,11 +95,41 @@ Plans:
 
 **Note on scope:** this phase significantly exceeds the original "2 simple games" scope, by explicit user choice during discuss-phase (2026-08-28) — it now bundles 5 games plus a new gamification/progression system that the user flagged as needing substantial research. Expect this phase's research and planning to be proportionally larger and likely multi-wave/multi-session.
 
-**Plans:** 0 plans
+**Plans:** 8 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 02.1 to break down)
+**Wave 1**
+
+- [ ] 02.1-01-PLAN.md — Tracer: write-capable game-state storage domain + Conexo end-to-end + shared progression counter (D-01/D-02/D-05/D-09/D-10/D-11)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 02.1-02-PLAN.md — Visual identity: pixel-art icon pipeline, two-tier typography, provenance/distinctness record (D-07/D-08)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 02.1-03-PLAN.md — Progression: additive-safe stage manifest, garden-inside-castle artwork, castelo screen + home tile (D-03/D-04/D-05/D-06/D-06a)
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 02.1-04-PLAN.md — Sudoku: unique-solution generator, 3 difficulties + daily, board UI, persistence
+
+**Wave 5** *(blocked on Wave 4)*
+
+- [ ] 02.1-05-PLAN.md — Paciência (Klondike): per-move-type legality engine, tap-to-move screen, persistence
+
+**Wave 6** *(blocked on Wave 5)*
+
+- [ ] 02.1-06-PLAN.md — Termo/Dueto/Quarteto: PT-BR word curation, duplicate-safe feedback, 3-mode screen (D-01a/D-01b)
+
+**Wave 7** *(blocked on Wave 6)*
+
+- [ ] 02.1-07-PLAN.md — Cruzadinha: crossword generator tooling, hand-authored puzzle bank, numbered-clue screen (D-11/D-12)
+
+**Wave 8** *(blocked on Wave 7)*
+
+- [ ] 02.1-08-PLAN.md — Launcher polish (per-game icons, jogar/continuar) + phase-gate verification of all 5 success criteria
 
 ### Phase 3: Hardware Bring-Up — Display, Touch, Boot & Partition Scheme
 
@@ -213,7 +243,7 @@ Phases execute in numeric order: 1 → 2 → 02.1 → 3 → 4 → 5 → 6 → 7 
 |-------|----------------|--------|-----------|
 | 1. Shell, Storage API & Simulator-First App Shells | 3/3 | Complete    | 2026-08-27 |
 | 2. Sync Protocol, Security Model & Cloud Backend | 4/4 | Complete    | 2026-08-28 |
-| 02.1. Visual Identity & Games (Simulator-Buildable Scope) *(INSERTED)* | 0/TBD | Not started | - |
+| 02.1. Visual Identity & Games (Simulator-Buildable Scope) *(INSERTED)* | 0/8 | Not started | - |
 | 3. Hardware Bring-Up — Display, Touch, Boot & Partition Scheme | 0/TBD | Not started | - |
 | 4. Power Management — Battery, PMIC, RTC | 0/TBD | Not started | - |
 | 5. Audio, Storage & Camera Bring-Up | 0/TBD | Not started | - |
