@@ -1,0 +1,16 @@
+{
+  "symbol_prefix": "ratimos_icon",
+  "images": [
+    { "id": "home_jogos", "file": "home_jogos.png", "w": 32, "h": 32 },
+    { "id": "home_musica", "file": "home_musica.png", "w": 32, "h": 32 },
+    { "id": "home_album", "file": "home_album.png", "w": 32, "h": 32 },
+    { "id": "home_cartas", "file": "home_cartas.png", "w": 32, "h": 32 },
+    { "id": "home_config", "file": "home_config.png", "w": 32, "h": 32 },
+    { "id": "home_castelo", "file": "home_castelo.png", "w": 32, "h": 32 },
+    { "id": "game_sudoku", "file": "game_sudoku.png", "w": 32, "h": 32 },
+    { "id": "game_paciencia", "file": "game_paciencia.png", "w": 32, "h": 32 },
+    { "id": "game_termo", "file": "game_termo.png", "w": 32, "h": 32 },
+    { "id": "game_cruzadinha", "file": "game_cruzadinha.png", "w": 32, "h": 32 },
+    { "id": "game_conexo", "file": "game_conexo.png", "w": 32, "h": 32 }
+  ]
+}
