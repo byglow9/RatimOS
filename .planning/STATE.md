@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02.1
 current_phase_name: Visual Identity & Games (Simulator-Buildable Scope)
 status: executing
-stopped_at: Completed 02.1-03-PLAN.md
-last_updated: "2026-09-09T19:25:44.993Z"
+stopped_at: Completed 02.1-04-PLAN.md
+last_updated: "2026-09-09T20:12:02.856Z"
 last_activity: 2026-09-09
 last_activity_desc: Phase 02.1 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 15
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-26)
 ## Current Position
 
 Phase: 02.1 (Visual Identity & Games (Simulator-Buildable Scope)) — EXECUTING
-Plan: 4 of 8
+Plan: 5 of 8
 Status: Ready to execute
 Last activity: 2026-09-09 — Phase 02.1 execution started
 
-Progress: [███████░░░] 67%
+Progress: [███████░░░] 73%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [███████░░░] 67%
 | Phase 02.1 P01 | 50min | 3 tasks | 18 files |
 | Phase 02.1 P02 | 50min | 3 tasks | 22 files |
 | Phase 02.1 P03 | 65min | 3 tasks | 23 files |
+| Phase 02.1 P04 | ~40min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 02.1-03: asset_id[32] (RESEARCH's proposed size) bumped to asset_id[40] before first commit -- the plan's own stage-04 id (37 chars) did not fit in 32 bytes
 - [Phase ?]: 02.1-03: castelo_app.c is the first cache-once screen that must REFRESH on every visit (not just cache) since its content genuinely changes as the shared counter grows
 - [Phase ?]: 02.1-03: per-game exclusive unlock motifs (D-05, Claude's discretion) -- rose bush/pennant/small tree/fountain/gate for sudoku/paciencia/termo/cruzadinha/conexo
+- [Phase ?]: 02.1-04: Sudoku engine's counting backtracking solver (stop-at-2) is the non-negotiable uniqueness proof for procedurally generated puzzles, pinned by a 20-consecutive-generations-per-difficulty test
+- [Phase ?]: 02.1-04: Restored sudoku save fields (mode, given/filled digits) are range-checked on load and discarded-and-regenerated (not clamped in place) on any out-of-range value -- simpler mitigation for T-02.1-02/T-02.1-12
+- [Phase ?]: 02.1-04: sudoku.c/.h and sudoku_engine.c/.h comments avoid the literal substrings rand(/srand( after self-defeating the plan's own forbidden-pattern grep, same fix class as 02.1-01's car jam and 02-03's cJSON
 
 ### Pending Todos
 
@@ -130,6 +134,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-09T19:25:44.977Z
-Stopped at: Completed 02.1-03-PLAN.md
+Last session: 2026-09-09T20:12:02.839Z
+Stopped at: Completed 02.1-04-PLAN.md
 Resume file: None
