@@ -9,7 +9,7 @@
 
 static lv_obj_t * s_home_screen = NULL;
 
-static lv_obj_t * tile_create(lv_obj_t * parent, const char * letter, const char * title,
+static lv_obj_t * tile_create(lv_obj_t * parent, const char * icon_id, const char * title,
                                lv_coord_t w, lv_coord_t h, lv_event_cb_t click_cb)
 {
     lv_obj_t * tile = ratimos_panel_create(parent);
@@ -20,7 +20,7 @@ static lv_obj_t * tile_create(lv_obj_t * parent, const char * letter, const char
     lv_obj_add_flag(tile, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(tile, click_cb, LV_EVENT_CLICKED, NULL);
 
-    ratimos_badge_create(tile, letter);
+    ratimos_badge_create(tile, icon_id);
 
     lv_obj_t * lbl = lv_label_create(tile);
     lv_label_set_text(lbl, title);
@@ -48,7 +48,7 @@ static lv_obj_t * build_home_screen(void)
     lv_obj_set_style_pad_row(content, 10, 0);
 
     /* tile largo: jogos */
-    tile_create(content, "J", "jogos", RATIMOS_SCREEN_W - 20, 70, ratimos_jogos_show);
+    tile_create(content, "home_jogos", "jogos", RATIMOS_SCREEN_W - 20, 70, ratimos_jogos_show);
 
     /* grid 2x2: musica / album / cartas / config */
     lv_obj_t * grid = lv_obj_create(content);
@@ -61,10 +61,10 @@ static lv_obj_t * build_home_screen(void)
     lv_obj_clear_flag(grid, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_coord_t tile_w = (RATIMOS_SCREEN_W - 20 - 10) / 2;
-    tile_create(grid, "M", "musica", tile_w, 80, ratimos_musica_show);
-    tile_create(grid, "A", "album", tile_w, 80, ratimos_album_show);
-    tile_create(grid, "C", "cartas", tile_w, 80, ratimos_cartas_show);
-    tile_create(grid, "#", "config", tile_w, 80, ratimos_config_show);
+    tile_create(grid, "home_musica", "musica", tile_w, 80, ratimos_musica_show);
+    tile_create(grid, "home_album", "album", tile_w, 80, ratimos_album_show);
+    tile_create(grid, "home_cartas", "cartas", tile_w, 80, ratimos_cartas_show);
+    tile_create(grid, "home_config", "config", tile_w, 80, ratimos_config_show);
 
     ratimos_bottombar_create(scr, "local", NULL, "sem wifi/audio");
 

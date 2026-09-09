@@ -42,6 +42,16 @@
 
 void ratimos_theme_apply_screen(lv_obj_t * scr);
 lv_obj_t * ratimos_panel_create(lv_obj_t * parent);
-lv_obj_t * ratimos_badge_create(lv_obj_t * parent, const char * letter);
+
+/*
+ * Cria o selo redondo de 28x28px usado pelos launchers/linhas de lista.
+ * `icon_id` e' resolvido via ratimos_icon_by_id() (src/ratimos/icons.h):
+ * numa correspondencia, renderiza o icone de pixel art project-authored
+ * (VISUAL-01/D-07) centrado, com o container recortado em circulo. Em
+ * NULL ou id sem correspondencia, cai para a renderizacao original de
+ * circulo+letra (icon_id e' entao tratado como o texto a exibir) --
+ * nunca desreferencia um icon_id NULL, sempre retorna um objeto valido.
+ */
+lv_obj_t * ratimos_badge_create(lv_obj_t * parent, const char * icon_id);
 
 #endif

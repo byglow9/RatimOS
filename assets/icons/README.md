@@ -15,8 +15,8 @@ reference image, sprite sheet, or third-party asset was consulted or traced to p
 This substitution (script instead of an external editor) is a production-method detail, not a
 scope change: D-07 explicitly left the exact production method open, and the result satisfies
 every requirement the UI-SPEC's own recommendation was chasing — project-authored, palette-
-consistent, reproducible from source, and free of any dependency on the colombiaOS reference
-project.
+consistent, reproducible from source, and free of any dependency on the third-party reference
+project named in `docs/visual-identity/README.md`.
 
 ## Regenerating
 
@@ -48,4 +48,4 @@ commands are deterministic — running them twice in a row produces byte-identic
 | `game_conexo` | four dots joined into two pairs |
 
 See `docs/visual-identity/README.md` for the full asset provenance table and the
-distinctness record against the colombiaOS reference project.
+distinctness record against the reference project.
