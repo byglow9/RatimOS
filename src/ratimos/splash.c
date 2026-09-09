@@ -24,6 +24,7 @@ static const splash_step_t s_steps[] = {
     { ratimos_storage_index_tracks },
     { ratimos_storage_index_games },
     { ratimos_storage_index_settings },
+    { ratimos_storage_index_game_state },
 };
 
 #define SPLASH_STEP_COUNT ((int) (sizeof(s_steps) / sizeof(s_steps[0])))

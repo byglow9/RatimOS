@@ -1,7 +1,9 @@
 #ifndef RATIMOS_STORAGE_CONTENT_API_H
 #define RATIMOS_STORAGE_CONTENT_API_H
 
+#include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 /*
  * Storage/Content API do RatimOS (D-09/D-10/D-11).
@@ -63,5 +65,75 @@ size_t ratimos_storage_list_tracks(ratimos_track_t * out, size_t max_count);
 size_t ratimos_storage_list_letters(ratimos_letter_t * out, size_t max_count);
 size_t ratimos_storage_list_games(ratimos_game_t * out, size_t max_count);
 ratimos_settings_t ratimos_storage_get_settings(void);
+
+/* ------------------------------------------------------------------------
+ * Dominio `game_state` — o PRIMEIRO dominio de escrita da Storage API (D-10).
+ *
+ * Os 5 dominios acima (letters/photos/tracks/games/settings) sao somente
+ * leitura: indexam fixtures uma vez e nunca escrevem nada. Este dominio
+ * quebra essa simetria de proposito — o progresso de um jogo precisa
+ * sobreviver a um reboot, e o cache de tela em memoria (build-once) nao
+ * sobrevive. Continua valendo a regra central: nenhum arquivo em
+ * src/ratimos/apps/ toca disco; tudo passa por aqui.
+ * ------------------------------------------------------------------------ */
+
+/* Ordem canonica dos jogos — usada como indice em varios arrays de tamanho
+ * fixo (tabela de caminhos de save, flags de desbloqueio). Qualquer valor
+ * vindo de disco DEVE ser checado contra RATIMOS_GAME_COUNT antes do uso. */
+typedef enum {
+    RATIMOS_GAME_SUDOKU = 0,
+    RATIMOS_GAME_PACIENCIA,
+    RATIMOS_GAME_TERMO,
+    RATIMOS_GAME_CRUZADINHA,
+    RATIMOS_GAME_CONEXO,
+    RATIMOS_GAME_COUNT
+} ratimos_game_kind_t;
+
+/* Blob opaco de estado: a Storage API nao sabe (nem quer saber) o que cada
+ * jogo guarda aqui dentro — so garante que os `used` primeiros bytes voltam
+ * identicos e na mesma ordem. Tamanho fixo, sem alocacao dinamica. */
+#define RATIMOS_GAME_STATE_BLOB_SIZE 512
+
+typedef struct {
+    uint8_t bytes[RATIMOS_GAME_STATE_BLOB_SIZE];
+    size_t used;
+} ratimos_game_state_t;
+
+typedef enum {
+    RATIMOS_GAME_STATE_OK = 0,      /* save valido carregado */
+    RATIMOS_GAME_STATE_ABSENT,      /* nunca houve save — comece um jogo novo */
+    RATIMOS_GAME_STATE_INVALID      /* save corrompido/truncado — jogo novo + aviso */
+} ratimos_game_state_status_t;
+
+/* Teto do contador compartilhado (jardim/castelo, D-05). Existe para que um
+ * arquivo adulterado nao consiga injetar um numero absurdo na UI. */
+#define RATIMOS_PROGRESSION_MAX_COMPLETIONS 9999
+
+typedef struct {
+    uint16_t shared_completions;                        /* dias concluidos, somados entre todos os jogos */
+    uint8_t game_exclusive_unlocked[RATIMOS_GAME_COUNT]; /* 0 ou 1 por jogo */
+} ratimos_progression_state_t;
+
+/* Passo de boot: garante que o diretorio de saves existe. Nao le nada. */
+void ratimos_storage_index_game_state(void);
+
+/* Le o save de um jogo. Em QUALQUER caminho de falha `*out` sai zerado, para
+ * que um chamador que ignore o status nunca leia bytes velhos. */
+ratimos_game_state_status_t ratimos_storage_get_game_state(ratimos_game_kind_t game,
+                                                           ratimos_game_state_t * out);
+
+/* Grava o save de um jogo de forma atomica (arquivo temporario + rename). */
+bool ratimos_storage_save_game_state(ratimos_game_kind_t game, const ratimos_game_state_t * state);
+
+/* Apaga APENAS o tabuleiro salvo desse jogo. Nunca toca na progressao. */
+bool ratimos_storage_clear_game_state(ratimos_game_kind_t game);
+
+bool ratimos_storage_get_progression(ratimos_progression_state_t * out);
+bool ratimos_storage_save_progression(const ratimos_progression_state_t * state);
+
+/* Vitoria no modo diario: soma 1 no contador compartilhado e marca o
+ * desbloqueio exclusivo do jogo. Nunca decrementa nem limpa nada. */
+bool ratimos_storage_record_daily_win(ratimos_game_kind_t game);
+
 
 #endif

@@ -2,6 +2,7 @@
 #include "../app_shell.h"
 #include "../row_list.h"
 #include "../../storage/content_api.h"
+#include "jogos/conexo.h"
 
 /*
  * Cache-once, like ratimos_cartas_show() (01-01) / ratimos_home_screen_show():
@@ -18,14 +19,17 @@ static lv_obj_t * build_jogos_screen(void)
 {
     ratimos_app_shell_t shell = ratimos_app_shell_create("jogos", "toque para abrir");
 
-    ratimos_game_t games[4];
-    size_t n = ratimos_storage_list_games(games, 4);
+    ratimos_game_t games[RATIMOS_GAME_COUNT];
+    size_t n = ratimos_storage_list_games(games, RATIMOS_GAME_COUNT);
 
     if (n == 0) {
         ratimos_row_create(shell.content, "!", "nenhum jogo disponivel", "verifique a instalacao do RatimOS", NULL);
     } else {
         for (size_t i = 0; i < n; i++) {
-            ratimos_row_create(shell.content, "J", games[i].title, "abrir", NULL);
+            /* Somente conexo (D-11) esta pronto nesta fase; os outros 4 jogos
+             * sao wired pelos seus proprios planos, um callback por vez. */
+            lv_event_cb_t click_cb = (i == (size_t) RATIMOS_GAME_CONEXO) ? ratimos_conexo_show : NULL;
+            ratimos_row_create(shell.content, "J", games[i].title, "abrir", click_cb);
         }
     }
 

@@ -17,6 +17,26 @@
 #define RATIMOS_COLOR_TEXT          lv_color_hex(0xf5f2f8)
 #define RATIMOS_COLOR_TEXT_MUTED    lv_color_hex(0xa997ba)
 
+/*
+ * Cores semanticas de JOGO (novas nesta fase, D-17 intacto).
+ *
+ * D-17 travou a paleta de MARCA/CHROME (as 6 macros acima) — nao havia jogo
+ * nenhum quando ela foi definida, entao ela nao previu feedback de acerto/erro.
+ * Estas 7 macros existem SOMENTE para feedback de jogabilidade dentro do
+ * tabuleiro (letra certa/presente/ausente no termo, faixa de categoria
+ * resolvida no conexo). Nunca use nenhuma delas como cor de chrome, de botao
+ * primario ou de CTA — esse papel continua sendo exclusivo de
+ * RATIMOS_COLOR_ACCENT.
+ */
+#define RATIMOS_COLOR_GAME_CORRECT   lv_color_hex(0x2f8f4e)
+#define RATIMOS_COLOR_GAME_PRESENT   lv_color_hex(0xd99a1b)
+#define RATIMOS_COLOR_GAME_ABSENT    lv_color_hex(0x3a3a42)
+
+#define RATIMOS_COLOR_CONEXO_YELLOW  lv_color_hex(0xd9a520)
+#define RATIMOS_COLOR_CONEXO_GREEN   lv_color_hex(0x3f8f4e)
+#define RATIMOS_COLOR_CONEXO_BLUE    lv_color_hex(0x2f6fa8)
+#define RATIMOS_COLOR_CONEXO_PURPLE  lv_color_hex(0x8a3fbe)
+
 #define RATIMOS_SCREEN_W 320
 #define RATIMOS_SCREEN_H 480
 

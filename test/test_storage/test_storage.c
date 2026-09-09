@@ -69,13 +69,15 @@ void test_games_list_returns_compiled_titles_in_order(void)
 {
     ratimos_storage_index_games();
 
-    ratimos_game_t out[4];
-    size_t n = ratimos_storage_list_games(out, 4);
+    ratimos_game_t out[RATIMOS_GAME_COUNT];
+    size_t n = ratimos_storage_list_games(out, RATIMOS_GAME_COUNT);
 
-    TEST_ASSERT_EQUAL_UINT(3, n);
+    TEST_ASSERT_EQUAL_UINT(5, n);
     TEST_ASSERT_EQUAL_STRING("sudoku", out[0].title);
-    TEST_ASSERT_EQUAL_STRING("car jam", out[1].title);
-    TEST_ASSERT_EQUAL_STRING("paciencia", out[2].title);
+    TEST_ASSERT_EQUAL_STRING("paciencia", out[1].title);
+    TEST_ASSERT_EQUAL_STRING("termo", out[2].title);
+    TEST_ASSERT_EQUAL_STRING("cruzadinha", out[3].title);
+    TEST_ASSERT_EQUAL_STRING("conexo", out[4].title);
 }
 
 void test_settings_get_returns_nonzero_values(void)
