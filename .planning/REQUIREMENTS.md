@@ -80,7 +80,7 @@ Requirements for the gift delivery. Each maps to roadmap phases.
 
 ### Identidade Visual
 
-- [ ] **VISUAL-01**: RatimOS has its own color palette, typography, and icon set, visually distinct from the "colombiaOS" reference project
+- [x] **VISUAL-01**: RatimOS has its own color palette, typography, and icon set, visually distinct from the "colombiaOS" reference project
 
 ## v2 Requirements
 
@@ -150,7 +150,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-02 | Phase 2 | Complete |
 | SEC-03 | Phase 9 | Pending |
 | SEC-04 | Phase 9 | Pending |
-| VISUAL-01 | Phase 02.1 | Pending |
+| VISUAL-01 | Phase 02.1 | Complete |
 
 **Coverage:**
 

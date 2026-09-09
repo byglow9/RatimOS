@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02.1
 current_phase_name: Visual Identity & Games (Simulator-Buildable Scope)
 status: executing
-stopped_at: Completed 02.1-01-PLAN.md
-last_updated: "2026-09-09T18:15:49.318Z"
+stopped_at: Completed 02.1-02-PLAN.md
+last_updated: "2026-09-09T18:47:01.484Z"
 last_activity: 2026-09-09
 last_activity_desc: Phase 02.1 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 15
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-26)
 ## Current Position
 
 Phase: 02.1 (Visual Identity & Games (Simulator-Buildable Scope)) — EXECUTING
-Plan: 2 of 8
+Plan: 3 of 8
 Status: Ready to execute
 Last activity: 2026-09-09 — Phase 02.1 execution started
 
-Progress: [█████░░░░░] 53%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [█████░░░░░] 53%
 | Phase 02 P03 | 9min | 2 tasks | 4 files |
 | Phase 02 P04 | 5min | 3 tasks | 1 files |
 | Phase 02.1 P01 | 50min | 3 tasks | 18 files |
+| Phase 02.1 P02 | 50min | 3 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 02.1-01: ratimos_conexo_start() internally preserves the puzzle_history ring buffer across its own state reset so callers never manually save/restore it across a 'novo jogo' or corrupted-save recovery
 - [Phase ?]: 02.1-01: daily-win recording lives in a standalone LVGL-free ratimos_conexo_record_win_if_needed() engine function (not inlined in the screen callback) so the once-only guard is directly unit-testable
 - [Phase ?]: 02.1-01: two unrun-verify items logged to WINDOWS.md — the plan's interactive simulator tap-through acceptance criteria could not be executed (no GUI input-simulation tooling in this sandbox); substituted with 29 passing unit tests + a headless no-crash smoke run, needs human UAT before phase close
+- [Phase ?]: 02.1-02: Icon art authored via a committed procedural script (tools/generate_icon_art.py) instead of an external pixel-art editor (Piskel/Aseprite) -- stronger provenance auditability
+- [Phase ?]: 02.1-02: Press Start 2P locked immediately -- lv_font_conv's first run confirmed full PT-BR accented-glyph coverage (24/24 symbols, 0 missing-glyph warnings), Pixel Operator fallback never needed
+- [Phase ?]: 02.1-02: colombiaOS is named exactly once in the whole repo (docs/visual-identity/README.md's Distinctness section) -- every other file uses generic wording to satisfy the plan's zero-hits-elsewhere acceptance gate
 
 ### Pending Todos
 
@@ -122,6 +126,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-09T18:15:49.302Z
-Stopped at: Completed 02.1-01-PLAN.md
+Last session: 2026-09-09T18:47:01.468Z
+Stopped at: Completed 02.1-02-PLAN.md
 Resume file: None
