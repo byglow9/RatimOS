@@ -18,6 +18,7 @@
 
 #include "../../app_shell.h"
 #include "../../theme.h"
+#include "../../fonts/ratimos_fonts.h"
 #include "../../../storage/content_api.h"
 #include "daily_seed.h"
 
@@ -47,6 +48,8 @@ static lv_obj_t * s_board = NULL;
 static lv_obj_t * s_cells[9][9];
 static lv_obj_t * s_cell_labels[9][9];
 static lv_obj_t * s_keypad = NULL;
+static lv_obj_t * s_banner_label = NULL;
+static lv_obj_t * s_castle_label = NULL;
 static lv_obj_t * s_gen_fail_container = NULL;
 static lv_obj_t * s_confirm_overlay = NULL;
 
@@ -54,6 +57,16 @@ static ratimos_sudoku_state_t s_state;
 static bool s_generation_failed = false;
 static ratimos_sudoku_mode_t s_failed_mode = RATIMOS_SUDOKU_MEDIO;
 static ratimos_sudoku_mode_t s_pending_mode = RATIMOS_SUDOKU_MEDIO;
+
+/* Uma unica pilula "novo jogo" pode disparar dois tipos de confirmacao
+ * destrutiva -- trocar de modo ou reiniciar o mesmo modo -- entao o overlay
+ * precisa saber qual das duas o botao "recomecar" deve executar. */
+typedef enum {
+    SUDOKU_PENDING_MODE_SWITCH = 0,
+    SUDOKU_PENDING_RESET
+} sudoku_pending_action_t;
+
+static sudoku_pending_action_t s_pending_action = SUDOKU_PENDING_MODE_SWITCH;
 
 static const char * const SUDOKU_MODE_LABELS[RATIMOS_SUDOKU_MODE_COUNT] = {
     "facil", "medio", "dificil", "diario"
@@ -242,12 +255,36 @@ static void render_cells(void)
     }
 }
 
+/* Banner "resolvido!" (Display-tier, UI-SPEC): so aparece quando o board
+ * atual esta marcado como resolvido. A linha "+1 no castelo" so acompanha o
+ * banner quando a vitoria e do modo diario E ja foi registrada no contador
+ * compartilhado -- vencer facil/medio/dificil celebra sem creditar nada. */
+static void render_banner(void)
+{
+    if (!s_state.solved) {
+        lv_obj_add_flag(s_banner_label, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    lv_label_set_text(s_banner_label, "resolvido!");
+    lv_obj_clear_flag(s_banner_label, LV_OBJ_FLAG_HIDDEN);
+
+    if (s_state.mode == RATIMOS_SUDOKU_DIARIO && s_state.daily_win_recorded) {
+        lv_obj_clear_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
 static void render_board(void)
 {
     if (s_generation_failed) {
         lv_obj_add_flag(s_pill_row, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(s_board_wrap, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(s_keypad, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_banner_label, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(s_gen_fail_container, LV_OBJ_FLAG_HIDDEN);
         return;
     }
@@ -259,6 +296,7 @@ static void render_board(void)
 
     render_pills();
     render_cells();
+    render_banner();
 }
 
 static void cell_clicked_cb(lv_event_t * e)
@@ -301,6 +339,20 @@ static void keypad_value_changed_cb(lv_event_t * e)
         return; /* pista: recusado */
     }
 
+    /* PROGRESSAO-01: credita o castelo EXATAMENTE uma vez por board diario
+     * vencido -- o guard `daily_win_recorded` fica dentro do proprio estado
+     * persistido, entao reentrar num board diario ja vencido apos um
+     * restart nunca soma de novo. Vencer facil/medio/dificil so marca
+     * `solved` (banner sem linha de castelo) e nunca chama esta funcao. */
+    if (ratimos_sudoku_is_solved(&s_state)) {
+        s_state.solved = 1;
+        if (s_state.mode == RATIMOS_SUDOKU_DIARIO && !s_state.daily_win_recorded) {
+            if (ratimos_storage_record_daily_win(RATIMOS_GAME_SUDOKU)) {
+                s_state.daily_win_recorded = 1;
+            }
+        }
+    }
+
     persist_state();
     render_board();
 }
@@ -321,7 +373,16 @@ static void confirm_restart_cb(lv_event_t * e)
 {
     (void) e;
     lv_obj_add_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
-    switch_to_mode(s_pending_mode);
+
+    if (s_pending_action == SUDOKU_PENDING_RESET) {
+        /* So apaga o TABULEIRO salvo -- a progressao ja conquistada (contador
+         * compartilhado + desbloqueio exclusivo) nunca regride por causa de
+         * um reset manual (proibicao do plano). */
+        ratimos_storage_clear_game_state(RATIMOS_GAME_SUDOKU);
+        switch_to_mode(s_state.mode);
+    } else {
+        switch_to_mode(s_pending_mode);
+    }
 }
 
 static void mode_pill_clicked_cb(lv_event_t * e)
@@ -333,12 +394,27 @@ static void mode_pill_clicked_cb(lv_event_t * e)
     }
 
     if (!s_generation_failed && has_progress()) {
+        s_pending_action = SUDOKU_PENDING_MODE_SWITCH;
         s_pending_mode = target;
         lv_obj_clear_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
         return;
     }
 
     switch_to_mode(target);
+}
+
+/* "novo jogo" (UI-SPEC): disponivel mesmo no meio de uma partida, sempre
+ * pede confirmacao (mesma copia destrutiva do Copywriting Contract) antes de
+ * descartar o tabuleiro atual, ao contrario da troca de dificuldade que so
+ * confirma quando ha progresso do jogador em risco. */
+static void novo_jogo_clicked_cb(lv_event_t * e)
+{
+    (void) e;
+    if (s_generation_failed) {
+        return;
+    }
+    s_pending_action = SUDOKU_PENDING_RESET;
+    lv_obj_clear_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
 }
 
 static lv_obj_t * make_pill_w(lv_obj_t * parent, const char * text, lv_color_t bg, lv_event_cb_t cb, lv_coord_t width)
@@ -463,6 +539,35 @@ static lv_obj_t * build_sudoku_screen(void)
     lv_obj_set_style_text_color(s_keypad, RATIMOS_COLOR_TEXT, LV_PART_ITEMS);
     lv_obj_set_style_radius(s_keypad, 4, LV_PART_ITEMS);
     lv_obj_add_event_cb(s_keypad, keypad_value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
+
+    /* Banner de vitoria (Display-tier, UI-SPEC): "resolvido!" sempre que
+     * s_state.solved; "+1 no castelo" so junto quando a vitoria diaria ja
+     * foi creditada. Escondidos ate render_banner() decidir. */
+    s_banner_label = lv_label_create(shell.content);
+    lv_label_set_text(s_banner_label, "");
+    lv_obj_set_width(s_banner_label, lv_pct(100));
+    lv_label_set_long_mode(s_banner_label, LV_LABEL_LONG_MODE_WRAP);
+    lv_obj_set_style_text_align(s_banner_label, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_color(s_banner_label, RATIMOS_COLOR_TEXT, 0);
+    lv_obj_set_style_text_font(s_banner_label, &ratimos_font_title_20, 0);
+    lv_obj_add_flag(s_banner_label, LV_OBJ_FLAG_HIDDEN);
+
+    s_castle_label = lv_label_create(shell.content);
+    lv_label_set_text(s_castle_label, "+1 no castelo");
+    lv_obj_set_width(s_castle_label, lv_pct(100));
+    lv_obj_set_style_text_align(s_castle_label, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_color(s_castle_label, RATIMOS_COLOR_TEXT_MUTED, 0);
+    lv_obj_add_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
+
+    /* "novo jogo" (UI-SPEC): disponivel o tempo todo, nao so apos vencer. */
+    lv_obj_t * novo_jogo_row = lv_obj_create(shell.content);
+    lv_obj_remove_style_all(novo_jogo_row);
+    lv_obj_set_width(novo_jogo_row, lv_pct(100));
+    lv_obj_set_height(novo_jogo_row, LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(novo_jogo_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(novo_jogo_row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_clear_flag(novo_jogo_row, LV_OBJ_FLAG_SCROLLABLE);
+    make_pill_w(novo_jogo_row, "novo jogo", RATIMOS_COLOR_PANEL, novo_jogo_clicked_cb, 140);
 
     /* Falha de geracao (UI-SPEC, estado de erro): nenhum tabuleiro, so a
      * copia de erro + pilula de retry. Escondido ate render_board() decidir

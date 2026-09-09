@@ -10,6 +10,7 @@
 #include <unity.h>
 
 #include "ratimos/apps/jogos/sudoku_engine.h"
+#include "storage/content_api.h"
 
 void setUp(void) {}
 void tearDown(void) {}
@@ -306,6 +307,87 @@ void test_is_solved_false_when_conflict_present(void)
     TEST_ASSERT_FALSE(ratimos_sudoku_is_solved(&state));
 }
 
+/* ------------------------------------------------------------------------
+ * Task 3: caminho de vitoria (is_solved a partir da propria solucao gerada)
+ * e round-trip do estado atraves do blob de save.
+ * ------------------------------------------------------------------------ */
+
+void test_is_solved_true_when_filled_from_own_generated_solution(void)
+{
+    ratimos_sudoku_state_t state;
+    TEST_ASSERT_TRUE(ratimos_sudoku_generate(&state, RATIMOS_SUDOKU_FACIL, 777, 64));
+
+    for (int r = 0; r < 9; r++) {
+        for (int c = 0; c < 9; c++) {
+            if (state.given[r][c] == 0) {
+                TEST_ASSERT_TRUE(ratimos_sudoku_set_cell(&state, r, c, state.solution[r][c]));
+            }
+        }
+    }
+
+    TEST_ASSERT_TRUE(ratimos_sudoku_is_solved(&state));
+}
+
+void test_is_solved_false_when_one_digit_wrong_after_filling_from_solution(void)
+{
+    ratimos_sudoku_state_t state;
+    TEST_ASSERT_TRUE(ratimos_sudoku_generate(&state, RATIMOS_SUDOKU_FACIL, 778, 64));
+
+    int wrong_r = -1, wrong_c = -1;
+    for (int r = 0; r < 9 && wrong_r < 0; r++) {
+        for (int c = 0; c < 9; c++) {
+            if (state.given[r][c] == 0) {
+                uint8_t correct = state.solution[r][c];
+                uint8_t wrong = (uint8_t) (correct % 9) + 1; /* sempre diferente de `correct` */
+                TEST_ASSERT_TRUE(ratimos_sudoku_set_cell(&state, r, c, wrong));
+                wrong_r = r;
+                wrong_c = c;
+                break;
+            }
+        }
+    }
+    TEST_ASSERT_TRUE(wrong_r >= 0); /* fixture sempre tem pelo menos uma celula vazia */
+
+    for (int r = 0; r < 9; r++) {
+        for (int c = 0; c < 9; c++) {
+            if (state.given[r][c] == 0 && !(r == wrong_r && c == wrong_c)) {
+                TEST_ASSERT_TRUE(ratimos_sudoku_set_cell(&state, r, c, state.solution[r][c]));
+            }
+        }
+    }
+
+    TEST_ASSERT_FALSE(ratimos_sudoku_is_solved(&state));
+}
+
+/* Round-trip atraves do blob opaco da Storage API (mesmo shape que
+ * sudoku.c's persist_state()/load_or_start_state() usam de verdade) --
+ * confirma que solved/mode/daily_win_recorded sobrevivem ao serializar e
+ * desserializar, sem precisar de LVGL nem tocar disco de verdade. */
+void test_state_round_trips_through_game_state_blob(void)
+{
+    ratimos_sudoku_state_t original;
+    memset(&original, 0, sizeof(original));
+    memcpy(original.given, UNIQUE_PUZZLE, sizeof(original.given));
+    original.mode = RATIMOS_SUDOKU_DIARIO;
+    original.solved = 1;
+    original.daily_win_recorded = 1;
+
+    ratimos_game_state_t blob;
+    memset(&blob, 0, sizeof(blob));
+    memcpy(blob.bytes, &original, sizeof(original));
+    blob.used = sizeof(original);
+
+    ratimos_sudoku_state_t restored;
+    memset(&restored, 0, sizeof(restored));
+    TEST_ASSERT_EQUAL_size_t(sizeof(original), blob.used);
+    memcpy(&restored, blob.bytes, sizeof(restored));
+
+    TEST_ASSERT_EQUAL_UINT8(1, restored.solved);
+    TEST_ASSERT_EQUAL_UINT8(1, restored.daily_win_recorded);
+    TEST_ASSERT_EQUAL_INT(RATIMOS_SUDOKU_DIARIO, restored.mode);
+    TEST_ASSERT_EQUAL_MEMORY(original.given, restored.given, sizeof(original.given));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -330,6 +412,10 @@ int main(void)
     RUN_TEST(test_is_solved_true_when_fully_filled_and_valid);
     RUN_TEST(test_is_solved_false_when_incomplete);
     RUN_TEST(test_is_solved_false_when_conflict_present);
+
+    RUN_TEST(test_is_solved_true_when_filled_from_own_generated_solution);
+    RUN_TEST(test_is_solved_false_when_one_digit_wrong_after_filling_from_solution);
+    RUN_TEST(test_state_round_trips_through_game_state_blob);
 
     return UNITY_END();
 }
