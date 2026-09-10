@@ -118,6 +118,11 @@ typedef enum {
  * especifico; draw-1 e a escolha deste plano). */
 #define RATIMOS_KLONDIKE_DRAW_COUNT 1
 
+/* Teto de jogadas que ratimos_klondike_auto_collect() pode aplicar numa
+ * unica chamada -- protege contra travar o loop de eventos do LVGL se um
+ * bug algum dia fizer o loop nao convergir (T-02.1-15). */
+#define RATIMOS_KLONDIKE_AUTOCOLLECT_MAX 200
+
 /* Monta um baralho novo de 52 cartas embaralhado por Fisher-Yates a partir
  * de um PRNG local semeado por `seed` (nunca o gerador pseudoaleatorio
  * global da libc), depois distribui 1..7 cartas pelas sete colunas do
@@ -150,5 +155,14 @@ bool ratimos_klondike_move(ratimos_klondike_state_t * st, ratimos_klondike_move_
 
 /* Verdadeiro exatamente quando as quatro fundacoes tem treze cartas cada. */
 bool ratimos_klondike_is_won(const ratimos_klondike_state_t * st);
+
+/* Aplica repetidamente toda jogada legal de descarte-para-fundacao e
+ * tableau-para-fundacao ate que nenhuma mais exista, sempre atraves de
+ * ratimos_klondike_move() -- NUNCA bypassa a legalidade escrevendo pilhas
+ * direto. Limita o proprio numero de jogadas em
+ * RATIMOS_KLONDIKE_AUTOCOLLECT_MAX para nunca travar o chamador numa
+ * unica invocacao. Retorna quantas jogadas foram de fato aplicadas
+ * (0 quando nenhuma jogada de fundacao esta disponivel). */
+uint16_t ratimos_klondike_auto_collect(ratimos_klondike_state_t * st);
 
 #endif

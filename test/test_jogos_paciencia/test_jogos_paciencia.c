@@ -375,6 +375,96 @@ void test_illegal_move_leaves_state_byte_identical(void)
     TEST_ASSERT_EQUAL_MEMORY(&before, &st, sizeof(st));
 }
 
+/* ------------------------------------------------------------------------
+ * Task 3: campo `won` apos a ultima jogada, auto-collect limitado, e
+ * round-trip do estado atraves do blob de save.
+ * ------------------------------------------------------------------------ */
+
+void test_move_sets_won_field_true_when_final_foundation_completes(void)
+{
+    ratimos_klondike_state_t st;
+    memset(&st, 0, sizeof(st));
+
+    fill_all_foundations(&st);
+    /* Esvazia so a ultima fundacao e poe uma unica carta no tableau pronta
+     * pra completa-la -- a jogada que fecha essa fundacao deve deixar
+     * st.won == 1 como efeito colateral de ratimos_klondike_move(). */
+    st.foundation[3].count = 12;
+    st.tableau[0].cards[0] = ratimos_card_make(3, 13, true);
+    st.tableau[0].count = 1;
+
+    TEST_ASSERT_EQUAL_UINT8(0, st.won);
+    TEST_ASSERT_TRUE(ratimos_klondike_move(&st, RATIMOS_KLONDIKE_MOVE_TABLEAU_TO_FOUNDATION, 0, 3, 1));
+    TEST_ASSERT_EQUAL_UINT8(1, st.won);
+    TEST_ASSERT_TRUE(ratimos_klondike_is_won(&st));
+}
+
+void test_auto_collect_returns_zero_and_terminates_when_no_foundation_move_available(void)
+{
+    ratimos_klondike_state_t st;
+    memset(&st, 0, sizeof(st));
+    /* Estado inteiramente vazio -- nenhuma pilha tem carta nenhuma, entao
+     * nenhuma jogada de fundacao pode existir; a chamada tem que voltar
+     * imediatamente (0 jogadas) em vez de rodar RATIMOS_KLONDIKE_AUTOCOLLECT_MAX
+     * vezes inutilmente. */
+    TEST_ASSERT_EQUAL_UINT16(0, ratimos_klondike_auto_collect(&st));
+}
+
+void test_auto_collect_clears_every_available_foundation_move_within_cap(void)
+{
+    ratimos_klondike_state_t st;
+    memset(&st, 0, sizeof(st));
+
+    /* Um as de cada naipe, cada um sozinho no topo de uma coluna do
+     * tableau -- todos legais pra fundacao de cara, sem depender de ordem. */
+    for (uint8_t suit = 0; suit < 4; suit++) {
+        st.tableau[suit].cards[0] = ratimos_card_make(suit, 1, true);
+        st.tableau[suit].count = 1;
+    }
+
+    uint16_t applied = ratimos_klondike_auto_collect(&st);
+    TEST_ASSERT_EQUAL_UINT16(4, applied);
+    TEST_ASSERT_TRUE(applied <= RATIMOS_KLONDIKE_AUTOCOLLECT_MAX);
+
+    for (uint8_t suit = 0; suit < 4; suit++) {
+        TEST_ASSERT_EQUAL_UINT8(0, st.tableau[suit].count);
+        TEST_ASSERT_EQUAL_UINT8(1, st.foundation[suit].count);
+    }
+}
+
+void test_state_round_trips_through_game_state_blob(void)
+{
+    ratimos_klondike_state_t original;
+    ratimos_klondike_deal(&original, 555, true);
+    original.won = 0;
+    original.daily = 1;
+    original.daily_win_recorded = 1;
+    original.moves = 7;
+
+    ratimos_game_state_t blob;
+    memset(&blob, 0, sizeof(blob));
+    memcpy(blob.bytes, &original, sizeof(original));
+    blob.used = sizeof(original);
+
+    ratimos_klondike_state_t restored;
+    memset(&restored, 0, sizeof(restored));
+    TEST_ASSERT_EQUAL_size_t(sizeof(original), blob.used);
+    memcpy(&restored, blob.bytes, sizeof(restored));
+
+    TEST_ASSERT_EQUAL_UINT8(original.won, restored.won);
+    TEST_ASSERT_EQUAL_UINT8(original.daily, restored.daily);
+    TEST_ASSERT_EQUAL_UINT8(original.daily_win_recorded, restored.daily_win_recorded);
+    TEST_ASSERT_EQUAL_UINT16(original.moves, restored.moves);
+    for (int c = 0; c < RATIMOS_KLONDIKE_TABLEAU_COLS; c++) {
+        TEST_ASSERT_EQUAL_MEMORY(&original.tableau[c], &restored.tableau[c], sizeof(original.tableau[c]));
+    }
+    for (int f = 0; f < RATIMOS_KLONDIKE_FOUNDATIONS; f++) {
+        TEST_ASSERT_EQUAL_MEMORY(&original.foundation[f], &restored.foundation[f], sizeof(original.foundation[f]));
+    }
+    TEST_ASSERT_EQUAL_MEMORY(&original.stock, &restored.stock, sizeof(original.stock));
+    TEST_ASSERT_EQUAL_MEMORY(&original.waste, &restored.waste, sizeof(original.waste));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -403,6 +493,11 @@ int main(void)
     RUN_TEST(test_is_won_true_exactly_when_all_foundations_complete);
 
     RUN_TEST(test_illegal_move_leaves_state_byte_identical);
+
+    RUN_TEST(test_move_sets_won_field_true_when_final_foundation_completes);
+    RUN_TEST(test_auto_collect_returns_zero_and_terminates_when_no_foundation_move_available);
+    RUN_TEST(test_auto_collect_clears_every_available_foundation_move_within_cap);
+    RUN_TEST(test_state_round_trips_through_game_state_blob);
 
     return UNITY_END();
 }

@@ -328,6 +328,40 @@ bool ratimos_klondike_is_won(const ratimos_klondike_state_t * st)
     return true;
 }
 
+uint16_t ratimos_klondike_auto_collect(ratimos_klondike_state_t * st)
+{
+    if (!st) {
+        return 0;
+    }
+
+    uint16_t applied = 0;
+    for (uint16_t i = 0; i < RATIMOS_KLONDIKE_AUTOCOLLECT_MAX; i++) {
+        bool moved = false;
+
+        for (uint8_t f = 0; f < RATIMOS_KLONDIKE_FOUNDATIONS && !moved; f++) {
+            if (ratimos_klondike_move(st, RATIMOS_KLONDIKE_MOVE_WASTE_TO_FOUNDATION, 0, f, 1)) {
+                moved = true;
+            }
+        }
+        if (!moved) {
+            for (uint8_t c = 0; c < RATIMOS_KLONDIKE_TABLEAU_COLS && !moved; c++) {
+                for (uint8_t f = 0; f < RATIMOS_KLONDIKE_FOUNDATIONS && !moved; f++) {
+                    if (ratimos_klondike_move(st, RATIMOS_KLONDIKE_MOVE_TABLEAU_TO_FOUNDATION, c, f, 1)) {
+                        moved = true;
+                    }
+                }
+            }
+        }
+
+        if (!moved) {
+            break; /* nenhuma jogada de fundacao legal restante nesta passada */
+        }
+        applied++;
+    }
+
+    return applied;
+}
+
 void ratimos_klondike_deal(ratimos_klondike_state_t * out, uint32_t seed, bool daily)
 {
     if (!out) {
