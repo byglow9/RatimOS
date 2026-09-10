@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 9
+open_count: 10
 waived_count: 0
 fixed_count: 0
-total_count: 9
-last_updated: 2026-09-10T13:55:24.242Z
+total_count: 10
+last_updated: 2026-09-10T19:16:55.004Z
 ---
 
 # Broken Windows Ledger
@@ -24,6 +24,7 @@ last_updated: 2026-09-10T13:55:24.242Z
 | 7 | 02.1 | unrun-verify | src/ratimos/apps/jogos/paciencia.c |  | Task 2 manual UAT (open jogos>paciencia, confirm 7 tableau columns with one face-up card each, tap the stock to draw, attempt an illegal move (red 6 onto red 7) and confirm visible refusal via the accent-border flash, make legal moves, navigate away/back, quit+relaunch, confirm the same deal is restored) not interactively executed -- no GUI input-simulation tooling (xdotool/ydotool/xte) available in this sandbox and no sudo to install one. Substituted with 21 automated engine unit tests plus a headless no-crash smoke run of the built binary; needs human UAT. | open |  | 2026-09-10T13:02:34.579Z |  |
 | 8 | 02.1 | unrun-verify | src/ratimos/apps/jogos/paciencia.c |  | Task 3 manual UAT (press recolher on a well-progressed deal and confirm cards move to foundations legally, complete a daily deal and confirm the venceu! banner and +1 no castelo line, go home and confirm the castelo day count went up by one and paciencia's conquista is lit, re-enter paciencia and confirm no double-count) not interactively executed -- same tooling gap as Task 2. Substituted with unit tests covering the won field as a move side effect, auto-collect's bounded termination (both zero-available and clear-everything cases), and a full state round-trip through the game-state blob; needs human UAT. | open |  | 2026-09-10T13:02:39.750Z |  |
 | 9 | 02.1 | unrun-verify | src/ratimos/apps/jogos/termo.c |  | Task 3 manual UAT (play a guess and confirm per-letter colours, switch to quarteto and confirm 4 scrollable boards fit, navigate away and back, quit and relaunch, solve a daily session and confirm the castelo count) not interactively executed -- no GUI input-simulation tooling (xdotool) available in this sandbox. Substituted with 16 engine unit tests plus a headless no-crash smoke run of the built binary; needs human UAT. | open |  | 2026-09-10T13:55:24.242Z |  |
+| 10 | 02.1 | unrun-verify | src/ratimos/apps/jogos_app.c |  | Plan 08's own Task 2/3 human-checks (touch the jogos launcher rows, confirm icon+subtitle behavior by literal tap; full phase-gate UAT playing all 5 games to a win via touch) not interactively executed -- no GUI input-simulation tooling (xdotool/ydotool/xte) available in this sandbox. Substituted with: real ImageMagick screenshots of the actual compiled native_sim binary (via a temporary splash.c boot-redirect + a hand-written storage fixture calling the real ratimos_storage_save_game_state(), reverted before commit) proving the icon table renders and the jogar/continuar subtitle flips correctly against real storage; plus the full green automated suite (9/10 phase suites). The literal finger/mouse tap-through for the launcher and all 5 games remains open; needs human UAT. | open |  | 2026-09-10T19:16:55.004Z |  |
 
 ````json
 [
@@ -133,6 +134,18 @@ last_updated: 2026-09-10T13:55:24.242Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-10T13:55:24.242Z",
+    "resolved_at": null
+  },
+  {
+    "id": 10,
+    "kind": "unrun-verify",
+    "phase": "02.1",
+    "file": "src/ratimos/apps/jogos_app.c",
+    "line": null,
+    "description": "Plan 08's own Task 2/3 human-checks (touch the jogos launcher rows, confirm icon+subtitle behavior by literal tap; full phase-gate UAT playing all 5 games to a win via touch) not interactively executed -- no GUI input-simulation tooling (xdotool/ydotool/xte) available in this sandbox. Substituted with: real ImageMagick screenshots of the actual compiled native_sim binary (via a temporary splash.c boot-redirect + a hand-written storage fixture calling the real ratimos_storage_save_game_state(), reverted before commit) proving the icon table renders and the jogar/continuar subtitle flips correctly against real storage; plus the full green automated suite (9/10 phase suites). The literal finger/mouse tap-through for the launcher and all 5 games remains open; needs human UAT.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-10T19:16:55.004Z",
     "resolved_at": null
   }
 ]

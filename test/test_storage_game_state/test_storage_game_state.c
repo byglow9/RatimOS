@@ -61,6 +61,17 @@ static void write_valid_conexo_save(void)
     TEST_ASSERT_TRUE(ratimos_storage_save_game_state(RATIMOS_GAME_CONEXO, &state));
 }
 
+/* Cria um arquivo de save de 0 bytes diretamente no caminho fixo -- o
+ * residuo natural de uma escrita/criacao interrompida no meio, que o probe
+ * e o getter DEVEM tratar como "sem progresso" (ABSENT), nunca como
+ * corrupcao (INVALID). */
+static void write_zero_byte_conexo_save(void)
+{
+    FILE * f = fopen(CONEXO_SAVE_PATH, "wb");
+    TEST_ASSERT_NOT_NULL(f);
+    fclose(f);
+}
+
 static void read_conexo_record(test_save_record_t * out)
 {
     FILE * f = fopen(CONEXO_SAVE_PATH, "rb");
@@ -356,6 +367,74 @@ void test_get_game_state_rejects_out_of_range_kind_without_touching_disk(void)
     assert_get_returns_invalid_and_zeroed_for_kind((ratimos_game_kind_t) RATIMOS_GAME_COUNT);
 }
 
+/* ------------------------------------------------------------------------
+ * Task 1 (plano 08) — ratimos_storage_has_game_state(): probe barata que o
+ * launcher usa para escolher entre "jogar"/"continuar" sem carregar o blob
+ * inteiro cinco vezes. Cada teste tambem confirma que ratimos_storage_get_game_state()
+ * concorda com o resultado da probe (mesma validacao compartilhada).
+ * ------------------------------------------------------------------------ */
+
+void test_has_game_state_false_when_absent(void)
+{
+    TEST_ASSERT_FALSE(ratimos_storage_has_game_state(RATIMOS_GAME_CONEXO));
+}
+
+void test_has_game_state_true_after_successful_save(void)
+{
+    write_valid_conexo_save();
+
+    TEST_ASSERT_TRUE(ratimos_storage_has_game_state(RATIMOS_GAME_CONEXO));
+}
+
+void test_has_game_state_false_after_clear(void)
+{
+    write_valid_conexo_save();
+    TEST_ASSERT_TRUE(ratimos_storage_has_game_state(RATIMOS_GAME_CONEXO));
+
+    TEST_ASSERT_TRUE(ratimos_storage_clear_game_state(RATIMOS_GAME_CONEXO));
+
+    TEST_ASSERT_FALSE(ratimos_storage_has_game_state(RATIMOS_GAME_CONEXO));
+}
+
+void test_has_game_state_false_for_zero_byte_file(void)
+{
+    write_zero_byte_conexo_save();
+
+    TEST_ASSERT_FALSE(ratimos_storage_has_game_state(RATIMOS_GAME_CONEXO));
+}
+
+void test_get_game_state_returns_absent_not_invalid_for_zero_byte_file(void)
+{
+    write_zero_byte_conexo_save();
+
+    ratimos_game_state_t out;
+    memset(&out, 0xFF, sizeof(out));
+    ratimos_game_state_status_t status = ratimos_storage_get_game_state(RATIMOS_GAME_CONEXO, &out);
+
+    TEST_ASSERT_EQUAL_INT(RATIMOS_GAME_STATE_ABSENT, status);
+    TEST_ASSERT_EQUAL_UINT(0, out.used);
+    for (size_t i = 0; i < RATIMOS_GAME_STATE_BLOB_SIZE; i++) {
+        TEST_ASSERT_EQUAL_UINT8(0, out.bytes[i]);
+    }
+}
+
+void test_has_game_state_false_for_corrupted_file(void)
+{
+    write_valid_conexo_save();
+
+    test_save_record_t rec;
+    read_conexo_record(&rec);
+    rec.magic = 0xDEADBEEFu;
+    write_conexo_record(&rec);
+
+    TEST_ASSERT_FALSE(ratimos_storage_has_game_state(RATIMOS_GAME_CONEXO));
+}
+
+void test_has_game_state_false_for_out_of_range_kind(void)
+{
+    TEST_ASSERT_FALSE(ratimos_storage_has_game_state((ratimos_game_kind_t) RATIMOS_GAME_COUNT));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -375,5 +454,12 @@ int main(void)
     RUN_TEST(test_stored_game_kind_out_of_range_returns_invalid_and_zeroed);
     RUN_TEST(test_checksum_mismatch_after_byte_tamper_returns_invalid_and_zeroed);
     RUN_TEST(test_get_game_state_rejects_out_of_range_kind_without_touching_disk);
+    RUN_TEST(test_has_game_state_false_when_absent);
+    RUN_TEST(test_has_game_state_true_after_successful_save);
+    RUN_TEST(test_has_game_state_false_after_clear);
+    RUN_TEST(test_has_game_state_false_for_zero_byte_file);
+    RUN_TEST(test_get_game_state_returns_absent_not_invalid_for_zero_byte_file);
+    RUN_TEST(test_has_game_state_false_for_corrupted_file);
+    RUN_TEST(test_has_game_state_false_for_out_of_range_kind);
     return UNITY_END();
 }

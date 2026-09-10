@@ -122,6 +122,13 @@ void ratimos_storage_index_game_state(void);
 ratimos_game_state_status_t ratimos_storage_get_game_state(ratimos_game_kind_t game,
                                                            ratimos_game_state_t * out);
 
+/* Responde apenas "existe progresso retomavel para este jogo" (o launcher
+ * usa isto para decidir entre os rotulos "jogar"/"continuar"), sem devolver
+ * o blob. Reaproveita a MESMA validacao de ratimos_storage_get_game_state —
+ * probe e getter nunca podem discordar: um save corrompido ou vazio (0
+ * bytes, residuo de escrita interrompida) responde que nao ha progresso. */
+bool ratimos_storage_has_game_state(ratimos_game_kind_t game);
+
 /* Grava o save de um jogo de forma atomica (arquivo temporario + rename). */
 bool ratimos_storage_save_game_state(ratimos_game_kind_t game, const ratimos_game_state_t * state);
 

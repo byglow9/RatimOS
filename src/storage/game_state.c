@@ -92,6 +92,25 @@ static bool kind_in_range(ratimos_game_kind_t game)
     return (int) game >= 0 && (int) game < (int) RATIMOS_GAME_COUNT;
 }
 
+/* Unico lugar do arquivo que compara um magic lido contra a constante fixa
+ * do formato de save. validate_record() (tabuleiro) e
+ * ratimos_storage_get_progression() (contador compartilhado) chamam esta
+ * mesma funcao em vez de repetir a comparacao — um so lugar para os dois
+ * formatos de registro concordarem. */
+static bool magic_ok(uint32_t magic)
+{
+    return magic == RATIMOS_SAVE_MAGIC;
+}
+
+/* Unico lugar do arquivo que ESCREVE o par magic+versao do formato num
+ * registro novo — usado tanto por ratimos_storage_save_game_state() quanto
+ * por ratimos_storage_save_progression(). */
+static void write_header_magic(uint32_t * magic, uint16_t * format_version)
+{
+    *magic = RATIMOS_SAVE_MAGIC;
+    *format_version = RATIMOS_SAVE_FORMAT_VERSION;
+}
+
 /*
  * Escrita atomica: grava em "<path>.tmp", fecha, e so entao renomeia por cima
  * do caminho final. rename() e atomico dentro do mesmo diretorio, entao um
@@ -157,7 +176,7 @@ static bool read_exact(const char * path, void * out, size_t size, bool * out_mi
  * ------------------------------------------------------------------------ */
 static bool validate_record(const save_record_t * rec, ratimos_game_kind_t requested)
 {
-    if (rec->magic != RATIMOS_SAVE_MAGIC) {
+    if (!magic_ok(rec->magic)) {
         return false;
     }
     if (rec->format_version != RATIMOS_SAVE_FORMAT_VERSION) {
@@ -191,6 +210,43 @@ void ratimos_storage_index_game_state(void)
     }
 }
 
+/*
+ * Fronteira compartilhada entre o getter (ratimos_storage_get_game_state) e a
+ * probe (ratimos_storage_has_game_state) — nenhum dos dois confia em nada
+ * abaixo desta funcao sem passar por ela, entao os dois NUNCA podem discordar
+ * sobre "existe progresso valido para este jogo". Checa limites antes de
+ * tocar em s_state_paths[game]; um arquivo de 0 bytes (residuo natural de uma
+ * escrita interrompida) responde ABSENT, nao INVALID — tratar isso como
+ * corrupcao assustaria a jogadora com um erro por algo que nunca guardou
+ * progresso nenhum.
+ */
+static ratimos_game_state_status_t load_game_state_record(ratimos_game_kind_t game,
+                                                           save_record_t * rec)
+{
+    if (!kind_in_range(game)) {
+        return RATIMOS_GAME_STATE_INVALID;
+    }
+
+    struct stat st;
+    if (stat(s_state_paths[game], &st) != 0) {
+        return RATIMOS_GAME_STATE_ABSENT;
+    }
+    if (st.st_size == 0) {
+        return RATIMOS_GAME_STATE_ABSENT;
+    }
+
+    bool missing = false;
+    if (!read_exact(s_state_paths[game], rec, sizeof(*rec), &missing)) {
+        return missing ? RATIMOS_GAME_STATE_ABSENT : RATIMOS_GAME_STATE_INVALID;
+    }
+
+    if (!validate_record(rec, game)) {
+        return RATIMOS_GAME_STATE_INVALID;
+    }
+
+    return RATIMOS_GAME_STATE_OK;
+}
+
 ratimos_game_state_status_t ratimos_storage_get_game_state(ratimos_game_kind_t game,
                                                            ratimos_game_state_t * out)
 {
@@ -200,25 +256,21 @@ ratimos_game_state_status_t ratimos_storage_get_game_state(ratimos_game_kind_t g
 
     memset(out, 0, sizeof(*out));
 
-    /* Checagem de limites ANTES de tocar em s_state_paths[game]. */
-    if (!kind_in_range(game)) {
-        return RATIMOS_GAME_STATE_INVALID;
-    }
-
     save_record_t rec;
-    bool missing = false;
-
-    if (!read_exact(s_state_paths[game], &rec, sizeof(rec), &missing)) {
-        return missing ? RATIMOS_GAME_STATE_ABSENT : RATIMOS_GAME_STATE_INVALID;
-    }
-
-    if (!validate_record(&rec, game)) {
-        return RATIMOS_GAME_STATE_INVALID;
+    ratimos_game_state_status_t status = load_game_state_record(game, &rec);
+    if (status != RATIMOS_GAME_STATE_OK) {
+        return status;
     }
 
     memcpy(out->bytes, rec.bytes, RATIMOS_GAME_STATE_BLOB_SIZE);
     out->used = (size_t) rec.used;
     return RATIMOS_GAME_STATE_OK;
+}
+
+bool ratimos_storage_has_game_state(ratimos_game_kind_t game)
+{
+    save_record_t rec;
+    return load_game_state_record(game, &rec) == RATIMOS_GAME_STATE_OK;
 }
 
 bool ratimos_storage_save_game_state(ratimos_game_kind_t game, const ratimos_game_state_t * state)
@@ -232,8 +284,7 @@ bool ratimos_storage_save_game_state(ratimos_game_kind_t game, const ratimos_gam
 
     save_record_t rec;
     memset(&rec, 0, sizeof(rec));
-    rec.magic = RATIMOS_SAVE_MAGIC;
-    rec.format_version = RATIMOS_SAVE_FORMAT_VERSION;
+    write_header_magic(&rec.magic, &rec.format_version);
     rec.game_kind = (uint16_t) game;
     rec.used = (uint32_t) state->used;
     memcpy(rec.bytes, state->bytes, RATIMOS_GAME_STATE_BLOB_SIZE);
@@ -281,7 +332,7 @@ bool ratimos_storage_get_progression(ratimos_progression_state_t * out)
     if (!read_exact(s_progression_path, &rec, sizeof(rec), &missing)) {
         return false;
     }
-    if (rec.magic != RATIMOS_SAVE_MAGIC || rec.format_version != RATIMOS_SAVE_FORMAT_VERSION) {
+    if (!magic_ok(rec.magic) || rec.format_version != RATIMOS_SAVE_FORMAT_VERSION) {
         return false;
     }
 
@@ -308,8 +359,7 @@ bool ratimos_storage_save_progression(const ratimos_progression_state_t * state)
 
     progression_record_t rec;
     memset(&rec, 0, sizeof(rec));
-    rec.magic = RATIMOS_SAVE_MAGIC;
-    rec.format_version = RATIMOS_SAVE_FORMAT_VERSION;
+    write_header_magic(&rec.magic, &rec.format_version);
     rec.shared_completions = safe.shared_completions;
     memcpy(rec.game_exclusive_unlocked, safe.game_exclusive_unlocked, RATIMOS_GAME_COUNT);
 
