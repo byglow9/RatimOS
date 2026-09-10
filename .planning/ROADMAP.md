@@ -95,7 +95,7 @@ Plans:
 
 **Note on scope:** this phase significantly exceeds the original "2 simple games" scope, by explicit user choice during discuss-phase (2026-08-28) — it now bundles 5 games plus a new gamification/progression system that the user flagged as needing substantial research. Expect this phase's research and planning to be proportionally larger and likely multi-wave/multi-session.
 
-**Plans:** 6/8 plans executed
+**Plans:** 8/8 plans executed
 
 Plans:
 
@@ -125,11 +125,11 @@ Plans:
 
 **Wave 7** *(blocked on Wave 6)*
 
-- [ ] 02.1-07-PLAN.md — Cruzadinha: crossword generator tooling, hand-authored puzzle bank, numbered-clue screen (D-11/D-12)
+- [x] 02.1-07-PLAN.md — Cruzadinha: crossword generator tooling, hand-authored puzzle bank, numbered-clue screen (D-11/D-12)
 
 **Wave 8** *(blocked on Wave 7)*
 
-- [ ] 02.1-08-PLAN.md — Launcher polish (per-game icons, jogar/continuar) + phase-gate verification of all 5 success criteria
+- [x] 02.1-08-PLAN.md — Launcher polish (per-game icons, jogar/continuar) + phase-gate verification of all 5 success criteria
 
 ### Phase 3: Hardware Bring-Up — Display, Touch, Boot & Partition Scheme
 
@@ -243,7 +243,7 @@ Phases execute in numeric order: 1 → 2 → 02.1 → 3 → 4 → 5 → 6 → 7 
 |-------|----------------|--------|-----------|
 | 1. Shell, Storage API & Simulator-First App Shells | 3/3 | Complete    | 2026-08-27 |
 | 2. Sync Protocol, Security Model & Cloud Backend | 4/4 | Complete    | 2026-08-28 |
-| 02.1. Visual Identity & Games (Simulator-Buildable Scope) *(INSERTED)* | 6/8 | In Progress|  |
+| 02.1. Visual Identity & Games (Simulator-Buildable Scope) *(INSERTED)* | 8/8 | In Progress|  |
 | 3. Hardware Bring-Up — Display, Touch, Boot & Partition Scheme | 0/TBD | Not started | - |
 | 4. Power Management — Battery, PMIC, RTC | 0/TBD | Not started | - |
 | 5. Audio, Storage & Camera Bring-Up | 0/TBD | Not started | - |
