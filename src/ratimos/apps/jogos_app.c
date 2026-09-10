@@ -4,6 +4,7 @@
 #include "../../storage/content_api.h"
 #include "jogos/conexo.h"
 #include "jogos/sudoku.h"
+#include "jogos/termo.h"
 
 /*
  * Cache-once, like ratimos_cartas_show() (01-01) / ratimos_home_screen_show():
@@ -27,11 +28,14 @@ static lv_obj_t * build_jogos_screen(void)
         ratimos_row_create(shell.content, "!", "nenhum jogo disponivel", "verifique a instalacao do RatimOS", NULL);
     } else {
         for (size_t i = 0; i < n; i++) {
-            /* Sudoku e conexo (02.1-04/02.1-01) ja estao prontos; os outros 3
-             * jogos sao wired pelos seus proprios planos, um callback por vez. */
+            /* Sudoku, termo e conexo (02.1-04/02.1-06/02.1-01) ja estao
+             * prontos; os jogos restantes sao wired pelos seus proprios
+             * planos, um callback por vez. */
             lv_event_cb_t click_cb = NULL;
             if (i == (size_t) RATIMOS_GAME_SUDOKU) {
                 click_cb = ratimos_sudoku_show;
+            } else if (i == (size_t) RATIMOS_GAME_TERMO) {
+                click_cb = ratimos_termo_show;
             } else if (i == (size_t) RATIMOS_GAME_CONEXO) {
                 click_cb = ratimos_conexo_show;
             }
