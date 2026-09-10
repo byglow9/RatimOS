@@ -94,6 +94,27 @@ static uint32_t termo_xorshift32(uint32_t * state)
  * com a semente diaria de outro jogo nem entre si (RESEARCH round 2: "se
  * todos os 3 modos forem conteudo diario no MESMO dia, derive uma
  * sub-semente distinta por modo"). */
+
+/* WR-02: a janela de 32 fluxos por dia e compartilhada entre
+ * ratimos_daily_seed() (daily_seed.c, fluxos 0..RATIMOS_GAME_COUNT-1) e este
+ * arquivo (fluxos 8..8+RATIMOS_TERMO_MODE_COUNT-1) -- nenhum dos dois lados
+ * sabe do outro em tempo de execucao, entao um 6o jogo ou um 4o modo do termo
+ * adicionado sem reler este comentario poderia colidir silenciosamente com o
+ * mesmo (dia, offset), aliasing dois fluxos diarios distintos para a mesma
+ * semente sem erro de build nem de runtime. Estes dois _Static_assert travam
+ * a build assim que qualquer um dos dois lados crescer demais: o primeiro
+ * garante que os indices brutos de jogo (0..RATIMOS_GAME_COUNT-1) nunca
+ * alcancam o offset 8 reservado pro termo; o segundo garante que o maior
+ * offset do termo (8 + ultimo modo) continua estritamente dentro da janela
+ * de 32. */
+_Static_assert(RATIMOS_GAME_COUNT <= 8,
+               "ratimos_game_kind_t cresceu alem do offset 8 reservado para o termo "
+               "em termo_daily_seed() -- revise a janela de 32 fluxos/dia de daily_seed.c");
+_Static_assert(8u + (uint32_t) RATIMOS_TERMO_MODE_COUNT - 1u < 32u,
+               "termo_daily_seed(): o offset maximo do termo estourou a janela de 32 "
+               "fluxos/dia compartilhada com daily_seed.c -- revise o stride ou "
+               "reserve mais espaco");
+
 static uint32_t termo_daily_seed(uint32_t day_index, ratimos_termo_mode_t mode)
 {
     return day_index * 32u + (uint32_t) (8u + (uint32_t) mode);
