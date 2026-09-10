@@ -91,6 +91,23 @@ def validate_clue(clue: str, answer: str, puzzle_id: str) -> str:
             f"puzzle {puzzle_id}: dica de '{answer}' precisa ter entre 1 e 90 caracteres "
             f"(tem {len(clue)})"
         )
+    if not clue.isascii():
+        raise CrosswordError(
+            f"puzzle {puzzle_id}: dica de '{answer}' precisa ser ASCII (sem acento) -- "
+            f"as fontes bitmap LVGL do dispositivo so cobrem ASCII (ver "
+            f"conexo_puzzles.c e a convencao 'sem acento' do crossword README)"
+        )
+    # WR-01: len() acima conta CARACTERES Python, nao bytes -- uma dica com
+    # exatamente 90 caracteres ASCII sempre cabe (90 <= 95), mas a checagem
+    # de bytes UTF-8 fica aqui como cinto-e-suspensorio caso o limite de
+    # caracteres suba no futuro sem alguem revisitar o tamanho do buffer C
+    # fixo (`char clue_text[96]`, 95 bytes uteis + terminador nulo).
+    encoded_len = len(clue.encode("utf-8"))
+    if encoded_len > 95:
+        raise CrosswordError(
+            f"puzzle {puzzle_id}: dica de '{answer}' ocupa {encoded_len} bytes UTF-8, "
+            f"maximo permitido e 95 (buffer C fixo char clue_text[96])"
+        )
     return clue
 
 
