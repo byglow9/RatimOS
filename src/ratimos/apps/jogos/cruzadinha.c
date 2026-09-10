@@ -346,12 +346,26 @@ static void render_clue_list(void)
         char buf[160];
         snprintf(buf, sizeof(buf), "%u: %s", (unsigned) w->clue_number, w->clue_text);
 
+        /* WR-04: defesa em profundidade -- hoje across_count+down_count <=
+         * word_count <= RATIMOS_CRUZADINHA_MAX_WORDS e garantido pelo gerador
+         * e por _Static_assert de dimensionamento, mas nada aqui checava os
+         * dois contadores individualmente no PONTO DE USO antes de indexar
+         * s_clue_list_across_label[]/s_clue_list_across_row[] (tamanho fixo
+         * RATIMOS_CRUZADINHA_MAX_WORDS). Um `break` aqui casa com a
+         * disciplina de bounds-check do resto do arquivo/engine em vez de
+         * confiar so no invariante upstream. */
         if (w->is_across) {
+            if (across_count >= RATIMOS_CRUZADINHA_MAX_WORDS) {
+                break;
+            }
             lv_label_set_text(s_clue_list_across_label[across_count], buf);
             lv_obj_set_user_data(s_clue_list_across_row[across_count], (void *) (uintptr_t) i);
             lv_obj_clear_flag(s_clue_list_across_row[across_count], LV_OBJ_FLAG_HIDDEN);
             across_count++;
         } else {
+            if (down_count >= RATIMOS_CRUZADINHA_MAX_WORDS) {
+                break;
+            }
             lv_label_set_text(s_clue_list_down_label[down_count], buf);
             lv_obj_set_user_data(s_clue_list_down_row[down_count], (void *) (uintptr_t) i);
             lv_obj_clear_flag(s_clue_list_down_row[down_count], LV_OBJ_FLAG_HIDDEN);
