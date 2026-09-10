@@ -199,7 +199,7 @@ bool ratimos_conexo_record_win_if_needed(ratimos_conexo_state_t * state)
         return false;
     }
 
-    if (!ratimos_storage_record_daily_win(RATIMOS_GAME_CONEXO)) {
+    if (!ratimos_storage_record_daily_win(RATIMOS_GAME_CONEXO, ratimos_daily_index())) {
         return false;
     }
 

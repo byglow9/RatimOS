@@ -66,6 +66,12 @@ typedef struct {
     uint16_t shared_completions;
     uint8_t game_exclusive_unlocked[RATIMOS_GAME_COUNT];
     uint8_t reserved2;
+    /* CR-01: dia de credito por jogo, persistido para que o guard de
+     * idempotencia sobreviva a um reset client-side de daily_win_recorded.
+     * Adicionado ao FINAL do registro para que o payload de checksum
+     * (offsetof(shared_completions) ate o fim do struct) continue cobrindo
+     * este campo automaticamente, sem mudar o calculo do checksum. */
+    uint32_t last_win_day_index[RATIMOS_GAME_COUNT];
 } progression_record_t;
 
 /* O registro e gravado como bytes crus da struct, entao o tamanho precisa ser
@@ -73,7 +79,7 @@ typedef struct {
  * de casar com o novo binario silenciosamente. Falhar aqui e melhor. */
 _Static_assert(sizeof(save_record_t) == 16 + RATIMOS_GAME_STATE_BLOB_SIZE,
                "save_record_t ganhou padding inesperado");
-_Static_assert(sizeof(progression_record_t) == 20,
+_Static_assert(sizeof(progression_record_t) == 20 + 4 * RATIMOS_GAME_COUNT,
                "progression_record_t ganhou padding inesperado");
 
 /* Soma aditiva de 32 bits. Nao e criptografia (o save nao e secreto, V6 nao
@@ -344,6 +350,7 @@ bool ratimos_storage_get_progression(ratimos_progression_state_t * out)
 
     out->shared_completions = rec.shared_completions;
     memcpy(out->game_exclusive_unlocked, rec.game_exclusive_unlocked, RATIMOS_GAME_COUNT);
+    memcpy(out->last_win_day_index, rec.last_win_day_index, sizeof(out->last_win_day_index));
     clamp_progression(out);
     return true;
 }
@@ -362,6 +369,7 @@ bool ratimos_storage_save_progression(const ratimos_progression_state_t * state)
     write_header_magic(&rec.magic, &rec.format_version);
     rec.shared_completions = safe.shared_completions;
     memcpy(rec.game_exclusive_unlocked, safe.game_exclusive_unlocked, RATIMOS_GAME_COUNT);
+    memcpy(rec.last_win_day_index, safe.last_win_day_index, sizeof(rec.last_win_day_index));
 
     uint32_t payload_offset = (uint32_t) offsetof(progression_record_t, shared_completions);
     uint32_t payload_len = (uint32_t) (sizeof(rec) - payload_offset);
@@ -370,7 +378,7 @@ bool ratimos_storage_save_progression(const ratimos_progression_state_t * state)
     return write_atomic(s_progression_path, &rec, sizeof(rec));
 }
 
-bool ratimos_storage_record_daily_win(ratimos_game_kind_t game)
+bool ratimos_storage_record_daily_win(ratimos_game_kind_t game, uint32_t day_index)
 {
     if (!kind_in_range(game)) {
         return false;
@@ -379,14 +387,31 @@ bool ratimos_storage_record_daily_win(ratimos_game_kind_t game)
     ratimos_progression_state_t p;
     if (!ratimos_storage_get_progression(&p)) {
         /* Sem progressao valida ainda: comeca do zero em vez de falhar — uma
-         * vitoria real nunca pode ser perdida por causa de um arquivo ausente. */
+         * vitoria real nunca pode ser perdida por causa de um arquivo ausente.
+         * last_win_day_index precisa da sentinela explicita: memset(0) sozinho
+         * deixaria todo jogo marcado como "ja credited no dia 0", o que
+         * bloquearia incorretamente a PRIMEIRA vitoria real caso
+         * ratimos_daily_index() algum dia retorne 0 (fallback de relogio
+         * quebrado). */
         memset(&p, 0, sizeof(p));
+        for (size_t i = 0; i < RATIMOS_GAME_COUNT; i++) {
+            p.last_win_day_index[i] = RATIMOS_NO_WIN_DAY;
+        }
+    }
+
+    /* CR-01: idempotencia por dia sobrevivendo a um reset client-side do
+     * proprio `daily_win_recorded` -- se este jogo ja creditou o castelo
+     * NESTE MESMO dia, a chamada e um no-op (nao e uma falha: o estado
+     * desejado pelo chamador -- "hoje esta creditado" -- ja e verdade). */
+    if (p.last_win_day_index[game] == day_index) {
+        return true;
     }
 
     if (p.shared_completions < RATIMOS_PROGRESSION_MAX_COMPLETIONS) {
         p.shared_completions++;
     }
     p.game_exclusive_unlocked[game] = 1;
+    p.last_win_day_index[game] = day_index;
 
     return ratimos_storage_save_progression(&p);
 }

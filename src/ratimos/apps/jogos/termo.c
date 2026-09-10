@@ -404,7 +404,7 @@ static void try_submit(void)
          * de novo. Uma troca de modo ou um "nao foi dessa vez" nunca chega
          * aqui. */
         if (s_state.finished == 1 && !s_state.daily_win_recorded) {
-            if (ratimos_storage_record_daily_win(RATIMOS_GAME_TERMO)) {
+            if (ratimos_storage_record_daily_win(RATIMOS_GAME_TERMO, ratimos_daily_index())) {
                 s_state.daily_win_recorded = 1;
             }
         }

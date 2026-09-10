@@ -400,7 +400,7 @@ static void check_completion(void)
         /* PROGRESSAO-01: credita o castelo EXATAMENTE uma vez -- o guard
          * `daily_win_recorded` fica dentro do proprio estado persistido. */
         if (!s_state.daily_win_recorded) {
-            if (ratimos_storage_record_daily_win(RATIMOS_GAME_CRUZADINHA)) {
+            if (ratimos_storage_record_daily_win(RATIMOS_GAME_CRUZADINHA, ratimos_daily_index())) {
                 s_state.daily_win_recorded = 1;
             }
         }

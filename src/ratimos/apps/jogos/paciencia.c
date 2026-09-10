@@ -208,7 +208,7 @@ static void begin_flash(paciencia_selection_kind_t kind, uint8_t index)
 static void handle_win_credit_if_needed(void)
 {
     if (s_state.won && s_state.daily && !s_state.daily_win_recorded) {
-        if (ratimos_storage_record_daily_win(RATIMOS_GAME_PACIENCIA)) {
+        if (ratimos_storage_record_daily_win(RATIMOS_GAME_PACIENCIA, ratimos_daily_index())) {
             s_state.daily_win_recorded = 1;
         }
     }

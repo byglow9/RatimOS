@@ -109,9 +109,22 @@ typedef enum {
  * arquivo adulterado nao consiga injetar um numero absurdo na UI. */
 #define RATIMOS_PROGRESSION_MAX_COMPLETIONS 9999
 
+/* Sentinela "nunca creditado" para last_win_day_index[] -- precisa ser um
+ * valor que ratimos_daily_index() nunca produz na pratica (dias desde a
+ * epoch Unix; um progression state novo/zerado nao pode ser confundido com
+ * "ja venceu no dia 0"). UINT32_MAX corresponde a ~11.7 milhoes de anos no
+ * futuro a partir da epoch, entao nunca colide com um dia real. */
+#define RATIMOS_NO_WIN_DAY 0xFFFFFFFFu
+
 typedef struct {
     uint16_t shared_completions;                        /* dias concluidos, somados entre todos os jogos */
     uint8_t game_exclusive_unlocked[RATIMOS_GAME_COUNT]; /* 0 ou 1 por jogo */
+    /* CR-01: dia (ratimos_daily_index()) em que este jogo creditou o castelo
+     * pela ultima vez. Guard de idempotencia POR DIA que sobrevive a um
+     * reset client-side de `daily_win_recorded` -- ver
+     * ratimos_storage_record_daily_win(). RATIMOS_NO_WIN_DAY = nunca
+     * creditado. */
+    uint32_t last_win_day_index[RATIMOS_GAME_COUNT];
 } ratimos_progression_state_t;
 
 /* Passo de boot: garante que o diretorio de saves existe. Nao le nada. */
@@ -139,8 +152,16 @@ bool ratimos_storage_get_progression(ratimos_progression_state_t * out);
 bool ratimos_storage_save_progression(const ratimos_progression_state_t * state);
 
 /* Vitoria no modo diario: soma 1 no contador compartilhado e marca o
- * desbloqueio exclusivo do jogo. Nunca decrementa nem limpa nada. */
-bool ratimos_storage_record_daily_win(ratimos_game_kind_t game);
+ * desbloqueio exclusivo do jogo. Nunca decrementa nem limpa nada.
+ *
+ * `day_index` (tipicamente ratimos_daily_index() do chamador) e comparado
+ * contra o `last_win_day_index` ja persistido para este jogo (CR-01): se
+ * este jogo ja foi creditado no MESMO dia, a chamada e um no-op idempotente
+ * (retorna true sem somar de novo) -- protege o contador mesmo que o
+ * chamador tenha perdido/zerado seu proprio flag `daily_win_recorded` em
+ * memoria (ex.: um "novo jogo"/troca-de-modo que reconstroi o estado do
+ * zero a partir da MESMA semente diaria). */
+bool ratimos_storage_record_daily_win(ratimos_game_kind_t game, uint32_t day_index);
 
 
 #endif

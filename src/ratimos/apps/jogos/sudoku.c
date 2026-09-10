@@ -347,7 +347,7 @@ static void keypad_value_changed_cb(lv_event_t * e)
     if (ratimos_sudoku_is_solved(&s_state)) {
         s_state.solved = 1;
         if (s_state.mode == RATIMOS_SUDOKU_DIARIO && !s_state.daily_win_recorded) {
-            if (ratimos_storage_record_daily_win(RATIMOS_GAME_SUDOKU)) {
+            if (ratimos_storage_record_daily_win(RATIMOS_GAME_SUDOKU, ratimos_daily_index())) {
                 s_state.daily_win_recorded = 1;
             }
         }

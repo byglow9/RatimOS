@@ -224,7 +224,7 @@ void test_clear_game_state_removes_board_but_not_progression(void)
     memset(&state, 0, sizeof(state));
     state.used = 4;
     TEST_ASSERT_TRUE(ratimos_storage_save_game_state(RATIMOS_GAME_CONEXO, &state));
-    TEST_ASSERT_TRUE(ratimos_storage_record_daily_win(RATIMOS_GAME_CONEXO));
+    TEST_ASSERT_TRUE(ratimos_storage_record_daily_win(RATIMOS_GAME_CONEXO, 100));
 
     ratimos_progression_state_t before;
     TEST_ASSERT_TRUE(ratimos_storage_get_progression(&before));
@@ -259,7 +259,7 @@ void test_progression_clamp_normalizes_extreme_values(void)
 
 void test_record_daily_win_increments_and_sets_unlock_flag(void)
 {
-    TEST_ASSERT_TRUE(ratimos_storage_record_daily_win(RATIMOS_GAME_CONEXO));
+    TEST_ASSERT_TRUE(ratimos_storage_record_daily_win(RATIMOS_GAME_CONEXO, 100));
 
     ratimos_progression_state_t p;
     TEST_ASSERT_TRUE(ratimos_storage_get_progression(&p));
@@ -268,10 +268,31 @@ void test_record_daily_win_increments_and_sets_unlock_flag(void)
     TEST_ASSERT_EQUAL_UINT8(0, p.game_exclusive_unlocked[RATIMOS_GAME_SUDOKU]);
 }
 
-void test_record_daily_win_twice_increments_counter_but_flag_stays_one(void)
+/* CR-01 (fix): duas chamadas para o MESMO dia (day_index identico) sao
+ * idempotentes -- a segunda chamada e um no-op que NAO soma de novo o
+ * contador compartilhado. Isto e o guard que sobrevive a um "novo
+ * jogo"/troca-de-modo client-side que reseta o proprio `daily_win_recorded`
+ * em memoria mas ainda gera o MESMO dia (mesma semente diaria). Antes do
+ * fix esta mesma chamada dupla incrementava o contador duas vezes -- ver
+ * git history para o teste anterior que provava o bug. */
+void test_record_daily_win_same_day_twice_is_idempotent(void)
 {
-    TEST_ASSERT_TRUE(ratimos_storage_record_daily_win(RATIMOS_GAME_CONEXO));
-    TEST_ASSERT_TRUE(ratimos_storage_record_daily_win(RATIMOS_GAME_CONEXO));
+    TEST_ASSERT_TRUE(ratimos_storage_record_daily_win(RATIMOS_GAME_CONEXO, 100));
+    TEST_ASSERT_TRUE(ratimos_storage_record_daily_win(RATIMOS_GAME_CONEXO, 100));
+
+    ratimos_progression_state_t p;
+    TEST_ASSERT_TRUE(ratimos_storage_get_progression(&p));
+    TEST_ASSERT_EQUAL_UINT16(1, p.shared_completions);
+    TEST_ASSERT_EQUAL_UINT8(1, p.game_exclusive_unlocked[RATIMOS_GAME_CONEXO]);
+}
+
+/* Contraste direto com o teste acima: um dia DIFERENTE para o mesmo jogo e
+ * uma vitoria diaria legitima nova, entao soma de novo -- o guard e por
+ * jogo+dia, nao um "so uma vez para sempre". */
+void test_record_daily_win_different_day_increments_again(void)
+{
+    TEST_ASSERT_TRUE(ratimos_storage_record_daily_win(RATIMOS_GAME_CONEXO, 100));
+    TEST_ASSERT_TRUE(ratimos_storage_record_daily_win(RATIMOS_GAME_CONEXO, 101));
 
     ratimos_progression_state_t p;
     TEST_ASSERT_TRUE(ratimos_storage_get_progression(&p));
@@ -279,9 +300,24 @@ void test_record_daily_win_twice_increments_counter_but_flag_stays_one(void)
     TEST_ASSERT_EQUAL_UINT8(1, p.game_exclusive_unlocked[RATIMOS_GAME_CONEXO]);
 }
 
+/* Outro jogo no MESMO dia nao e afetado pelo guard per-jogo do conexo --
+ * prova que last_win_day_index e indexado por jogo, nao um unico dia
+ * global compartilhado. */
+void test_record_daily_win_same_day_different_game_both_increment(void)
+{
+    TEST_ASSERT_TRUE(ratimos_storage_record_daily_win(RATIMOS_GAME_CONEXO, 100));
+    TEST_ASSERT_TRUE(ratimos_storage_record_daily_win(RATIMOS_GAME_SUDOKU, 100));
+
+    ratimos_progression_state_t p;
+    TEST_ASSERT_TRUE(ratimos_storage_get_progression(&p));
+    TEST_ASSERT_EQUAL_UINT16(2, p.shared_completions);
+    TEST_ASSERT_EQUAL_UINT8(1, p.game_exclusive_unlocked[RATIMOS_GAME_CONEXO]);
+    TEST_ASSERT_EQUAL_UINT8(1, p.game_exclusive_unlocked[RATIMOS_GAME_SUDOKU]);
+}
+
 void test_record_daily_win_rejects_out_of_range_game(void)
 {
-    TEST_ASSERT_FALSE(ratimos_storage_record_daily_win((ratimos_game_kind_t) RATIMOS_GAME_COUNT));
+    TEST_ASSERT_FALSE(ratimos_storage_record_daily_win((ratimos_game_kind_t) RATIMOS_GAME_COUNT, 100));
 
     ratimos_progression_state_t p;
     TEST_ASSERT_TRUE(ratimos_storage_get_progression(&p));
@@ -446,7 +482,9 @@ int main(void)
     RUN_TEST(test_clear_game_state_removes_board_but_not_progression);
     RUN_TEST(test_progression_clamp_normalizes_extreme_values);
     RUN_TEST(test_record_daily_win_increments_and_sets_unlock_flag);
-    RUN_TEST(test_record_daily_win_twice_increments_counter_but_flag_stays_one);
+    RUN_TEST(test_record_daily_win_same_day_twice_is_idempotent);
+    RUN_TEST(test_record_daily_win_different_day_increments_again);
+    RUN_TEST(test_record_daily_win_same_day_different_game_both_increment);
     RUN_TEST(test_record_daily_win_rejects_out_of_range_game);
     RUN_TEST(test_wrong_magic_returns_invalid_and_zeroed);
     RUN_TEST(test_truncated_to_half_length_returns_invalid_and_zeroed);
