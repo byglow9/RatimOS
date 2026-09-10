@@ -6,6 +6,7 @@
 .env.*
 supabase/.temp/
 .planning/research/.cache/
+__pycache__/
 
 # progresso de jogo escrito em runtime — diferente de assets/mock/ (versionado), nunca commitar
 assets/save/

@@ -1,0 +1,78 @@
+{
+  "puzzles": [
+    {
+      "id": "cruz-001",
+      "grid_size": 9,
+      "words": [
+        { "answer": "CASA", "clue": "lugar onde moramos, com quartos, sala e cozinha" },
+        { "answer": "JANELA", "clue": "abertura na parede com vidro, por onde entra a luz" },
+        { "answer": "PORTA", "clue": "abre e fecha para entrar ou sair de um comodo" },
+        { "answer": "MESA", "clue": "movel onde comemos e colocamos objetos" },
+        { "answer": "CADEIRA", "clue": "movel com encosto onde nos sentamos" },
+        { "answer": "COZINHA", "clue": "comodo da casa onde preparamos a comida" },
+        { "answer": "QUARTO", "clue": "comodo da casa onde dormimos" },
+        { "answer": "SALA", "clue": "comodo da casa onde recebemos visitas" }
+      ]
+    },
+    {
+      "id": "cruz-002",
+      "grid_size": 9,
+      "words": [
+        { "answer": "ARVORE", "clue": "planta grande com tronco, galhos e folhas" },
+        { "answer": "FLOR", "clue": "parte colorida e perfumada de uma planta" },
+        { "answer": "FOLHA", "clue": "parte verde da planta presa ao galho" },
+        { "answer": "RIO", "clue": "curso de agua doce que corre ate o mar" },
+        { "answer": "MONTANHA", "clue": "elevacao alta de terra, maior que uma colina" },
+        { "answer": "FLORESTA", "clue": "area com muitas arvores proximas umas das outras" },
+        { "answer": "CHUVA", "clue": "agua que cai do ceu em forma de gotas" },
+        { "answer": "VENTO", "clue": "ar em movimento que sentimos no rosto" },
+        { "answer": "SOL", "clue": "estrela que ilumina e aquece a terra de dia" },
+        { "answer": "LUA", "clue": "satelite natural da terra, visivel a noite" }
+      ]
+    },
+    {
+      "id": "cruz-003",
+      "grid_size": 9,
+      "words": [
+        { "answer": "ARROZ", "clue": "grao branco cozido, acompanha o feijao todo dia" },
+        { "answer": "FEIJAO", "clue": "grao que cozinha com o arroz, prato tipico brasileiro" },
+        { "answer": "BOLO", "clue": "doce assado no forno, comum em aniversarios" },
+        { "answer": "PIZZA", "clue": "massa redonda coberta com molho e queijo" },
+        { "answer": "SALADA", "clue": "mistura de verduras e legumes, geralmente crua" },
+        { "answer": "FRUTA", "clue": "alimento doce que cresce em arvores ou plantas" },
+        { "answer": "LARANJA", "clue": "fruta citrica, redonda e suculenta, rica em vitamina c" },
+        { "answer": "LEITE", "clue": "liquido branco que vem da vaca, usado no cafe" }
+      ]
+    },
+    {
+      "id": "cruz-004",
+      "grid_size": 9,
+      "words": [
+        { "answer": "GATO", "clue": "animal domestico que mia e adora dormir no sol" },
+        { "answer": "CACHORRO", "clue": "melhor amigo do homem, late e abana o rabo" },
+        { "answer": "PASSARO", "clue": "animal com penas e bico que geralmente voa" },
+        { "answer": "PEIXE", "clue": "animal que vive na agua e respira por guelras" },
+        { "answer": "COELHO", "clue": "animal de orelhas compridas que adora cenoura" },
+        { "answer": "CAVALO", "clue": "animal grande usado para montaria e corrida" },
+        { "answer": "FORMIGA", "clue": "inseto pequeno que trabalha em grupo, vive em formigueiro" },
+        { "answer": "ARANHA", "clue": "animal de oito patas que tece teias" }
+      ]
+    },
+    {
+      "id": "cruz-005",
+      "grid_size": 11,
+      "words": [
+        { "answer": "ESCOLA", "clue": "lugar onde estudamos e aprendemos coisas novas" },
+        { "answer": "TRABALHO", "clue": "atividade que fazemos para ganhar a vida" },
+        { "answer": "AMIGO", "clue": "pessoa querida com quem compartilhamos momentos" },
+        { "answer": "FAMILIA", "clue": "pessoas unidas por laco de sangue ou de afeto" },
+        { "answer": "VIAGEM", "clue": "deslocamento para conhecer um novo lugar" },
+        { "answer": "MUSICA", "clue": "arte feita de sons e ritmos, boa para dancar" },
+        { "answer": "LIVRO", "clue": "objeto com paginas cheio de historias e conhecimento" },
+        { "answer": "FESTA", "clue": "reuniao alegre para comemorar algo especial" },
+        { "answer": "PRESENTE", "clue": "objeto dado com carinho em uma data especial" },
+        { "answer": "CARTA", "clue": "mensagem escrita enviada para alguem querido" }
+      ]
+    }
+  ]
+}
