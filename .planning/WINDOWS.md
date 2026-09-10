@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 8
+open_count: 9
 waived_count: 0
 fixed_count: 0
-total_count: 8
-last_updated: 2026-09-10T13:02:39.750Z
+total_count: 9
+last_updated: 2026-09-10T13:55:24.242Z
 ---
 
 # Broken Windows Ledger
@@ -23,6 +23,7 @@ last_updated: 2026-09-10T13:02:39.750Z
 | 6 | 02.1 | unrun-verify | src/ratimos/apps/jogos/sudoku.c |  | Task 3 manual UAT (select diario, solve the board via the engine's own solution, confirm resolvido!+1 no castelo banner, confirm castelo tile/conquistas update on home, re-enter and confirm no double-count) not interactively executed -- same tooling gap. Substituted with unit tests covering is_solved-from-own-solution, the daily-win-recorded guard (via test_storage_game_state), and a state round-trip test through the save blob; needs human UAT. | open |  | 2026-09-09T20:07:13.033Z |  |
 | 7 | 02.1 | unrun-verify | src/ratimos/apps/jogos/paciencia.c |  | Task 2 manual UAT (open jogos>paciencia, confirm 7 tableau columns with one face-up card each, tap the stock to draw, attempt an illegal move (red 6 onto red 7) and confirm visible refusal via the accent-border flash, make legal moves, navigate away/back, quit+relaunch, confirm the same deal is restored) not interactively executed -- no GUI input-simulation tooling (xdotool/ydotool/xte) available in this sandbox and no sudo to install one. Substituted with 21 automated engine unit tests plus a headless no-crash smoke run of the built binary; needs human UAT. | open |  | 2026-09-10T13:02:34.579Z |  |
 | 8 | 02.1 | unrun-verify | src/ratimos/apps/jogos/paciencia.c |  | Task 3 manual UAT (press recolher on a well-progressed deal and confirm cards move to foundations legally, complete a daily deal and confirm the venceu! banner and +1 no castelo line, go home and confirm the castelo day count went up by one and paciencia's conquista is lit, re-enter paciencia and confirm no double-count) not interactively executed -- same tooling gap as Task 2. Substituted with unit tests covering the won field as a move side effect, auto-collect's bounded termination (both zero-available and clear-everything cases), and a full state round-trip through the game-state blob; needs human UAT. | open |  | 2026-09-10T13:02:39.750Z |  |
+| 9 | 02.1 | unrun-verify | src/ratimos/apps/jogos/termo.c |  | Task 3 manual UAT (play a guess and confirm per-letter colours, switch to quarteto and confirm 4 scrollable boards fit, navigate away and back, quit and relaunch, solve a daily session and confirm the castelo count) not interactively executed -- no GUI input-simulation tooling (xdotool) available in this sandbox. Substituted with 16 engine unit tests plus a headless no-crash smoke run of the built binary; needs human UAT. | open |  | 2026-09-10T13:55:24.242Z |  |
 
 ````json
 [
@@ -120,6 +121,18 @@ last_updated: 2026-09-10T13:02:39.750Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-10T13:02:39.750Z",
+    "resolved_at": null
+  },
+  {
+    "id": 9,
+    "kind": "unrun-verify",
+    "phase": "02.1",
+    "file": "src/ratimos/apps/jogos/termo.c",
+    "line": null,
+    "description": "Task 3 manual UAT (play a guess and confirm per-letter colours, switch to quarteto and confirm 4 scrollable boards fit, navigate away and back, quit and relaunch, solve a daily session and confirm the castelo count) not interactively executed -- no GUI input-simulation tooling (xdotool) available in this sandbox. Substituted with 16 engine unit tests plus a headless no-crash smoke run of the built binary; needs human UAT.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-10T13:55:24.242Z",
     "resolved_at": null
   }
 ]

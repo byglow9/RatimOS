@@ -39,6 +39,7 @@ below names the reference project this identity is inspired by but not copied fr
 | Unlock `unlock_termo_arvore` | `assets/progress/unlock_termo_arvore.png` | `tools/generate_progress_art.py` + `tools/convert_images.py` | Procedurally drawn (small tree motif), termo's exclusive unlock (D-05) | Project-owned |
 | Unlock `unlock_cruzadinha_fonte` | `assets/progress/unlock_cruzadinha_fonte.png` | `tools/generate_progress_art.py` + `tools/convert_images.py` | Procedurally drawn (fountain motif), cruzadinha's exclusive unlock (D-05) | Project-owned |
 | Unlock `unlock_conexo_portao` | `assets/progress/unlock_conexo_portao.png` | `tools/generate_progress_art.py` + `tools/convert_images.py` | Procedurally drawn (arched gate motif), conexo's exclusive unlock (D-05) | Project-owned |
+| Word list (termo/dueto/quarteto) | `assets/wordlists/termo_answers.txt` (577 words) + `assets/wordlists/termo_accepted.txt` (6,011 words) | `tools/curate_termo_words.py` (`src/ratimos/apps/jogos/termo_words.c`/`.h`) | Curated subset of the `fserb/pt-br` Brazilian Portuguese lexicon (https://github.com/fserb/pt-br), filtered to 5-letter words, ranked by the source's bundled ICF frequency score, and additionally passed through a manual suitability review (23 entries removed — proper nouns and morbid/religious terms; see `assets/wordlists/README.md`), plan 02.1-06 | **MIT** (verified against the source repository's `LICENSE` file) |
 
 ## Distinctness vs colombiaOS
 
@@ -101,6 +102,15 @@ python3 tools/generate_progress_art.py
 python3 tools/convert_images.py --manifest assets/progress/manifest.json \
     --out-c src/ratimos/progress_images.c --out-h src/ratimos/progress_images.h \
     --guard RATIMOS_PROGRESS_IMAGES_H
+
+# Termo/Dueto/Quarteto word list: recompile the C arrays from the already-curated
+# assets/wordlists/*.txt files (safe, does not touch the manually-reviewed content) --
+# see assets/wordlists/README.md for the --regenerate flag, which rebuilds the .txt
+# files from a fresh fserb/pt-br checkout and REQUIRES repeating the manual
+# suitability pass documented there (plan 02.1-06)
+python3 tools/curate_termo_words.py --source <path-to-fserb-pt-br-checkout> \
+    --out-c src/ratimos/apps/jogos/termo_words.c \
+    --out-h src/ratimos/apps/jogos/termo_words.h
 ```
 
 Both pipelines are deterministic — running either command twice in a row produces
