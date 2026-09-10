@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 6
+open_count: 7
 waived_count: 0
 fixed_count: 0
-total_count: 6
-last_updated: 2026-09-09T20:07:13.033Z
+total_count: 7
+last_updated: 2026-09-10T13:55:24.242Z
 ---
 
 # Broken Windows Ledger
@@ -21,6 +21,7 @@ last_updated: 2026-09-09T20:07:13.033Z
 | 4 | 02.1 | unrun-verify | src/ratimos/apps/castelo_app.c |  | Interactive tap-through (home tile -> castelo screen -> play/win a game -> confirm day count) not executable in this sandbox (no xdotool/ydotool/xte). Substituted with unit tests + real screenshots of a crafted progression.bin fixture at two states; needs human UAT. | open |  | 2026-09-09T19:25:49.678Z |  |
 | 5 | 02.1 | unrun-verify | src/ratimos/apps/jogos/sudoku.c |  | Task 2 manual UAT (open jogos>sudoku, fill cells, create a conflict, switch difficulty with the confirm dialog, navigate away/back, quit+relaunch, confirm board restored) not interactively executed -- no GUI input-simulation tooling (xdotool) available in this sandbox. Substituted with 20 automated engine/screen-adjacent unit tests plus a headless no-crash smoke run of the built binary; needs human UAT. | open |  | 2026-09-09T20:07:12.926Z |  |
 | 6 | 02.1 | unrun-verify | src/ratimos/apps/jogos/sudoku.c |  | Task 3 manual UAT (select diario, solve the board via the engine's own solution, confirm resolvido!+1 no castelo banner, confirm castelo tile/conquistas update on home, re-enter and confirm no double-count) not interactively executed -- same tooling gap. Substituted with unit tests covering is_solved-from-own-solution, the daily-win-recorded guard (via test_storage_game_state), and a state round-trip test through the save blob; needs human UAT. | open |  | 2026-09-09T20:07:13.033Z |  |
+| 7 | 02.1 | unrun-verify | src/ratimos/apps/jogos/termo.c |  | Task 3 manual UAT (play a guess and confirm per-letter colours, switch to quarteto and confirm 4 scrollable boards fit, navigate away and back, quit and relaunch, solve a daily session and confirm the castelo count) not interactively executed -- no GUI input-simulation tooling (xdotool) available in this sandbox. Substituted with 16 engine unit tests plus a headless no-crash smoke run of the built binary; needs human UAT. | open |  | 2026-09-10T13:55:24.242Z |  |
 
 ````json
 [
@@ -94,6 +95,18 @@ last_updated: 2026-09-09T20:07:13.033Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-09T20:07:13.033Z",
+    "resolved_at": null
+  },
+  {
+    "id": 7,
+    "kind": "unrun-verify",
+    "phase": "02.1",
+    "file": "src/ratimos/apps/jogos/termo.c",
+    "line": null,
+    "description": "Task 3 manual UAT (play a guess and confirm per-letter colours, switch to quarteto and confirm 4 scrollable boards fit, navigate away and back, quit and relaunch, solve a daily session and confirm the castelo count) not interactively executed -- no GUI input-simulation tooling (xdotool) available in this sandbox. Substituted with 16 engine unit tests plus a headless no-crash smoke run of the built binary; needs human UAT.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-10T13:55:24.242Z",
     "resolved_at": null
   }
 ]
