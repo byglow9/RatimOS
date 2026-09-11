@@ -11,6 +11,7 @@
     { "id": "game_paciencia", "file": "game_paciencia.png", "w": 32, "h": 32 },
     { "id": "game_termo", "file": "game_termo.png", "w": 32, "h": 32 },
     { "id": "game_cruzadinha", "file": "game_cruzadinha.png", "w": 32, "h": 32 },
-    { "id": "game_conexo", "file": "game_conexo.png", "w": 32, "h": 32 }
+    { "id": "game_conexo", "file": "game_conexo.png", "w": 32, "h": 32 },
+    { "id": "system_rook", "file": "system_rook.png", "w": 14, "h": 20 }
   ]
 }

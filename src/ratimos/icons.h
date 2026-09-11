@@ -22,6 +22,7 @@ extern const lv_image_dsc_t ratimos_icon_game_paciencia_desc;
 extern const lv_image_dsc_t ratimos_icon_game_termo_desc;
 extern const lv_image_dsc_t ratimos_icon_game_cruzadinha_desc;
 extern const lv_image_dsc_t ratimos_icon_game_conexo_desc;
+extern const lv_image_dsc_t ratimos_icon_system_rook_desc;
 
 const lv_image_dsc_t * ratimos_icon_by_id(const char * id);
 
