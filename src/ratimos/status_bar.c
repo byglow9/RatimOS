@@ -1,6 +1,13 @@
 #include "status_bar.h"
 #include "theme.h"
-#include "fonts/ratimos_fonts.h"
+
+#include <string.h>
+
+/* Tamanho maximo do buffer de markup recolorido da sectionbar -- folga
+ * generosa acima do maior caminho real esperado nesta fase ("./home/jogos/
+ * cruzadinha", o nome de app mais longo) mais o overhead dos dois spans
+ * "#RRGGBB ...#". */
+#define RATIMOS_SECTIONBAR_PATH_BUF_LEN 96
 
 static lv_obj_t * bar_row_create(lv_obj_t * parent, lv_coord_t height)
 {
@@ -41,26 +48,74 @@ void ratimos_topbar_create(lv_obj_t * parent)
     lv_obj_set_style_text_color(batt, RATIMOS_COLOR_TEXT, 0);
 }
 
-void ratimos_sectionbar_create(lv_obj_t * parent, const char * label)
+/*
+ * Constroi (em `label`) o markup recolorido de um caminho de sectionbar --
+ * unico lugar do arquivo que monta a string "#RRGGBB ...#" (create() e
+ * set_path() chamam esta funcao, nunca duplicam a logica de recoloracao).
+ *
+ * Regra: caminhos com profundidade >=2 (2+ ocorrencias de '/', ex:
+ * "./home/jogos/conexo") tem tudo ate a ULTIMA '/' (inclusive) esmaecido
+ * (RATIMOS_COLOR_TEXT_MUTED) e o segmento final em destaque
+ * (RATIMOS_COLOR_ACCENT). Um caminho de nivel unico (ex: "./home", que tem
+ * so' uma '/', a do prefixo "./") nao tem segmento-pai nenhum pra esmaecer
+ * nem drill-down nenhum pra destacar -- o texto inteiro usa a cor normal de
+ * corpo (RATIMOS_COLOR_TEXT).
+ */
+static void format_breadcrumb(lv_obj_t * label, const char * path)
+{
+    lv_label_set_recolor(label, true);
+
+    const char * safe_path = path ? path : "";
+
+    size_t slash_count = 0;
+    for (const char * p = safe_path; *p; p++) {
+        if (*p == '/') {
+            slash_count++;
+        }
+    }
+
+    /* lv_color_to_u32() devolve 0xAARRGGBB (alpha sempre 0xff) -- mascara o
+     * byte de alpha pra sobrar so' os 6 digitos hex que o markup de recolor
+     * do LVGL espera. Nunca hardcoda uma segunda copia dos valores hex das
+     * macros de cor -- eles ficam com fonte unica em theme.h. */
+    unsigned long muted_rgb  = (unsigned long) (lv_color_to_u32(RATIMOS_COLOR_TEXT_MUTED) & 0x00FFFFFFu);
+    unsigned long accent_rgb = (unsigned long) (lv_color_to_u32(RATIMOS_COLOR_ACCENT) & 0x00FFFFFFu);
+    unsigned long text_rgb   = (unsigned long) (lv_color_to_u32(RATIMOS_COLOR_TEXT) & 0x00FFFFFFu);
+
+    char buf[RATIMOS_SECTIONBAR_PATH_BUF_LEN];
+    const char * last_slash = strrchr(safe_path, '/');
+
+    if (slash_count >= 2 && last_slash) {
+        int muted_len = (int) (last_slash - safe_path) + 1; /* inclui a '/' final */
+        lv_snprintf(buf, sizeof(buf), "#%06lx %.*s##%06lx %s#", muted_rgb, muted_len, safe_path,
+                    accent_rgb, last_slash + 1);
+    }
+    else {
+        lv_snprintf(buf, sizeof(buf), "#%06lx %s#", text_rgb, safe_path);
+    }
+
+    lv_label_set_text(label, buf);
+}
+
+void ratimos_sectionbar_create(lv_obj_t * parent, const char * path)
 {
     lv_obj_t * row = bar_row_create(parent, 24);
     lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
     lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    /* LV_SYMBOL_OK fica na fonte padrao (Montserrat) -- fontes pixel
-     * convertidas via lv_font_conv nao trazem os glifos de icone da area
-     * de uso privado do LVGL, entao trocar a fonte deste label renderizaria
-     * uma caixa vazia no lugar do check. So' o label de titulo ao lado
-     * adota o tier Heading (D-08). */
-    lv_obj_t * dots = lv_label_create(row);
-    lv_label_set_text(dots, LV_SYMBOL_OK);
-    lv_obj_set_style_text_color(dots, RATIMOS_COLOR_ACCENT, 0);
-
+    /* Unico filho do row: o label do caminho recolorido -- o antigo glifo
+     * de checkmark (fonte padrao) foi removido (nao fazia parte do design
+     * validado, ver header-navegacao.md "Sectionbar: caminho crescente").
+     * Fonte no tier Body (D-08) -- o tier Heading/pixel arriscava estourar
+     * a largura da sectionbar com um caminho de 3 segmentos. */
     lv_obj_t * title = lv_label_create(row);
-    lv_label_set_text(title, label);
-    lv_obj_set_style_text_color(title, RATIMOS_COLOR_TEXT, 0);
-    lv_obj_set_style_text_font(title, &ratimos_font_title_16, 0);
-    lv_obj_set_style_pad_left(title, 6, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_14, 0);
+    format_breadcrumb(title, path);
+}
+
+void ratimos_sectionbar_set_path(lv_obj_t * title_label, const char * path)
+{
+    format_breadcrumb(title_label, path);
 }
 
 void ratimos_bottombar_create(lv_obj_t * parent, const char * left_text, lv_event_cb_t left_cb,
