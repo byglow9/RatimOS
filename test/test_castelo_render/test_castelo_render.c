@@ -79,25 +79,27 @@ static void pump_render(void)
 }
 
 /*
- * Layout conhecido (app_shell.c + castelo_app.c, verificado nesta execucao):
- * shell.screen recebe, NESTA ORDEM, topbar/sectionbar (chrome, planos
- * 02.1-09/02.1-10) + shell.content + bottombar -- content e' sempre o
- * terceiro filho (indice 2). castelo_app.c constroi s_stage_image como o
- * PRIMEIRO filho de shell.content (indice 0), antes da legenda/conquistas.
- * Os dois planos independentes da mesma wave (02.1-09/02.1-10) so mexem no
- * chrome (topbar/sectionbar), nunca na ordem estrutural screen->content nem
- * nos filhos de content que castelo_app.c (arquivo deste plano) constroi --
- * por isso os indices abaixo sao estaveis. Mesmo assim, cada passo abaixo
- * falha alto (TEST_ASSERT) em vez de silenciosamente amostrar o widget
- * errado caso essa suposicao pare de valer no futuro.
+ * Layout conhecido (app_shell.c + castelo_app.c + theme.c, verificado nesta
+ * execucao): ratimos_theme_apply_screen() (plano 02.1-09 Task 3) agora
+ * insere o bitmap de fundo ditherizado como o PRIMEIRO filho de
+ * shell.screen (LV_OBJ_FLAG_FLOATING, fora do layout flex-column) --
+ * shell.screen recebe, NESTA ORDEM, fundo + topbar/sectionbar (chrome,
+ * planos 02.1-09/02.1-10) + shell.content + bottombar, entao content e'
+ * agora o QUARTO filho (indice 3), nao mais o terceiro (indice 2 era valido
+ * antes do plano 02.1-09 Task 3 existir). castelo_app.c constroi
+ * s_stage_image como o PRIMEIRO filho de shell.content (indice 0), antes da
+ * legenda/conquistas -- essa parte continua inalterada, so' o indice de
+ * `content` dentro de `scr` mudou. Mesmo assim, cada passo abaixo falha
+ * alto (TEST_ASSERT) em vez de silenciosamente amostrar o widget errado
+ * caso essa suposicao pare de valer no futuro.
  */
 static lv_obj_t * find_stage_image(void)
 {
     lv_obj_t * scr = lv_screen_active();
     TEST_ASSERT_NOT_NULL(scr);
-    TEST_ASSERT_TRUE(lv_obj_get_child_count(scr) >= 3);
+    TEST_ASSERT_TRUE(lv_obj_get_child_count(scr) >= 4);
 
-    lv_obj_t * content = lv_obj_get_child(scr, 2);
+    lv_obj_t * content = lv_obj_get_child(scr, 3);
     TEST_ASSERT_NOT_NULL(content);
     TEST_ASSERT_TRUE(lv_obj_get_child_count(content) >= 1);
 
