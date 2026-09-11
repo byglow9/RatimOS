@@ -1,0 +1,252 @@
+<title>001 — Background</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 56px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+
+  #variant-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: #0a0a0f; border-bottom: 1px solid #2a2a3a;
+    padding: 8px 16px; display: flex; gap: 8px; font-family: var(--font-mono);
+    flex-wrap: wrap;
+  }
+  .variant-tab {
+    background: #1c1c28; color: #cfcfe0; border: 1px solid #35354a;
+    padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: var(--font-mono); font-size: 12px;
+  }
+  .variant-tab.active { background: var(--ratimos-accent); color: white; border-color: var(--ratimos-accent); }
+  .variant { display: none; flex-direction: column; align-items: center; gap: 24px; }
+  .variant.active { display: flex; }
+
+  .frames-row { display: flex; gap: 32px; flex-wrap: wrap; justify-content: center; }
+
+  canvas.bg-canvas {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    image-rendering: pixelated;
+  }
+
+  .mock-topbar {
+    position: relative; z-index: 2;
+    height: 26px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 10px; font-size: 10px; color: var(--ratimos-text);
+    background: rgba(0,0,0,0.35);
+  }
+  .mock-sectionbar {
+    position: relative; z-index: 2;
+    height: 24px; display: flex; align-items: center;
+    padding: 0 10px; font-family: var(--font-display); font-size: 9px; color: var(--ratimos-text);
+  }
+  .mock-content {
+    position: relative; z-index: 2;
+    padding: 10px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .mock-row {
+    background: rgba(42,18,63,0.72);
+    border: 1px solid var(--ratimos-accent);
+    border-radius: 6px; padding: 8px;
+    display: flex; align-items: center; gap: 10px;
+    backdrop-filter: blur(1px);
+  }
+  .mock-row .dot { width: 28px; height: 28px; border-radius: 50%; background: var(--ratimos-accent); flex: none; }
+  .mock-row .txt { font-size: 11px; }
+  .mock-row .txt .t { display:block; }
+  .mock-row .txt .s { display:block; color: var(--ratimos-text-muted); font-size: 9px; margin-top: 2px; }
+
+  .note { max-width: 320px; font-size: 12px; color: #9a9ab0; line-height: 1.5; text-align: center; }
+  h3.vlabel { font-family: var(--font-mono); font-size: 13px; color: #dcdce8; margin: 0 0 4px; text-align:center; }
+
+  .ref-box { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .ref-box img { width: 100px; border-radius: 6px; border: 1px solid #333; }
+  .ref-box span { font-size: 10px; color: #777; }
+</style>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showVariant('a')">A: Gradiente liso</button>
+  <button class="variant-tab" onclick="showVariant('b')">B: Gradiente dithered (pixel)</button>
+  <button class="variant-tab" onclick="showVariant('c')">C: Dithered + grid de scanline ★ Escolhido</button>
+</div>
+
+<div class="device-frame-label" style="margin-top:8px">sketch 001 — background · questão: o gradiente roxo→magenta→laranja funciona atrás dos cards existentes?</div>
+
+<!-- VARIANT A: smooth CSS gradient -->
+<div id="variant-a" class="variant active">
+  <h3 class="vlabel">A: Gradiente liso (CSS linear-gradient)</h3>
+  <div class="frames-row">
+    <div>
+      <div class="device-frame" style="background: linear-gradient(180deg, #1c0a3d 0%, #7a1560 42%, #c81f4c 68%, #e8630f 100%);">
+        <div class="mock-topbar"><span>🏠 RatimOS</span><span>14:32 &nbsp; 🔋</span></div>
+        <div class="mock-sectionbar">✓ ./home</div>
+        <div class="mock-content">
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">jogos</span></div></div>
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">musica</span></div></div>
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">album</span></div></div>
+        </div>
+      </div>
+      <div class="device-frame-label">home</div>
+    </div>
+    <div>
+      <div class="device-frame" style="background: linear-gradient(180deg, #1c0a3d 0%, #7a1560 42%, #c81f4c 68%, #e8630f 100%);">
+        <div class="mock-topbar"><span>🏠 RatimOS</span><span>14:33 &nbsp; 🔋</span></div>
+        <div class="mock-sectionbar">✓ ./home/jogos</div>
+        <div class="mock-content">
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">sudoku</span><span class="s">jogar</span></div></div>
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">paciência</span><span class="s">jogar</span></div></div>
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">conexo</span><span class="s">continuar</span></div></div>
+        </div>
+      </div>
+      <div class="device-frame-label">jogos</div>
+    </div>
+  </div>
+  <p class="note">Mais fácil de implementar no LVGL (lv_style_set_bg_grad, 4 stops) — zero custo de flash/RAM para asset de imagem. Fica mais "web/app moderno" do que retrô-pixel.</p>
+</div>
+
+<!-- VARIANT B: dithered pixel gradient (canvas, Bayer ordered dithering) -->
+<div id="variant-b" class="variant">
+  <h3 class="vlabel">B: Gradiente dithered pixel-art (ordered dithering, referência da usuária)</h3>
+  <div class="frames-row">
+    <div>
+      <div class="device-frame"><canvas class="bg-canvas" data-variant="dither" width="320" height="480"></canvas>
+        <div class="mock-topbar"><span>🏠 RatimOS</span><span>14:32 &nbsp; 🔋</span></div>
+        <div class="mock-sectionbar">✓ ./home</div>
+        <div class="mock-content">
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">jogos</span></div></div>
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">musica</span></div></div>
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">album</span></div></div>
+        </div>
+      </div>
+      <div class="device-frame-label">home</div>
+    </div>
+    <div>
+      <div class="device-frame"><canvas class="bg-canvas" data-variant="dither" width="320" height="480"></canvas>
+        <div class="mock-topbar"><span>🏠 RatimOS</span><span>14:33 &nbsp; 🔋</span></div>
+        <div class="mock-sectionbar">✓ ./home/jogos</div>
+        <div class="mock-content">
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">sudoku</span><span class="s">jogar</span></div></div>
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">paciência</span><span class="s">jogar</span></div></div>
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">conexo</span><span class="s">continuar</span></div></div>
+        </div>
+      </div>
+      <div class="device-frame-label">jogos</div>
+    </div>
+    <div class="ref-box">
+      <img src="reference-gradient.png" alt="referência enviada">
+      <span>referência original</span>
+    </div>
+  </div>
+  <p class="note">Dithering ordenado (matriz Bayer 4x4) sobre os mesmos 4 stops de cor, renderizado em baixa resolução e ampliado com pixel nítido — o mesmo efeito visual do gradiente pixelizado que você mandou. Buildável como um bitmap C convertido (mesmo pipeline Pillow já usado pros ícones, D-07) e fixado como fundo de tela.</p>
+</div>
+
+<!-- VARIANT C: dithered + scanline/pixel grid overlay -->
+<div id="variant-c" class="variant">
+  <h3 class="vlabel">C: Dithered + grid de scanline sutil (reforça o clima "console retrô")</h3>
+  <div class="frames-row">
+    <div>
+      <div class="device-frame"><canvas class="bg-canvas" data-variant="dither-scan" width="320" height="480"></canvas>
+        <div class="mock-topbar"><span>🏠 RatimOS</span><span>14:32 &nbsp; 🔋</span></div>
+        <div class="mock-sectionbar">✓ ./home</div>
+        <div class="mock-content">
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">jogos</span></div></div>
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">musica</span></div></div>
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">album</span></div></div>
+        </div>
+      </div>
+      <div class="device-frame-label">home</div>
+    </div>
+    <div>
+      <div class="device-frame"><canvas class="bg-canvas" data-variant="dither-scan" width="320" height="480"></canvas>
+        <div class="mock-topbar"><span>🏠 RatimOS</span><span>14:33 &nbsp; 🔋</span></div>
+        <div class="mock-sectionbar">✓ ./home/jogos</div>
+        <div class="mock-content">
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">sudoku</span><span class="s">jogar</span></div></div>
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">paciência</span><span class="s">jogar</span></div></div>
+          <div class="mock-row"><div class="dot"></div><div class="txt"><span class="t">conexo</span><span class="s">continuar</span></div></div>
+        </div>
+      </div>
+      <div class="device-frame-label">jogos</div>
+    </div>
+  </div>
+  <p class="note">Mesmo dithering do B, mais linhas de scanline (1px, baixa opacidade) — visual mais "tela de handheld antigo". Risco: pode ficar "sujo" atrás de texto pequeno; testar legibilidade real antes de travar.</p>
+</div>
+
+<div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
+  sketch 001 · background
+</div>
+
+<script>
+function showVariant(id) {
+  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('variant-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ---- Ordered (Bayer 4x4) dithering of a 4-stop vertical gradient, rendered
+// at low internal resolution then scaled with pixelated image-rendering ----
+const BAYER4 = [
+  [0,8,2,10],
+  [12,4,14,6],
+  [3,11,1,9],
+  [15,7,13,5]
+];
+
+function hexToRgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n>>16)&255, (n>>8)&255, n&255];
+}
+
+function lerp(a,b,t){ return a + (b-a)*t; }
+
+const stops = ['#1c0a3d', '#7a1560', '#c81f4c', '#e8630f'].map(hexToRgb);
+
+function colorAt(t) {
+  // t in [0,1] across 4 stops (3 segments)
+  const seg = Math.min(2, Math.floor(t * 3));
+  const localT = (t * 3) - seg;
+  const a = stops[seg], b = stops[seg+1];
+  return [lerp(a[0],b[0],localT), lerp(a[1],b[1],localT), lerp(a[2],b[2],localT)];
+}
+
+// small discrete palette to dither toward (8 steps) — mimics limited-color
+// pixel-art palette rather than true continuous gradient
+const PALETTE_STEPS = 10;
+function quantize(v, levels) {
+  const step = 255 / (levels - 1);
+  return Math.round(v / step) * step;
+}
+
+function drawDithered(canvas, scanlines) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const LOWW = 80, LOWH = 120; // internal low-res grid
+  const img = ctx.createImageData(LOWW, LOWH);
+  for (let y = 0; y < LOWH; y++) {
+    const t = y / (LOWH - 1);
+    const [r,g,b] = colorAt(t);
+    for (let x = 0; x < LOWW; x++) {
+      const threshold = (BAYER4[y % 4][x % 4] / 16) - 0.5; // spread noise
+      const amt = 255 / PALETTE_STEPS;
+      const rr = Math.min(255, Math.max(0, quantize(r + threshold * amt, PALETTE_STEPS)));
+      const gg = Math.min(255, Math.max(0, quantize(g + threshold * amt, PALETTE_STEPS)));
+      const bb = Math.min(255, Math.max(0, quantize(b + threshold * amt, PALETTE_STEPS)));
+      const i = (y * LOWW + x) * 4;
+      img.data[i] = rr; img.data[i+1] = gg; img.data[i+2] = bb; img.data[i+3] = 255;
+    }
+  }
+  // draw low-res to an offscreen canvas, then scale up with pixelation
+  const off = document.createElement('canvas');
+  off.width = LOWW; off.height = LOWH;
+  off.getContext('2d').putImageData(img, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(off, 0, 0, LOWW, LOWH, 0, 0, W, H);
+
+  if (scanlines) {
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = '#000000';
+    for (let y = 0; y < H; y += 3) ctx.fillRect(0, y, W, 1);
+    ctx.globalAlpha = 1;
+  }
+}
+
+document.querySelectorAll('canvas.bg-canvas').forEach(c => {
+  drawDithered(c, c.dataset.variant === 'dither-scan');
+});
+</script>

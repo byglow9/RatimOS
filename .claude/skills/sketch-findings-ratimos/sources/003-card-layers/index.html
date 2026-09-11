@@ -1,0 +1,260 @@
+<title>003 — Card (v2: cantos retos, translúcido)</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 64px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+
+  #variant-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: #0a0a0f; border-bottom: 1px solid #2a2a3a;
+    padding: 8px 16px; display: flex; gap: 8px; font-family: var(--font-mono);
+    flex-wrap: wrap;
+  }
+  .variant-tab {
+    background: #1c1c28; color: #cfcfe0; border: 1px solid #35354a;
+    padding: 6px 12px; border-radius: 4px; cursor: pointer; font-family: var(--font-mono); font-size: 12px;
+  }
+  .variant-tab.active { background: var(--ratimos-accent); color: white; border-color: var(--ratimos-accent); }
+  .variant { display: none; flex-direction: column; align-items: center; gap: 24px; }
+  .variant.active { display: flex; }
+
+  .device-frame { background-image: url('../themes/bg-dither-scan.png'); background-size: cover; border-radius: 0; } /* winner bg = sketch 001-C */
+
+  .mock-topbar {
+    height: 26px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 10px; font-size: 10px; color: var(--ratimos-text);
+    background: rgba(0,0,0,0.4);
+  }
+  .mock-topbar img { height: 15px; width:auto; image-rendering:pixelated; }
+  .mock-topbar .logo { display:flex; align-items:center; gap:5px; }
+  .mock-sectionbar {
+    height: 24px; display: flex; align-items: center;
+    padding: 0 10px; font-family: var(--font-mono); font-size: 11px; color: var(--ratimos-text);
+    background: rgba(0,0,0,0.18);
+  }
+  .mock-content { padding: 10px; display: flex; flex-direction: column; gap: 14px; }
+
+  /* shared row internals: icon + title + description */
+  .row-inner { display:flex; align-items:center; gap: 10px; position: relative; z-index: 2; }
+  .row-inner img { width: 26px; height: 26px; image-rendering: pixelated; flex: none; filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.7)); }
+  .row-inner .txt { display:flex; flex-direction:column; gap: 2px; min-width:0; }
+  .row-inner .t { font-family: var(--font-display); font-size: 9px; color: var(--ratimos-text); letter-spacing: 0.02em; }
+  .row-inner .d { font-family: var(--font-mono); font-size: 9px; color: var(--ratimos-text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  /* ---- A: quadriculado translúcido, borda fina, canto reto ---- */
+  .card-a {
+    border-radius: 0; padding: 10px;
+    background-image: url('../themes/card-checker-alpha.png');
+    background-size: 16px 16px;
+    border: 1px solid rgba(230,1,15,0.55);
+  }
+
+  /* ---- B: vidro fosco (glass), sem padrão ---- */
+  .card-b {
+    border-radius: 0; padding: 10px;
+    background: rgba(20,8,32,0.42);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-top: 1px solid rgba(255,255,255,0.28);
+  }
+
+  /* ---- C: moldura dupla estilo bevel retrô (GameBoy/Win95), translúcida ---- */
+  .card-c {
+    border-radius: 0; padding: 9px;
+    background: rgba(42,18,63,0.68);
+    border: 2px solid #0d0515;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,0.15),
+      inset 0 0 0 3px rgba(0,0,0,0.35);
+  }
+
+  /* ---- D: scanlines finas translúcidas ---- */
+  .card-d {
+    position: relative; border-radius: 0; padding: 10px;
+    background: rgba(42,18,63,0.55);
+    border: 1px solid rgba(230,1,15,0.5);
+    overflow: hidden;
+  }
+  .card-d::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.35) 0px, rgba(0,0,0,0.35) 1px, transparent 1px, transparent 3px);
+  }
+
+  /* ---- E: camadas empilhadas, canto cortado (notch) em vez de curva ---- */
+  .card-e-wrap { position: relative; padding: 10px 10px 13px; }
+  .notch { clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
+  .card-e-wrap::before, .card-e-wrap::after {
+    content: ""; position: absolute; left: 6px; right: -6px;
+    background: #180a26; border: 1px solid rgba(106,47,158,0.4);
+  }
+  .card-e-wrap::before { top: 6px; bottom: -6px; z-index: 0; }
+  .card-e-wrap::after { top: 3px; bottom: -3px; background: #240f3a; z-index: 1; }
+  .card-e {
+    position: relative; z-index: 2; padding: 10px;
+    background: rgba(42,18,63,0.72);
+    border: 1px solid rgba(230,1,15,0.55);
+    box-shadow: 0 3px 0 rgba(0,0,0,0.4);
+  }
+
+  .note { max-width: 340px; font-size: 12px; color: #9a9ab0; line-height: 1.5; text-align: center; }
+  h3.vlabel { font-family: var(--font-mono); font-size: 13px; color: #dcdce8; margin: 0 0 4px; text-align:center; }
+  .frames-row { display:flex; gap:24px; flex-wrap:wrap; justify-content:center; }
+</style>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showVariant('a')">A: Quadriculado translúcido</button>
+  <button class="variant-tab" onclick="showVariant('b')">B: Vidro fosco</button>
+  <button class="variant-tab" onclick="showVariant('c')">C: Moldura bevel retrô ★ Escolhido</button>
+  <button class="variant-tab" onclick="showVariant('d')">D: Scanlines translúcidas</button>
+  <button class="variant-tab" onclick="showVariant('e')">E: Camadas + canto cortado</button>
+</div>
+
+<div class="device-frame-label" style="margin-top:8px">sketch 003 v2 — cantos retos (sem border-radius), levemente transparentes, 5 opções</div>
+
+<!-- A -->
+<div id="variant-a" class="variant active">
+  <h3 class="vlabel">A: Quadriculado translúcido, borda fina reta</h3>
+  <div class="frames-row"><div>
+    <div class="device-frame">
+      <div class="mock-topbar"><span class="logo"><img src="../assets/icons/system_rook_32.png">RATIMOS</span><span>14:32</span></div>
+      <div class="mock-sectionbar">./home/jogos</div>
+      <div class="mock-content">
+        <div class="card-a"><div class="row-inner">
+          <img src="../assets/icons/game_sudoku.png">
+          <div class="txt"><span class="t">sudoku</span><span class="d">grade 9x9 · fácil, médio, difícil</span></div>
+        </div></div>
+        <div class="card-a"><div class="row-inner">
+          <img src="../assets/icons/game_paciencia.png">
+          <div class="txt"><span class="t">paciência</span><span class="d">clássico de baralho, 7 colunas</span></div>
+        </div></div>
+        <div class="card-a"><div class="row-inner">
+          <img src="../assets/icons/game_conexo.png">
+          <div class="txt"><span class="t">conexo</span><span class="d">continuar · categorias completas!</span></div>
+        </div></div>
+      </div>
+    </div>
+    <div class="device-frame-label">jogos</div>
+  </div></div>
+  <p class="note">Mesmo quadriculado de antes, agora com alpha (~70-88%) deixando o gradiente de fundo passar através, cantos 100% retos, borda fina vermelho-marca em vez de roxo.</p>
+</div>
+
+<!-- B -->
+<div id="variant-b" class="variant">
+  <h3 class="vlabel">B: Vidro fosco (glass), sem padrão de textura</h3>
+  <div class="frames-row"><div>
+    <div class="device-frame">
+      <div class="mock-topbar"><span class="logo"><img src="../assets/icons/system_rook_32.png">RATIMOS</span><span>14:32</span></div>
+      <div class="mock-sectionbar">./home/jogos</div>
+      <div class="mock-content">
+        <div class="card-b"><div class="row-inner">
+          <img src="../assets/icons/game_sudoku.png">
+          <div class="txt"><span class="t">sudoku</span><span class="d">grade 9x9 · fácil, médio, difícil</span></div>
+        </div></div>
+        <div class="card-b"><div class="row-inner">
+          <img src="../assets/icons/game_paciencia.png">
+          <div class="txt"><span class="t">paciência</span><span class="d">clássico de baralho, 7 colunas</span></div>
+        </div></div>
+        <div class="card-b"><div class="row-inner">
+          <img src="../assets/icons/game_conexo.png">
+          <div class="txt"><span class="t">conexo</span><span class="d">continuar · categorias completas!</span></div>
+        </div></div>
+      </div>
+    </div>
+    <div class="device-frame-label">jogos</div>
+  </div></div>
+  <p class="note">Painel bem transparente (~42% opaco) com blur atrás — o gradiente fica visível "embaçado" atrás do texto. Mais limpo/moderno, menos "textura de jogo". Risco técnico: LVGL não tem backdrop-blur nativo de verdade — a versão real seria simulada com um bg semi-transparente sem blur (mais parecido com A/C do que com este exato efeito).</p>
+</div>
+
+<!-- C -->
+<div id="variant-c" class="variant">
+  <h3 class="vlabel">C: Moldura dupla estilo bevel retrô (GameBoy / Win95), translúcida</h3>
+  <div class="frames-row"><div>
+    <div class="device-frame">
+      <div class="mock-topbar"><span class="logo"><img src="../assets/icons/system_rook_32.png">RATIMOS</span><span>14:32</span></div>
+      <div class="mock-sectionbar">./home/jogos</div>
+      <div class="mock-content">
+        <div class="card-c"><div class="row-inner">
+          <img src="../assets/icons/game_sudoku.png">
+          <div class="txt"><span class="t">sudoku</span><span class="d">grade 9x9 · fácil, médio, difícil</span></div>
+        </div></div>
+        <div class="card-c"><div class="row-inner">
+          <img src="../assets/icons/game_paciencia.png">
+          <div class="txt"><span class="t">paciência</span><span class="d">clássico de baralho, 7 colunas</span></div>
+        </div></div>
+        <div class="card-c"><div class="row-inner">
+          <img src="../assets/icons/game_conexo.png">
+          <div class="txt"><span class="t">conexo</span><span class="d">continuar · categorias completas!</span></div>
+        </div></div>
+      </div>
+    </div>
+    <div class="device-frame-label">jogos</div>
+  </div></div>
+  <p class="note">Borda externa escura de 2px + friso interno claro de 1px (efeito "janela de console antigo" via box-shadow inset) — sem textura, fundo roxo translúcido liso. O mais "hardware retrô" das 5, e o mais barato de fazer no LVGL (2 bordas, sem imagem).</p>
+</div>
+
+<!-- D -->
+<div id="variant-d" class="variant">
+  <h3 class="vlabel">D: Scanlines horizontais finas sobre painel translúcido</h3>
+  <div class="frames-row"><div>
+    <div class="device-frame">
+      <div class="mock-topbar"><span class="logo"><img src="../assets/icons/system_rook_32.png">RATIMOS</span><span>14:32</span></div>
+      <div class="mock-sectionbar">./home/jogos</div>
+      <div class="mock-content">
+        <div class="card-d"><div class="row-inner">
+          <img src="../assets/icons/game_sudoku.png">
+          <div class="txt"><span class="t">sudoku</span><span class="d">grade 9x9 · fácil, médio, difícil</span></div>
+        </div></div>
+        <div class="card-d"><div class="row-inner">
+          <img src="../assets/icons/game_paciencia.png">
+          <div class="txt"><span class="t">paciência</span><span class="d">clássico de baralho, 7 colunas</span></div>
+        </div></div>
+        <div class="card-d"><div class="row-inner">
+          <img src="../assets/icons/game_conexo.png">
+          <div class="txt"><span class="t">conexo</span><span class="d">continuar · categorias completas!</span></div>
+        </div></div>
+      </div>
+    </div>
+    <div class="device-frame-label">jogos</div>
+  </div></div>
+  <p class="note">Mesmo espírito do fundo (sketch 001-C), aplicado no card: linhas de 1px a cada 3px, bem sutis. Ecoa o background sem repetir o mesmo padrão quadriculado — mas dois efeitos de "textura" (fundo dithered + card scanline) juntos podem ficar carregado; testar em tela cheia antes de travar.</p>
+</div>
+
+<!-- E -->
+<div id="variant-e" class="variant">
+  <h3 class="vlabel">E: Camadas empilhadas, cantos cortados (chanfro) em vez de curva</h3>
+  <div class="frames-row"><div>
+    <div class="device-frame">
+      <div class="mock-topbar"><span class="logo"><img src="../assets/icons/system_rook_32.png">RATIMOS</span><span>14:32</span></div>
+      <div class="mock-sectionbar">./home/jogos</div>
+      <div class="mock-content">
+        <div class="card-e-wrap"><div class="card-e notch"><div class="row-inner">
+          <img src="../assets/icons/game_sudoku.png">
+          <div class="txt"><span class="t">sudoku</span><span class="d">grade 9x9 · fácil, médio, difícil</span></div>
+        </div></div></div>
+        <div class="card-e-wrap"><div class="card-e notch"><div class="row-inner">
+          <img src="../assets/icons/game_paciencia.png">
+          <div class="txt"><span class="t">paciência</span><span class="d">clássico de baralho, 7 colunas</span></div>
+        </div></div></div>
+        <div class="card-e-wrap"><div class="card-e notch"><div class="row-inner">
+          <img src="../assets/icons/game_conexo.png">
+          <div class="txt"><span class="t">conexo</span><span class="d">continuar · categorias completas!</span></div>
+        </div></div></div>
+      </div>
+    </div>
+    <div class="device-frame-label">jogos</div>
+  </div></div>
+  <p class="note">Mantém a ideia de profundidade em camadas (baralho empilhado) do rascunho anterior, mas troca cantos arredondados por um chanfro reto de 6px — técnica clássica de pixel-art pra "suavizar" um canto sem usar curva. Translúcido, sombra sólida (não blur) embaixo.</p>
+</div>
+
+<div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
+  sketch 003 v2 · card (cantos retos, translúcido)
+</div>
+
+<script>
+function showVariant(id) {
+  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('variant-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
