@@ -6,13 +6,29 @@
  * Fundo de tela: gradiente ditherizado pre-gerado (Task 3, plano 02.1-09 --
  * ver fundo-e-ambiente.md), decodificado da fonte 80x120 e esticado pro
  * frame 320x480 em tempo de desenho (nunca um gradiente computado via
- * lv_style_set_bg_grad -- essa variante foi explicitamente rejeitada na
- * sessao de sketch). LV_OBJ_FLAG_FLOATING mantem o bitmap fora do layout
+ * estilo de gradiente em runtime do LVGL -- essa variante foi
+ * explicitamente rejeitada na sessao de sketch). LV_OBJ_FLAG_FLOATING
+ * mantem o bitmap fora do layout
  * flex-column que toda tela usa pra topbar/sectionbar/content/bottombar;
  * lv_image_set_antialias(false) mantem o upscale nitido/pixelado em vez de
  * borrado pelo smoothing padrao do LVGL, preservando o visual retro-pixel.
  * RATIMOS_COLOR_BG solido continua desenhado por baixo (linha acima) como
  * fallback de resiliencia caso o source da imagem alguma vez fique NULL.
+ *
+ * FORMATO: ratimos_bg_dither_desc e' RGB565 (bg_images.c/tools/
+ * convert_bg_dither.py), de proposito NAO o formato indexado I4 que
+ * icons.c/progress_images.c usam. Verificacao real no simulador mostrou a
+ * combinacao LV_COLOR_FORMAT_I4 + LV_IMAGE_ALIGN_STRETCH renderizando
+ * ruido/estatico -- rastreado ate o decoder binario vendorizado do LVGL
+ * (lv_bin_decoder.c): com LV_BIN_DECODER_RAM_LOAD desligado (padrao deste
+ * projeto), uma imagem indexada LV_IMAGE_SRC_VARIABLE nunca ganha um
+ * buffer decodificado completo, caindo no caminho de decode "em pedacos"
+ * (lv_image_decoder_get_area()) que nao e' compativel com o caminho de
+ * desenho TRANSFORMADO que LV_IMAGE_ALIGN_STRETCH aciona (seta
+ * scale_x/scale_y != LV_SCALE_NONE). RGB565 nao passa por decode indexado
+ * nenhum -- mesmo formato ja comprovado em producao pelo logo da splash
+ * (logo_image.c). NUNCA reverter pra I4 aqui sem resolver esse bug de
+ * decode primeiro.
  */
 void ratimos_theme_apply_screen(lv_obj_t * scr)
 {

@@ -163,12 +163,14 @@ void test_row_create_text_col_is_not_clickable(void)
 
 /*
  * T-02.1-30: o fundo ditherizado (Task 3) e' decodificado a partir de uma
- * fonte 80x120 (nao 320x480), mantendo o buffer de decode ~19KB em vez de
- * ~300KB. Prova empirica (nao so o calculo): constroi e carrega pelo menos
- * duas telas distintas via ratimos_theme_apply_screen() (cada uma cria seu
- * proprio lv_image de fundo) e confirma que o heap builtin do LVGL
- * (LV_MEM_SIZE, 512KB) continua com folga confortavel depois de ambas
- * decodificadas/cacheadas.
+ * fonte 80x120 RGB565 (nao 320x480), mantendo o buffer de decode ~19KB em
+ * vez de ~300KB (RGB565 = 2 bytes/pixel -- ver o comentario de formato em
+ * theme.c/tools/convert_bg_dither.py para o porque RGB565 e nao o I4
+ * indexado usado pelos icones). Prova empirica (nao so o calculo): constroi
+ * e carrega pelo menos duas telas distintas via ratimos_theme_apply_screen()
+ * (cada uma cria seu proprio lv_image de fundo) e confirma que o heap
+ * builtin do LVGL (LV_MEM_SIZE, 512KB) continua com folga confortavel
+ * depois de ambas decodificadas/cacheadas.
  */
 void test_background_decode_across_two_screens_does_not_exhaust_heap(void)
 {

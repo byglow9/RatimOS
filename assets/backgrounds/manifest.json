@@ -1,6 +1,0 @@
-{
-  "symbol_prefix": "ratimos_bg",
-  "images": [
-    { "id": "dither", "file": "bg_dither.png", "w": 80, "h": 120 }
-  ]
-}

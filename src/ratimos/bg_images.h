@@ -1,18 +1,15 @@
 /*
- * GERADO por tools/convert_images.py a partir de assets/backgrounds/manifest.json -- nao
- * editar a mao. Reexecute o script se a arte fonte mudar.
+ * GERADO por tools/convert_bg_dither.py a partir de
+ * assets/backgrounds/bg_dither.png -- nao editar a mao.
  *
- * Formato de imagem indexado de 4 bits/pixel do LVGL (paleta de ate 16
- * cores) -- ver "Icon & Title Font Asset Pipeline" em 02.1-UI-SPEC.md.
+ * RGB565 (nao indexado) -- ver o comentario em bg_images.c ou o docstring
+ * de tools/convert_bg_dither.py para o porque.
  */
 #ifndef RATIMOS_BG_IMAGES_H
 #define RATIMOS_BG_IMAGES_H
 
 #include "lvgl.h"
-#include <stddef.h>
 
 extern const lv_image_dsc_t ratimos_bg_dither_desc;
-
-const lv_image_dsc_t * ratimos_bg_by_id(const char * id);
 
 #endif
