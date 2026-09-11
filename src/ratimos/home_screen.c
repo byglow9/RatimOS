@@ -81,6 +81,12 @@ static lv_obj_t * castelo_tile_create(lv_obj_t * parent)
     lv_obj_set_flex_flow(col, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_pad_row(col, 4, 0);
     lv_obj_clear_flag(col, LV_OBJ_FLAG_SCROLLABLE);
+    /* Same hitbox bug class as row_list.c's text_col: lv_obj_remove_style_all()
+     * never clears flags, so this plain lv_obj_create() kept LVGL's default
+     * LV_OBJ_FLAG_CLICKABLE with no handler, swallowing taps over the
+     * title/status text (most of the tile's width) before they reach
+     * `tile`'s own click_cb (ratimos_castelo_show) above. */
+    lv_obj_clear_flag(col, LV_OBJ_FLAG_CLICKABLE);
 
     lv_obj_t * title = lv_label_create(col);
     lv_label_set_text(title, "castelo");

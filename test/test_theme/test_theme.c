@@ -14,6 +14,7 @@
 #include <unity.h>
 
 #include "ratimos/theme.h"
+#include "ratimos/row_list.h"
 
 static uint8_t s_disp_buf[RATIMOS_SCREEN_W * RATIMOS_SCREEN_H * 2]; /* LV_COLOR_DEPTH 16 */
 
@@ -107,6 +108,34 @@ void test_badge_create_adds_exactly_one_child_per_call(void)
     lv_obj_delete(parent);
 }
 
+/*
+ * Segunda ocorrencia da MESMA classe de bug de hitbox que a Task 1 fechou
+ * pro badge, encontrada em revisao manual (verificacao real no simulador
+ * SDL2): ratimos_row_create() (row_list.c) cria `text_col` via
+ * lv_obj_create(row) + lv_obj_remove_style_all(text_col) -- e
+ * lv_obj_remove_style_all() so' remove ESTILOS, nunca flags (confirmado em
+ * lv_obj_style.c:remove_style_core() vendorizado). text_col mantinha
+ * LV_OBJ_FLAG_CLICKABLE default do LVGL sem nenhum handler proprio,
+ * engolindo o toque sobre a area de titulo/subtitulo (a maior parte da
+ * largura da linha) antes dele alcancar o click_cb de `row`. Fixado com um
+ * lv_obj_clear_flag() explicito, mesmo padrao da correcao do badge.
+ */
+void test_row_create_text_col_is_not_clickable(void)
+{
+    lv_obj_t * parent = lv_obj_create(NULL);
+
+    lv_obj_t * row = ratimos_row_create(parent, "game_sudoku", "titulo", "subtitulo", NULL);
+
+    TEST_ASSERT_NOT_NULL(row);
+    lv_obj_t * text_col = lv_obj_get_child(row, 1);
+    TEST_ASSERT_NOT_NULL(text_col);
+    TEST_ASSERT_FALSE_MESSAGE(lv_obj_has_flag(text_col, LV_OBJ_FLAG_CLICKABLE),
+                               "text_col must not be clickable -- it would swallow taps "
+                               "over the title/subtitle area meant for the parent row");
+
+    lv_obj_delete(parent);
+}
+
 int main(void)
 {
     lv_init();
@@ -120,5 +149,6 @@ int main(void)
     RUN_TEST(test_badge_unknown_id_falls_back_to_label);
     RUN_TEST(test_badge_null_id_never_dereferences_and_falls_back);
     RUN_TEST(test_badge_create_adds_exactly_one_child_per_call);
+    RUN_TEST(test_row_create_text_col_is_not_clickable);
     return UNITY_END();
 }

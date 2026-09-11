@@ -24,6 +24,13 @@ lv_obj_t * ratimos_row_create(lv_obj_t * parent,
     lv_obj_set_flex_grow(text_col, 1);
     lv_obj_set_flex_flow(text_col, LV_FLEX_FLOW_COLUMN);
     lv_obj_clear_flag(text_col, LV_OBJ_FLAG_SCROLLABLE);
+    /* lv_obj_remove_style_all() only strips styles, never flags -- text_col
+     * (a plain lv_obj_create()) keeps LVGL's default LV_OBJ_FLAG_CLICKABLE
+     * with no handler of its own, which silently swallows taps over the
+     * title/subtitle area (most of the row's width) before they can reach
+     * `row`'s own click_cb below. Same bug class as the badge hitbox fix
+     * in theme.c -- clear it explicitly. */
+    lv_obj_clear_flag(text_col, LV_OBJ_FLAG_CLICKABLE);
 
     lv_obj_t * title_lbl = lv_label_create(text_col);
     lv_label_set_text(title_lbl, title);
