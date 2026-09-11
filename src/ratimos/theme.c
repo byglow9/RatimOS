@@ -1,6 +1,19 @@
 #include "theme.h"
 #include "icons.h"
+#include "bg_images.h"
 
+/*
+ * Fundo de tela: gradiente ditherizado pre-gerado (Task 3, plano 02.1-09 --
+ * ver fundo-e-ambiente.md), decodificado da fonte 80x120 e esticado pro
+ * frame 320x480 em tempo de desenho (nunca um gradiente computado via
+ * lv_style_set_bg_grad -- essa variante foi explicitamente rejeitada na
+ * sessao de sketch). LV_OBJ_FLAG_FLOATING mantem o bitmap fora do layout
+ * flex-column que toda tela usa pra topbar/sectionbar/content/bottombar;
+ * lv_image_set_antialias(false) mantem o upscale nitido/pixelado em vez de
+ * borrado pelo smoothing padrao do LVGL, preservando o visual retro-pixel.
+ * RATIMOS_COLOR_BG solido continua desenhado por baixo (linha acima) como
+ * fallback de resiliencia caso o source da imagem alguma vez fique NULL.
+ */
 void ratimos_theme_apply_screen(lv_obj_t * scr)
 {
     lv_obj_set_style_bg_color(scr, RATIMOS_COLOR_BG, 0);
@@ -8,6 +21,14 @@ void ratimos_theme_apply_screen(lv_obj_t * scr)
     lv_obj_set_style_text_color(scr, RATIMOS_COLOR_TEXT, 0);
     lv_obj_set_style_pad_all(scr, 0, 0);
     lv_obj_set_style_border_width(scr, 0, 0);
+
+    lv_obj_t * bg = lv_image_create(scr);
+    lv_image_set_src(bg, &ratimos_bg_dither_desc);
+    lv_obj_set_size(bg, RATIMOS_SCREEN_W, RATIMOS_SCREEN_H);
+    lv_obj_set_pos(bg, 0, 0);
+    lv_obj_add_flag(bg, LV_OBJ_FLAG_FLOATING);
+    lv_image_set_inner_align(bg, LV_IMAGE_ALIGN_STRETCH);
+    lv_image_set_antialias(bg, false);
 }
 
 /*

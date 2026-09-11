@@ -15,6 +15,7 @@
 
 #include "ratimos/theme.h"
 #include "ratimos/row_list.h"
+#include "ratimos/bg_images.h"
 
 static uint8_t s_disp_buf[RATIMOS_SCREEN_W * RATIMOS_SCREEN_H * 2]; /* LV_COLOR_DEPTH 16 */
 
@@ -160,6 +161,37 @@ void test_row_create_text_col_is_not_clickable(void)
     lv_obj_delete(parent);
 }
 
+/*
+ * T-02.1-30: o fundo ditherizado (Task 3) e' decodificado a partir de uma
+ * fonte 80x120 (nao 320x480), mantendo o buffer de decode ~19KB em vez de
+ * ~300KB. Prova empirica (nao so o calculo): constroi e carrega pelo menos
+ * duas telas distintas via ratimos_theme_apply_screen() (cada uma cria seu
+ * proprio lv_image de fundo) e confirma que o heap builtin do LVGL
+ * (LV_MEM_SIZE, 512KB) continua com folga confortavel depois de ambas
+ * decodificadas/cacheadas.
+ */
+void test_background_decode_across_two_screens_does_not_exhaust_heap(void)
+{
+    lv_obj_t * scr1 = lv_obj_create(NULL);
+    ratimos_theme_apply_screen(scr1);
+    lv_screen_load(scr1);
+    lv_refr_now(NULL);
+
+    lv_obj_t * scr2 = lv_obj_create(NULL);
+    ratimos_theme_apply_screen(scr2);
+    lv_screen_load(scr2);
+    lv_refr_now(NULL);
+
+    lv_mem_monitor_t mon;
+    lv_mem_monitor(&mon);
+    TEST_ASSERT_TRUE_MESSAGE(mon.free_size > 100000,
+                              "LVGL heap free_size dropped below 100000 bytes after "
+                              "decoding the dithered background on two screens");
+
+    lv_obj_delete(scr1);
+    lv_obj_delete(scr2);
+}
+
 int main(void)
 {
     lv_init();
@@ -175,5 +207,6 @@ int main(void)
     RUN_TEST(test_badge_create_adds_exactly_one_child_per_call);
     RUN_TEST(test_panel_create_has_square_translucent_dark_bevel);
     RUN_TEST(test_row_create_text_col_is_not_clickable);
+    RUN_TEST(test_background_decode_across_two_screens_does_not_exhaust_heap);
     return UNITY_END();
 }
