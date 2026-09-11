@@ -1,0 +1,194 @@
+<title>004 — Header / breadcrumb</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 56px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+
+  #variant-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: #0a0a0f; border-bottom: 1px solid #2a2a3a;
+    padding: 8px 16px; display: flex; gap: 8px; font-family: var(--font-mono);
+    flex-wrap: wrap;
+  }
+  .variant-tab {
+    background: #1c1c28; color: #cfcfe0; border: 1px solid #35354a;
+    padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: var(--font-mono); font-size: 12px;
+  }
+  .variant-tab.active { background: var(--ratimos-accent); color: white; border-color: var(--ratimos-accent); }
+  .variant { display: none; flex-direction: column; align-items: center; gap: 24px; }
+  .variant.active { display: flex; }
+
+  .device-frame { background-image: url('../themes/bg-dither.png'); background-size: cover; }
+
+  .mock-content { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+  .mock-row {
+    background-image: url('../themes/card-checker.png'); background-size: 16px 16px;
+    border: 1px solid var(--ratimos-card-edge); border-radius: 6px; padding: 8px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .mock-row img { width: 26px; height: 26px; image-rendering: pixelated; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6)); }
+  .mock-row .t { font-family: var(--font-display); font-size: 9px; color: var(--ratimos-text); }
+
+  /* ---- A: two-bar, mono breadcrumb + clock (★ escolhido, refinado 2026-09-11) ---- */
+  .topbar-a { height: 26px; display:flex; align-items:center; justify-content:space-between; padding:0 10px; background: rgba(0,0,0,0.4); font-size: 10px; }
+  .topbar-a .logo { display:flex; align-items:center; gap:5px; font-family: var(--font-display); font-size: 8px; }
+  .topbar-a .logo img { height: 15px; width: auto; image-rendering: pixelated; filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.7)); }
+  .sectionbar-a { height: 24px; display:flex; align-items:center; padding:0 10px; font-family: var(--font-mono); font-size: 11px; background: rgba(0,0,0,0.18); }
+  .sectionbar-a .seg-muted { color: var(--ratimos-text-muted); }
+  .sectionbar-a .seg-current { color: var(--ratimos-text); font-weight: 600; }
+  .sectionbar-a .sep { color: var(--ratimos-text-muted); margin: 0 1px; }
+
+  /* pixel-art battery indicator — replaces the 🔋 emoji (no emoji anywhere, retro only) */
+  .pixel-battery { display:inline-flex; align-items:center; gap:2px; }
+  .pixel-battery .cell { width: 16px; height: 8px; border: 1px solid var(--ratimos-text); position: relative; }
+  .pixel-battery .cell::after { content:""; position:absolute; right:-3px; top:2px; width:2px; height:2px; background: var(--ratimos-text); }
+  .pixel-battery .fill { position:absolute; left:1px; top:1px; bottom:1px; background: var(--ratimos-game-correct); width: 70%; }
+
+  /* ---- B: terminal prompt single bar ---- */
+  .prompt-bar { padding: 8px 10px; background: rgba(0,0,0,0.5); font-family: var(--font-mono); font-size: 10px; display:flex; flex-direction:column; gap:2px; }
+  .prompt-bar .l1 { display:flex; justify-content:space-between; color: var(--ratimos-text-muted); font-size:9px; }
+  .prompt-bar .l2 { color: var(--ratimos-text); }
+  .prompt-bar .l2 .prompt-user { color: var(--ratimos-game-correct); }
+  .prompt-bar .l2 .prompt-path { color: var(--ratimos-accent); }
+
+  /* ---- C: minimal breadcrumb, clickable-look segments ---- */
+  .topbar-c { height: 26px; display:flex; align-items:center; justify-content:space-between; padding:0 10px; background: rgba(0,0,0,0.4); font-size: 10px; }
+  .sectionbar-c { height: 26px; display:flex; align-items:center; gap:4px; padding:0 10px; font-family: var(--font-mono); font-size: 11px; }
+  .crumb { padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.06); color: var(--ratimos-text-muted); }
+  .crumb.current { background: var(--ratimos-accent); color: white; }
+  .crumb-sep { color: var(--ratimos-text-muted); font-size: 10px; }
+
+  .note { max-width: 340px; font-size: 12px; color: #9a9ab0; line-height: 1.5; text-align: center; }
+  h3.vlabel { font-family: var(--font-mono); font-size: 13px; color: #dcdce8; margin: 0 0 4px; text-align:center; }
+  .frames-row { display:flex; gap:24px; flex-wrap:wrap; justify-content:center; }
+</style>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showVariant('a')">A: Breadcrumb mono + relógio ★ Escolhido</button>
+  <button class="variant-tab" onclick="showVariant('b')">B: Prompt de terminal</button>
+  <button class="variant-tab" onclick="showVariant('c')">C: Breadcrumb "pills" clicável</button>
+</div>
+
+<div class="device-frame-label" style="margin-top:8px">sketch 004 — header · troca "home.mem" por caminho tipo explorador (./home/jogos/conexo) + relógio</div>
+
+<!-- A -->
+<div id="variant-a" class="variant active">
+  <h3 class="vlabel">A: Duas barras, breadcrumb mono + relógio — refinado (sem emoji, sem piscar)</h3>
+  <div class="frames-row">
+    <div>
+      <div class="device-frame">
+        <div class="topbar-a"><span class="logo"><img src="../assets/icons/system_rook_32.png"> RATIMOS</span><span>14:32 <span class="pixel-battery"><span class="cell"><span class="fill"></span></span></span></span></div>
+        <div class="sectionbar-a"><span class="seg-current">./home</span></div>
+        <div class="mock-content">
+          <div class="mock-row"><img src="../assets/icons/home_jogos.png"><span class="t">jogos</span></div>
+          <div class="mock-row"><img src="../assets/icons/home_musica.png"><span class="t">musica</span></div>
+        </div>
+      </div>
+      <div class="device-frame-label">home</div>
+    </div>
+    <div>
+      <div class="device-frame">
+        <div class="topbar-a"><span class="logo"><img src="../assets/icons/system_rook_32.png"> RATIMOS</span><span>14:33 <span class="pixel-battery"><span class="cell"><span class="fill"></span></span></span></span></div>
+        <div class="sectionbar-a"><span class="seg-muted">./home/</span><span class="seg-current">jogos</span></div>
+        <div class="mock-content">
+          <div class="mock-row"><img src="../assets/icons/game_sudoku.png"><span class="t">sudoku</span></div>
+        </div>
+      </div>
+      <div class="device-frame-label">jogos</div>
+    </div>
+    <div>
+      <div class="device-frame">
+        <div class="topbar-a"><span class="logo"><img src="../assets/icons/system_rook_32.png"> RATIMOS</span><span>14:34 <span class="pixel-battery"><span class="cell"><span class="fill"></span></span></span></span></div>
+        <div class="sectionbar-a"><span class="seg-muted">./home/jogos/</span><span class="seg-current">conexo</span></div>
+        <div class="mock-content">
+          <div class="mock-row"><img src="../assets/icons/game_conexo.png"><span class="t">conexo</span></div>
+        </div>
+      </div>
+      <div class="device-frame-label">./home/jogos/conexo</div>
+    </div>
+  </div>
+  <p class="note">Caminho completo cresce conforme a navegação aprofunda (como um explorador de arquivos). Segmento atual em texto normal, pais em cinza. Logo trocado pro peão-torre vermelho (referência enviada) com sombra em pixel — nenhum emoji na UI (casinha e bateria viraram ícone/indicador pixel-art). Sem cursor piscando. Relógio real (RTC) chega na Fase 4 — aqui é mockado.</p>
+</div>
+
+<!-- B -->
+<div id="variant-b" class="variant">
+  <h3 class="vlabel">B: Barra única estilo prompt de terminal</h3>
+  <div class="frames-row">
+    <div>
+      <div class="device-frame">
+        <div class="prompt-bar">
+          <div class="l1"><span>ratimos</span><span>14:32 · 🔋87%</span></div>
+          <div class="l2"><span class="prompt-user">ela@ratimos</span>:<span class="prompt-path">~/home</span>$<span class="cursor-blink"></span></div>
+        </div>
+        <div class="mock-content">
+          <div class="mock-row"><img src="../assets/icons/home_jogos.png"><span class="t">jogos</span></div>
+          <div class="mock-row"><img src="../assets/icons/home_musica.png"><span class="t">musica</span></div>
+        </div>
+      </div>
+      <div class="device-frame-label">home</div>
+    </div>
+    <div>
+      <div class="device-frame">
+        <div class="prompt-bar">
+          <div class="l1"><span>ratimos</span><span>14:34 · 🔋87%</span></div>
+          <div class="l2"><span class="prompt-user">ela@ratimos</span>:<span class="prompt-path">~/home/jogos/conexo</span>$<span class="cursor-blink"></span></div>
+        </div>
+        <div class="mock-content">
+          <div class="mock-row"><img src="../assets/icons/game_conexo.png"><span class="t">conexo</span></div>
+        </div>
+      </div>
+      <div class="device-frame-label">./home/jogos/conexo</div>
+    </div>
+  </div>
+  <p class="note">Mais "nerd retro" — uma linha só, caminho com <code>~/</code> tipo shell, nome dela como usuário. Charmoso pra um presente pessoal, mas caminhos longos (~/home/jogos/conexo) podem truncar em 300px; precisa de regra de corte (ex: manter só os 2 últimos segmentos + "...").</p>
+</div>
+
+<!-- C -->
+<div id="variant-c" class="variant">
+  <h3 class="vlabel">C: Breadcrumb em "pills", segmento atual destacado em vermelho</h3>
+  <div class="frames-row">
+    <div>
+      <div class="device-frame">
+        <div class="topbar-c"><span>🏠 RATIMOS</span><span>14:32 🔋87%</span></div>
+        <div class="sectionbar-c"><span class="crumb current">home</span></div>
+        <div class="mock-content">
+          <div class="mock-row"><img src="../assets/icons/home_jogos.png"><span class="t">jogos</span></div>
+        </div>
+      </div>
+      <div class="device-frame-label">home</div>
+    </div>
+    <div>
+      <div class="device-frame">
+        <div class="topbar-c"><span>🏠 RATIMOS</span><span>14:34 🔋87%</span></div>
+        <div class="sectionbar-c"><span class="crumb">home</span><span class="crumb-sep">/</span><span class="crumb current">jogos</span></div>
+        <div class="mock-content">
+          <div class="mock-row"><img src="../assets/icons/game_sudoku.png"><span class="t">sudoku</span></div>
+        </div>
+      </div>
+      <div class="device-frame-label">jogos</div>
+    </div>
+    <div>
+      <div class="device-frame">
+        <div class="topbar-c"><span>🏠 RATIMOS</span><span>14:35 🔋87%</span></div>
+        <div class="sectionbar-c" style="font-size:9px"><span class="crumb">home</span><span class="crumb-sep">/</span><span class="crumb">jogos</span><span class="crumb-sep">/</span><span class="crumb current">conexo</span></div>
+        <div class="mock-content">
+          <div class="mock-row"><img src="../assets/icons/game_conexo.png"><span class="t">conexo</span></div>
+        </div>
+      </div>
+      <div class="device-frame-label">./home/jogos/conexo</div>
+    </div>
+  </div>
+  <p class="note">Cada segmento vira uma "pill" — o atual em vermelho-marca, os anteriores neutros. Mais visual/game-ish que A/B, mas 3 níveis de fundo (home/jogos/conexo) já aperta bastante em 300px de largura — provavelmente precisa reduzir fonte ou esconder segmentos do meio em telas muito profundas (ex: "home/…/conexo").</p>
+</div>
+
+<div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
+  sketch 004 · header / breadcrumb
+</div>
+
+<script>
+function showVariant(id) {
+  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('variant-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>

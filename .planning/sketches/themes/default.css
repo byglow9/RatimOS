@@ -1,0 +1,90 @@
+/*
+ * RatimOS sketch theme — mirrors src/ratimos/theme.h token-for-token where a
+ * token already exists (D-17 brand palette), and proposes new tokens for the
+ * 02.1-visual-identity-games UAT rework (background, card, icon, header).
+ * This file is throwaway design exploration, NOT the source of truth —
+ * src/ratimos/theme.h remains that once a direction is picked.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  /* ---- Existing shipped brand tokens (theme.h, D-17) — unchanged ---- */
+  --ratimos-bg: #000000;
+  --ratimos-panel: #2a123f;
+  --ratimos-panel-active: #4e2277;
+  --ratimos-accent: #e6010f;
+  --ratimos-text: #f5f2f8;
+  --ratimos-text-muted: #a997ba;
+
+  /* ---- Game feedback tokens (unchanged, not touched by this rework) ---- */
+  --ratimos-game-correct: #2f8f4e;
+  --ratimos-game-present: #d99a1b;
+  --ratimos-game-absent: #3a3a42;
+
+  /* ---- New: gradient background family (this rework) ---- */
+  --ratimos-grad-top: #1c0a3d;
+  --ratimos-grad-mid: #7a1560;
+  --ratimos-grad-hot: #c81f4c;
+  --ratimos-grad-bottom: #e8630f;
+
+  /* ---- New: card surface family (this rework) ---- */
+  --ratimos-card-1: #2a123f;
+  --ratimos-card-2: #391a54;
+  --ratimos-card-edge: #6a2f9e;
+  --ratimos-card-shadow: rgba(0, 0, 0, 0.55);
+
+  /* Typography */
+  --font-display: 'Press Start 2P', monospace;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Spacing (project's locked D-16 scale, reused as-is) */
+  --space-xs: 4px;
+  --space-sm: 6px;
+  --space-comp: 8px;
+  --space-md: 10px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+
+  --radius-panel: 6px;
+
+  /* Device frame (real target: 320x480 3.5" panel) */
+  --device-w: 320px;
+  --device-h: 480px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #14141c;
+  color: var(--ratimos-text);
+  font-family: var(--font-mono);
+}
+
+/* ---- Device frame: every sketch renders inside this to stay honest about
+   the real 320x480 constraint instead of drifting into web-page layout ---- */
+.device-frame {
+  width: var(--device-w);
+  height: var(--device-h);
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  box-shadow: 0 0 0 8px #0a0a0a, 0 12px 40px rgba(0,0,0,0.6);
+  image-rendering: pixelated;
+}
+
+.device-frame-label {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #8a8a9a;
+  margin: var(--space-sm) 0 var(--space-xs);
+  letter-spacing: 0.05em;
+}
+
+/* Hard-edged "pixel" shadow — no blur radius, reads as a crisp offset
+   silhouette instead of a soft web-app drop-shadow. Winner treatment from
+   sketch 002 (2026-09-11 UAT feedback: "sombra mais em pixel, nao tao smuve"). */
+.pixel-shadow {
+  filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.7));
+}

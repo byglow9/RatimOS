@@ -1,0 +1,180 @@
+<title>002 — Ícone sem badge</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 56px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+
+  #variant-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: #0a0a0f; border-bottom: 1px solid #2a2a3a;
+    padding: 8px 16px; display: flex; gap: 8px; font-family: var(--font-mono);
+    flex-wrap: wrap;
+  }
+  .variant-tab {
+    background: #1c1c28; color: #cfcfe0; border: 1px solid #35354a;
+    padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: var(--font-mono); font-size: 12px;
+  }
+  .variant-tab.active { background: var(--ratimos-accent); color: white; border-color: var(--ratimos-accent); }
+  .variant { display: none; flex-direction: column; align-items: center; gap: 24px; }
+  .variant.active { display: flex; }
+
+  .frames-row { display: flex; gap: 32px; flex-wrap: wrap; justify-content: center; }
+
+  .device-frame { background-image: url('../themes/bg-dither.png'); background-size: cover; }
+
+  .mock-topbar {
+    height: 26px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 10px; font-size: 10px; color: var(--ratimos-text);
+    background: rgba(0,0,0,0.35);
+  }
+  .mock-sectionbar {
+    height: 24px; display: flex; align-items: center;
+    padding: 0 10px; font-family: var(--font-display); font-size: 9px; color: var(--ratimos-text);
+  }
+  .mock-content { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+  .mock-row {
+    background: rgba(42,18,63,0.78);
+    border: 1px solid var(--ratimos-accent);
+    border-radius: 6px; padding: 8px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .mock-row .icon-slot { width: 28px; height: 28px; flex: none; display:flex; align-items:center; justify-content:center; }
+  .mock-row .icon-slot img { width: 26px; height: 26px; image-rendering: pixelated; }
+  .mock-row .txt { font-size: 11px; }
+  .mock-row .txt .t { display:block; }
+  .mock-row .txt .s { display:block; color: var(--ratimos-text-muted); font-size: 9px; margin-top: 2px; }
+
+  .icon-shadow img { filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.7)); } /* hard pixel shadow, no blur — 2026-09-11 refinement */
+
+  /* home grid mock */
+  .mock-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
+  .mock-tile {
+    background: rgba(42,18,63,0.78); border: 1px solid var(--ratimos-accent); border-radius: 6px;
+    padding: 12px 8px; display:flex; flex-direction:column; align-items:center; gap:6px;
+  }
+  .mock-tile img { width: 30px; height: 30px; image-rendering: pixelated; }
+  .mock-tile span { font-size: 10px; }
+
+  .note { max-width: 340px; font-size: 12px; color: #9a9ab0; line-height: 1.5; text-align: center; }
+  h3.vlabel { font-family: var(--font-mono); font-size: 13px; color: #dcdce8; margin: 0 0 4px; text-align:center; }
+
+  .old-badge { width: 28px; height: 28px; border-radius: 50%; background: var(--ratimos-accent); flex: none; display:flex; align-items:center; justify-content:center; }
+  .old-badge img { width: 18px; height: 18px; image-rendering: pixelated; }
+</style>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showVariant('a')">A: Ícone solto</button>
+  <button class="variant-tab" onclick="showVariant('b')">B: Ícone solto + sombra pixel ★ Escolhido</button>
+  <button class="variant-tab" onclick="showVariant('c')">C: Antes / Depois lado a lado</button>
+</div>
+
+<div class="device-frame-label" style="margin-top:8px">sketch 002 — ícone sem badge · questão: fica legível sem a bolinha vermelha, na lista e na home?</div>
+
+<!-- VARIANT A -->
+<div id="variant-a" class="variant active">
+  <h3 class="vlabel">A: Ícone pixel-art puro, sem container atrás</h3>
+  <div class="frames-row">
+    <div>
+      <div class="device-frame">
+        <div class="mock-topbar"><span>🏠 RatimOS</span><span>14:32 🔋</span></div>
+        <div class="mock-sectionbar">✓ ./home</div>
+        <div class="mock-grid">
+          <div class="mock-tile"><img src="../assets/icons/home_jogos.png"><span>jogos</span></div>
+          <div class="mock-tile"><img src="../assets/icons/home_musica.png"><span>musica</span></div>
+          <div class="mock-tile"><img src="../assets/icons/home_album.png"><span>album</span></div>
+          <div class="mock-tile"><img src="../assets/icons/home_cartas.png"><span>cartas</span></div>
+        </div>
+      </div>
+      <div class="device-frame-label">home (grid)</div>
+    </div>
+    <div>
+      <div class="device-frame">
+        <div class="mock-topbar"><span>🏠 RatimOS</span><span>14:33 🔋</span></div>
+        <div class="mock-sectionbar">✓ ./home/jogos</div>
+        <div class="mock-content">
+          <div class="mock-row"><div class="icon-slot"><img src="../assets/icons/game_sudoku.png"></div><div class="txt"><span class="t">sudoku</span><span class="s">jogar</span></div></div>
+          <div class="mock-row"><div class="icon-slot"><img src="../assets/icons/game_paciencia.png"></div><div class="txt"><span class="t">paciência</span><span class="s">jogar</span></div></div>
+          <div class="mock-row"><div class="icon-slot"><img src="../assets/icons/game_conexo.png"></div><div class="txt"><span class="t">conexo</span><span class="s">continuar</span></div></div>
+        </div>
+      </div>
+      <div class="device-frame-label">jogos (lista)</div>
+    </div>
+  </div>
+  <p class="note">Ícones reais do projeto (assets/icons/*.png, 32x32, D-07), sem nenhum container. Nota técnica: a área de toque continua sendo a linha/tile inteira — o ícone vira puramente visual (ver sketch de hitbox no código, não mais o badge clicável fantasma).</p>
+</div>
+
+<!-- VARIANT B -->
+<div id="variant-b" class="variant">
+  <h3 class="vlabel">B: Ícone solto + sombra pixel, sem blur (separação do fundo colorido)</h3>
+  <div class="frames-row">
+    <div>
+      <div class="device-frame">
+        <div class="mock-topbar"><span>🏠 RatimOS</span><span>14:32 🔋</span></div>
+        <div class="mock-sectionbar">✓ ./home</div>
+        <div class="mock-grid icon-shadow">
+          <div class="mock-tile"><img src="../assets/icons/home_jogos.png"><span>jogos</span></div>
+          <div class="mock-tile"><img src="../assets/icons/home_musica.png"><span>musica</span></div>
+          <div class="mock-tile"><img src="../assets/icons/home_album.png"><span>album</span></div>
+          <div class="mock-tile"><img src="../assets/icons/home_cartas.png"><span>cartas</span></div>
+        </div>
+      </div>
+      <div class="device-frame-label">home (grid)</div>
+    </div>
+    <div>
+      <div class="device-frame">
+        <div class="mock-topbar"><span>🏠 RatimOS</span><span>14:33 🔋</span></div>
+        <div class="mock-sectionbar">✓ ./home/jogos</div>
+        <div class="mock-content icon-shadow">
+          <div class="mock-row"><div class="icon-slot"><img src="../assets/icons/game_sudoku.png"></div><div class="txt"><span class="t">sudoku</span><span class="s">jogar</span></div></div>
+          <div class="mock-row"><div class="icon-slot"><img src="../assets/icons/game_paciencia.png"></div><div class="txt"><span class="t">paciência</span><span class="s">jogar</span></div></div>
+          <div class="mock-row"><div class="icon-slot"><img src="../assets/icons/game_conexo.png"></div><div class="txt"><span class="t">conexo</span><span class="s">continuar</span></div></div>
+        </div>
+      </div>
+      <div class="device-frame-label">jogos (lista)</div>
+    </div>
+  </div>
+  <p class="note">Sombra dura de 2px, sem blur (<code>drop-shadow(2px 2px 0 ...)</code>) — lê como sombra "pixel", não sombra suave de app web. Ajuda a destacar contra fundos coloridos/texturas do card (sketch 003), sem precisar de container. LVGL equivalente: <code>lv_obj_set_style_shadow_width</code> não serve pra isso (gera blur); o jeito real é desenhar um segundo <code>lv_image</code> do mesmo ícone, 2px deslocado, em preto/escuro, atrás do ícone principal.</p>
+</div>
+
+<!-- VARIANT C -->
+<div id="variant-c" class="variant">
+  <h3 class="vlabel">C: Antes (bolinha vermelha) vs Depois (solto)</h3>
+  <div class="frames-row">
+    <div>
+      <div class="device-frame">
+        <div class="mock-topbar"><span>🏠 RatimOS</span><span>14:32 🔋</span></div>
+        <div class="mock-sectionbar">✓ ./home/jogos</div>
+        <div class="mock-content">
+          <div class="mock-row"><div class="old-badge"><img src="../assets/icons/game_sudoku.png"></div><div class="txt"><span class="t">sudoku</span></div></div>
+          <div class="mock-row"><div class="old-badge"><img src="../assets/icons/game_paciencia.png"></div><div class="txt"><span class="t">paciência</span></div></div>
+          <div class="mock-row"><div class="old-badge"><img src="../assets/icons/game_conexo.png"></div><div class="txt"><span class="t">conexo</span></div></div>
+        </div>
+      </div>
+      <div class="device-frame-label">antes (badge circular vermelho)</div>
+    </div>
+    <div>
+      <div class="device-frame">
+        <div class="mock-topbar"><span>🏠 RatimOS</span><span>14:33 🔋</span></div>
+        <div class="mock-sectionbar">✓ ./home/jogos</div>
+        <div class="mock-content icon-shadow">
+          <div class="mock-row"><div class="icon-slot"><img src="../assets/icons/game_sudoku.png"></div><div class="txt"><span class="t">sudoku</span></div></div>
+          <div class="mock-row"><div class="icon-slot"><img src="../assets/icons/game_paciencia.png"></div><div class="txt"><span class="t">paciência</span></div></div>
+          <div class="mock-row"><div class="icon-slot"><img src="../assets/icons/game_conexo.png"></div><div class="txt"><span class="t">conexo</span></div></div>
+        </div>
+      </div>
+      <div class="device-frame-label">depois (B: solto + sombra)</div>
+    </div>
+  </div>
+</div>
+
+<div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
+  sketch 002 · ícone sem badge
+</div>
+
+<script>
+function showVariant(id) {
+  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('variant-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
