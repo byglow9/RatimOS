@@ -4,9 +4,12 @@
 #include "lvgl.h"
 
 /*
- * Barra superior (marca "RatimOS" + relógio + bateria).
- * Relógio/bateria são placeholders estáticos por enquanto — ficam
- * "vivos" na Fase 2 do plano, quando o firmware tiver RTC e PMIC reais.
+ * Barra superior: logo do sistema (peão-torre vermelho, resolvido via
+ * ratimos_icon_by_id("system_rook")) com sombra em pixel + nome "RatimOS" +
+ * relógio + bateria em ícone pixel-art. Relógio/bateria são placeholders
+ * (hora do PC / percentual mockado) por enquanto — ficam "vivos" na Fase 4
+ * do roadmap, quando o firmware tiver RTC (PCF85063) e PMIC (AXP2101 via
+ * XPowersLib) reais.
  */
 void ratimos_topbar_create(lv_obj_t * parent);
 
