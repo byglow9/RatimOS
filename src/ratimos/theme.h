@@ -44,13 +44,21 @@ void ratimos_theme_apply_screen(lv_obj_t * scr);
 lv_obj_t * ratimos_panel_create(lv_obj_t * parent);
 
 /*
- * Cria o selo redondo de 28x28px usado pelos launchers/linhas de lista.
- * `icon_id` e' resolvido via ratimos_icon_by_id() (src/ratimos/icons.h):
- * numa correspondencia, renderiza o icone de pixel art project-authored
- * (VISUAL-01/D-07) centrado, com o container recortado em circulo. Em
- * NULL ou id sem correspondencia, cai para a renderizacao original de
- * circulo+letra (icon_id e' entao tratado como o texto a exibir) --
- * nunca desreferencia um icon_id NULL, sempre retorna um objeto valido.
+ * Cria o icone solto usado pelos launchers/linhas de lista -- SEM nenhum
+ * container/badge por baixo (a bola vermelha circular foi removida, G-02.1-1/
+ * G-02.1-2: ela era um lv_obj_create() clicavel por padrao que interceptava o
+ * toque destinado a linha/tile pai, ver icones.md). `icon_id` e' resolvido
+ * via ratimos_icon_by_id() (src/ratimos/icons.h): numa correspondencia,
+ * retorna o icone de pixel art project-authored (VISUAL-01/D-07) criado
+ * diretamente via lv_image_create() -- essa e' a UNICA coisa visivel no
+ * slot, sem recorte de circulo, sem preenchimento de fundo. Em NULL ou id
+ * sem correspondencia, cai para um lv_label_create() com o texto bruto do
+ * id (icon_id e' entao tratado como o texto a exibir). Em qualquer um dos
+ * dois casos o objeto retornado nunca e' LV_OBJ_FLAG_CLICKABLE (garantido
+ * pelo proprio construtor do LVGL para lv_image/lv_label) e e' sempre
+ * exatamente UM objeto -- nunca desreferencia um icon_id NULL, nunca
+ * envolve o icone/rotulo num container extra (preserva o contrato de
+ * indice de filho badge=0/text_col=1 de ratimos_row_create()).
  */
 lv_obj_t * ratimos_badge_create(lv_obj_t * parent, const char * icon_id);
 

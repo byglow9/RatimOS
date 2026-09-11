@@ -25,37 +25,32 @@ lv_obj_t * ratimos_panel_create(lv_obj_t * parent)
 }
 
 /*
- * Selo redondo de 28x28px usado pelos launchers/linhas de lista
- * (row_list.c, home_screen.c). `icon_id` e' resolvido primeiro via
- * ratimos_icon_by_id() -- numa correspondencia, monta a arte de pixel
- * art project-authored (VISUAL-01/D-07) recortada em circulo; em NULL ou
- * sem correspondencia, cai para o selo original de circulo+letra (o
- * comportamento pre-D-07, preservado para nunca quebrar um chamador
- * existente e para nunca desreferenciar um icon_id NULL).
+ * Icone solto usado pelos launchers/linhas de lista (row_list.c,
+ * home_screen.c) -- SEM nenhum container/badge por baixo (G-02.1-1/
+ * G-02.1-2: a bola vermelha circular era um lv_obj_create() clicavel por
+ * padrao que interceptava o toque destinado a linha/tile pai, ver
+ * icones.md). `icon_id` e' resolvido primeiro via ratimos_icon_by_id() --
+ * numa correspondencia, cria o icone de pixel art project-authored
+ * (VISUAL-01/D-07) diretamente via lv_image_create(); em NULL ou sem
+ * correspondencia, cai para um lv_label_create() com o texto bruto do id.
+ * lv_image_create()/lv_label_create() ja removem LV_OBJ_FLAG_CLICKABLE no
+ * proprio construtor do LVGL (confirmado em lv_image.c/lv_label.c
+ * vendorizados) -- nenhuma manipulacao de flag extra e' necessaria aqui.
+ * Retorna sempre exatamente UM objeto, nunca envolto num container extra,
+ * preservando o contrato de indice de filho badge=0/text_col=1 de
+ * ratimos_row_create().
  */
 lv_obj_t * ratimos_badge_create(lv_obj_t * parent, const char * icon_id)
 {
-    lv_obj_t * badge = lv_obj_create(parent);
-    lv_obj_set_size(badge, 28, 28);
-    lv_obj_set_style_radius(badge, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(badge, RATIMOS_COLOR_ACCENT, 0);
-    lv_obj_set_style_bg_opa(badge, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(badge, 0, 0);
-    lv_obj_set_style_pad_all(badge, 0, 0);
-    lv_obj_set_style_clip_corner(badge, true, 0);
-    lv_obj_clear_flag(badge, LV_OBJ_FLAG_SCROLLABLE);
-
     const lv_image_dsc_t * icon = ratimos_icon_by_id(icon_id);
     if (icon) {
-        lv_obj_t * img = lv_image_create(badge);
+        lv_obj_t * img = lv_image_create(parent);
         lv_image_set_src(img, icon);
-        lv_obj_center(img);
-        return badge;
+        return img;
     }
 
-    lv_obj_t * label = lv_label_create(badge);
+    lv_obj_t * label = lv_label_create(parent);
     lv_label_set_text(label, icon_id ? icon_id : "?");
-    lv_obj_set_style_text_color(label, RATIMOS_COLOR_BG, 0);
-    lv_obj_center(label);
-    return badge;
+    lv_obj_set_style_text_color(label, RATIMOS_COLOR_TEXT, 0);
+    return label;
 }
