@@ -18,6 +18,15 @@
 #define RATIMOS_COLOR_TEXT_MUTED    lv_color_hex(0xa997ba)
 
 /*
+ * Borda externa escura do bevel retrô dos cards (D-17 revision escopada,
+ * plano 02.1-09 -- ver cards-superficies.md). NAO reabre a paleta travada:
+ * as 6 macros de marca/chrome acima continuam intactas, este e' um token
+ * novo introduzido pelo sketch especificamente para a borda externa de
+ * ratimos_panel_create(), nunca usado como cor de acento/CTA.
+ */
+#define RATIMOS_COLOR_BEVEL_DARK    lv_color_hex(0x0d0515)
+
+/*
  * Cores semanticas de JOGO (novas nesta fase, D-17 intacto).
  *
  * D-17 travou a paleta de MARCA/CHROME (as 6 macros acima) — nao havia jogo

@@ -10,14 +10,27 @@ void ratimos_theme_apply_screen(lv_obj_t * scr)
     lv_obj_set_style_border_width(scr, 0, 0);
 }
 
+/*
+ * Card/painel compartilhado (row_list.c, home_screen.c, todo painel/pill/
+ * overlay de jogo). Bevel retro de cantos retos (D-17 revision escopada,
+ * plano 02.1-09 -- variante C vencedora de cards-superficies.md): fundo
+ * translucido liso (LV_OPA_70, calibrado contra o fundo ditherizado
+ * aplicado por ratimos_theme_apply_screen()), borda externa escura de 2px
+ * (RATIMOS_COLOR_BEVEL_DARK, nao mais o acento). Sem friso interno claro
+ * (cards-superficies.md's "aceitar uma unica borda mais grossa como
+ * fallback mais simples") -- NUNCA adicionar um segundo lv_obj_t filho
+ * aqui: varios chamadores (row_list.c, jogos_app.c) leem filhos do valor
+ * retornado por indice posicional, e um filho extra shiftaria esses
+ * indices silenciosamente.
+ */
 lv_obj_t * ratimos_panel_create(lv_obj_t * parent)
 {
     lv_obj_t * panel = lv_obj_create(parent);
     lv_obj_set_style_bg_color(panel, RATIMOS_COLOR_PANEL, 0);
-    lv_obj_set_style_bg_opa(panel, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_color(panel, RATIMOS_COLOR_ACCENT, 0);
-    lv_obj_set_style_border_width(panel, 1, 0);
-    lv_obj_set_style_radius(panel, 6, 0);
+    lv_obj_set_style_bg_opa(panel, LV_OPA_70, 0);
+    lv_obj_set_style_border_color(panel, RATIMOS_COLOR_BEVEL_DARK, 0);
+    lv_obj_set_style_border_width(panel, 2, 0);
+    lv_obj_set_style_radius(panel, 0, 0);
     lv_obj_set_style_pad_all(panel, 8, 0);
     lv_obj_set_style_text_color(panel, RATIMOS_COLOR_TEXT, 0);
     lv_obj_set_style_shadow_width(panel, 0, 0);

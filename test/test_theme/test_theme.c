@@ -109,6 +109,30 @@ void test_badge_create_adds_exactly_one_child_per_call(void)
 }
 
 /*
+ * ratimos_panel_create() (Task 2): cantos 100% retos, fundo levemente
+ * translucido, borda externa escura de 2px (RATIMOS_COLOR_BEVEL_DARK) -- e
+ * nenhum filho extra por baixo (friso interno via segundo lv_obj foi
+ * explicitamente rejeitado, cards-superficies.md's fallback de borda
+ * unica).
+ */
+void test_panel_create_has_square_translucent_dark_bevel(void)
+{
+    lv_obj_t * parent = lv_obj_create(NULL);
+
+    lv_obj_t * panel = ratimos_panel_create(parent);
+
+    TEST_ASSERT_NOT_NULL(panel);
+    TEST_ASSERT_EQUAL_INT(0, lv_obj_get_style_radius(panel, LV_PART_MAIN));
+    TEST_ASSERT_EQUAL_UINT8(LV_OPA_70, lv_obj_get_style_bg_opa(panel, LV_PART_MAIN));
+    TEST_ASSERT_EQUAL_INT(2, lv_obj_get_style_border_width(panel, LV_PART_MAIN));
+    TEST_ASSERT_EQUAL_UINT32(lv_color_to_u32(RATIMOS_COLOR_BEVEL_DARK),
+                              lv_color_to_u32(lv_obj_get_style_border_color(panel, LV_PART_MAIN)));
+    TEST_ASSERT_EQUAL_UINT32(0, lv_obj_get_child_count(panel));
+
+    lv_obj_delete(parent);
+}
+
+/*
  * Segunda ocorrencia da MESMA classe de bug de hitbox que a Task 1 fechou
  * pro badge, encontrada em revisao manual (verificacao real no simulador
  * SDL2): ratimos_row_create() (row_list.c) cria `text_col` via
@@ -149,6 +173,7 @@ int main(void)
     RUN_TEST(test_badge_unknown_id_falls_back_to_label);
     RUN_TEST(test_badge_null_id_never_dereferences_and_falls_back);
     RUN_TEST(test_badge_create_adds_exactly_one_child_per_call);
+    RUN_TEST(test_panel_create_has_square_translucent_dark_bevel);
     RUN_TEST(test_row_create_text_col_is_not_clickable);
     return UNITY_END();
 }
