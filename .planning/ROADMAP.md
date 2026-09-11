@@ -95,9 +95,14 @@ Plans:
 
 **Note on scope:** this phase significantly exceeds the original "2 simple games" scope, by explicit user choice during discuss-phase (2026-08-28) — it now bundles 5 games plus a new gamification/progression system that the user flagged as needing substantial research. Expect this phase's research and planning to be proportionally larger and likely multi-wave/multi-session.
 
-**Plans:** 8/8 plans executed
+**Plans:** 9/12 plans executed
 
 Plans:
+
+- [ ] 02.1-09-PLAN.md
+- [x] 02.1-10-PLAN.md
+- [ ] 02.1-11-PLAN.md
+- [ ] 02.1-12-PLAN.md
 
 **Wave 1**
 
@@ -243,7 +248,7 @@ Phases execute in numeric order: 1 → 2 → 02.1 → 3 → 4 → 5 → 6 → 7 
 |-------|----------------|--------|-----------|
 | 1. Shell, Storage API & Simulator-First App Shells | 3/3 | Complete    | 2026-08-27 |
 | 2. Sync Protocol, Security Model & Cloud Backend | 4/4 | Complete    | 2026-08-28 |
-| 02.1. Visual Identity & Games (Simulator-Buildable Scope) *(INSERTED)* | 8/8 | In Progress|  |
+| 02.1. Visual Identity & Games (Simulator-Buildable Scope) *(INSERTED)* | 9/12 | In Progress|  |
 | 3. Hardware Bring-Up — Display, Touch, Boot & Partition Scheme | 0/TBD | Not started | - |
 | 4. Power Management — Battery, PMIC, RTC | 0/TBD | Not started | - |
 | 5. Audio, Storage & Camera Bring-Up | 0/TBD | Not started | - |
