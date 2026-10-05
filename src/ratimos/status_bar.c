@@ -104,6 +104,13 @@ static lv_obj_t * pixel_battery_create(lv_obj_t * parent)
 void ratimos_topbar_create(lv_obj_t * parent)
 {
     lv_obj_t * row = bar_row_create(parent, 26);
+    lv_obj_set_style_bg_opa(row, LV_OPA_40, 0);
+    /* Scrim escuro translucido sobre o fundo ditherizado -- o design
+     * aprovado (sketch 004, header-navegacao.md) e' `rgba(0,0,0,0.4)`:
+     * preto a 40% de opacidade, nao o painel violeta opaco que
+     * bar_row_create() aplica por padrao. Override local (mesmo padrao da
+     * sectionbar/bottombar), bar_row_create() continua com LV_OPA_COVER. */
+    lv_obj_set_style_bg_color(row, lv_color_black(), 0);
 
     lv_obj_t * brand = lv_obj_create(row);
     lv_obj_remove_style_all(brand);
