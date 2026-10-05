@@ -62,7 +62,7 @@ static lv_obj_t * s_game_subtitle_labels[RATIMOS_GAME_COUNT] = { NULL };
 
 static lv_obj_t * build_jogos_screen(void)
 {
-    ratimos_app_shell_t shell = ratimos_app_shell_create("jogos", "toque para abrir");
+    ratimos_app_shell_t shell = ratimos_app_shell_create("./home/jogos", "toque para abrir");
 
     ratimos_game_t games[RATIMOS_GAME_COUNT];
     size_t n = ratimos_storage_list_games(games, RATIMOS_GAME_COUNT);

@@ -581,7 +581,7 @@ static lv_obj_t * build_clue_list_row(lv_obj_t * parent, lv_obj_t ** out_label)
 
 static lv_obj_t * build_cruzadinha_screen(void)
 {
-    ratimos_app_shell_t shell = ratimos_app_shell_create("cruzadinha", "toque numa palavra");
+    ratimos_app_shell_t shell = ratimos_app_shell_create("./home/jogos/cruzadinha", "toque numa palavra");
 
     /* Banco vazio/quebrado: caminho defensivo, sem grid nenhum (UI-SPEC). */
     if (ratimos_cruzadinha_puzzle_count() == 0) {

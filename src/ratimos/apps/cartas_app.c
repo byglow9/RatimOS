@@ -19,7 +19,7 @@ static lv_obj_t * s_cartas_screen = NULL;
 
 static lv_obj_t * build_cartas_screen(void)
 {
-    ratimos_app_shell_t shell = ratimos_app_shell_create("cartas", "toque para abrir");
+    ratimos_app_shell_t shell = ratimos_app_shell_create("./home/cartas", "toque para abrir");
 
     ratimos_letter_t letters[4];
     size_t n = ratimos_storage_list_letters(letters, 4);

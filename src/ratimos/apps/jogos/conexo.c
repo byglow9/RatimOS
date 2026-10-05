@@ -467,7 +467,7 @@ static bool load_or_start_state(void)
 
 static lv_obj_t * build_conexo_screen(void)
 {
-    ratimos_app_shell_t shell = ratimos_app_shell_create("conexo", "toque 4 para agrupar");
+    ratimos_app_shell_t shell = ratimos_app_shell_create("./home/jogos/conexo", "toque 4 para agrupar");
 
     /* Banco vazio/quebrado: caminho defensivo, sem grid nenhum. */
     if (ratimos_conexo_puzzle_count() == 0) {

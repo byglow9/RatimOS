@@ -96,7 +96,7 @@ static void refresh_castelo_screen(void)
 
 static lv_obj_t * build_castelo_screen(void)
 {
-    ratimos_app_shell_t shell = ratimos_app_shell_create("castelo", "seu jardim");
+    ratimos_app_shell_t shell = ratimos_app_shell_create("./home/castelo", "seu jardim");
 
     s_stage_image = lv_image_create(shell.content);
     lv_obj_set_width(s_stage_image, lv_pct(100));

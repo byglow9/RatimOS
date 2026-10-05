@@ -109,7 +109,7 @@ static lv_obj_t * build_home_screen(void)
     lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
 
     ratimos_topbar_create(scr);
-    ratimos_sectionbar_create(scr, "home.mem");
+    ratimos_sectionbar_create(scr, "./home");
 
     lv_obj_t * content = lv_obj_create(scr);
     lv_obj_remove_style_all(content);
