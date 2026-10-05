@@ -22,6 +22,7 @@
 #include "termo_engine.h"
 
 #include "../../app_shell.h"
+#include "../../status_bar.h"
 #include "../../theme.h"
 #include "../../fonts/ratimos_fonts.h"
 #include "../../../storage/content_api.h"
@@ -42,6 +43,10 @@ static const uint8_t TERMO_VISIBLE_ROWS[RATIMOS_TERMO_MODE_COUNT] = { 6, 7, 5 };
 static const char * const TERMO_MODE_LABELS[RATIMOS_TERMO_MODE_COUNT] = {
     "termo", "dueto", "quarteto"
 };
+
+/* Buffer do caminho de breadcrumb da sectionbar ("./home/jogos/quarteto" e'
+ * o mais longo, 21 chars + NUL). */
+#define TERMO_PATH_BUF_LEN 32
 
 /* Teclado compartilhado -- layout QWERTY de 3 linhas com enter/apagar na
  * ultima linha (convencao Wordle/term.ooo padrao). Um unico
@@ -161,11 +166,25 @@ static bool load_or_start_state(void)
     return status == RATIMOS_GAME_STATE_INVALID;
 }
 
+/* Monta o caminho de breadcrumb da sectionbar para o modo dado
+ * ("./home/jogos/termo", "./home/jogos/dueto", "./home/jogos/quarteto") --
+ * unico lugar que formata esse caminho, usado na construcao da tela e na
+ * troca de modo. */
+static void format_termo_path(char * buf, size_t buf_size, ratimos_termo_mode_t mode)
+{
+    lv_snprintf(buf, buf_size, "./home/jogos/%s", TERMO_MODE_LABELS[mode]);
+}
+
 static void switch_to_mode(ratimos_termo_mode_t mode)
 {
     ratimos_termo_start_daily(&s_state, mode, ratimos_daily_index());
     persist_state();
-    lv_label_set_text(s_section_title_label, TERMO_MODE_LABELS[mode]);
+    /* Passa pelo helper compartilhado (status_bar.c), nunca por
+     * lv_label_set_text bruto -- senao o split de cor muted/atual do
+     * breadcrumb se perde depois da troca de modo. */
+    char path[TERMO_PATH_BUF_LEN];
+    format_termo_path(path, sizeof(path), mode);
+    ratimos_sectionbar_set_path(s_section_title_label, path);
     render_all();
 }
 
@@ -475,17 +494,21 @@ static lv_obj_t * build_termo_screen(void)
 {
     bool show_load_error = load_or_start_state();
 
-    ratimos_app_shell_t shell = ratimos_app_shell_create(TERMO_MODE_LABELS[s_state.mode], "digite uma palavra");
+    char initial_path[TERMO_PATH_BUF_LEN];
+    format_termo_path(initial_path, sizeof(initial_path), s_state.mode);
+    ratimos_app_shell_t shell = ratimos_app_shell_create(initial_path, "digite uma palavra");
 
     /* app_shell.h/status_bar.h nao expoe um handle pro label de titulo da
      * sectionbar (nenhum app antes de termo precisava mudar o titulo
      * depois de construido) -- pega pela posicao estrutural conhecida em
-     * vez de mudar a API compartilhada por um unico chamador:
-     * shell.screen filho 1 = a linha da sectionbar (filho 0 = topbar),
-     * e dentro dela filho 1 = o label de titulo (filho 0 = o check LV_SYMBOL_OK)
-     * -- ver ratimos_sectionbar_create() em status_bar.c. */
-    lv_obj_t * sectionbar_row = lv_obj_get_child(shell.screen, 1);
-    s_section_title_label = lv_obj_get_child(sectionbar_row, 1);
+     * vez de mudar a API compartilhada por um unico chamador. Filhos de
+     * shell.screen (ver app_shell.c): 0 = imagem de fundo ditherizada
+     * (ratimos_theme_apply_screen(), plano 02.1-09), 1 = topbar,
+     * 2 = linha da sectionbar, 3 = content, 4 = bottombar. A linha da
+     * sectionbar tem um UNICO filho, o label do caminho recolorido (plano
+     * 02.1-10) -- ver ratimos_sectionbar_create() em status_bar.c. */
+    lv_obj_t * sectionbar_row = lv_obj_get_child(shell.screen, 2);
+    s_section_title_label = lv_obj_get_child(sectionbar_row, 0);
 
     s_error_label = lv_label_create(shell.content);
     lv_label_set_text(s_error_label,

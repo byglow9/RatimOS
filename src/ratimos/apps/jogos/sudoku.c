@@ -437,7 +437,7 @@ static lv_obj_t * make_pill_w(lv_obj_t * parent, const char * text, lv_color_t b
 
 static lv_obj_t * build_sudoku_screen(void)
 {
-    ratimos_app_shell_t shell = ratimos_app_shell_create("sudoku", "numeros 1-9");
+    ratimos_app_shell_t shell = ratimos_app_shell_create("./home/jogos/sudoku", "numeros 1-9");
 
     bool show_load_error = load_or_start_state();
 
