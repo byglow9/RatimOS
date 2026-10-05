@@ -13,7 +13,7 @@ static lv_obj_t * s_config_screen = NULL;
 
 static lv_obj_t * build_config_screen(void)
 {
-    ratimos_app_shell_t shell = ratimos_app_shell_create("config", "fase 0 local");
+    ratimos_app_shell_t shell = ratimos_app_shell_create("./home/config", "fase 0 local");
 
     ratimos_settings_t s = ratimos_storage_get_settings();
 
