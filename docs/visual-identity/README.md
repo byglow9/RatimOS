@@ -25,6 +25,8 @@ below names the reference project this identity is inspired by but not copied fr
 | Icon `game_termo` | `assets/icons/game_termo.png` | `tools/generate_icon_art.py` + `tools/convert_images.py` | Procedurally drawn (letter-tile motif) | Project-owned |
 | Icon `game_cruzadinha` | `assets/icons/game_cruzadinha.png` | `tools/generate_icon_art.py` + `tools/convert_images.py` | Procedurally drawn (crossword-grid motif) | Project-owned |
 | Icon `game_conexo` | `assets/icons/game_conexo.png` | `tools/generate_icon_art.py` + `tools/convert_images.py` | Procedurally drawn (grouped-dots motif) | Project-owned |
+| Icon `system_rook` (topbar system logo) | `assets/icons/system_rook.png` | `tools/prepare_system_rook.py` + `tools/convert_images.py` | Original artwork provided by the project owner (red rook/pawn with flag; chroma-keyed, alpha-thresholded, quantized to 6 colors and NEAREST-downscaled to 14x20px to fit the 16-color icon palette), plan 02.1-10 | Project-owned |
+| Background `bg_dither` | `assets/backgrounds/bg_dither.png` | `tools/generate_bg_dither.py` + `tools/convert_bg_dither.py` (`src/ratimos/bg_images.c`/`.h`, RGB565 -- not the indexed `convert_images.py` path, because the image is stretched at render time) | Procedurally drawn (4-stop purple -> magenta -> orange gradient, ordered dither, scanlines), project-owned generator script, no external reference, plan 02.1-09 | Project-owned |
 | Heading font, 16px | `src/ratimos/fonts/ratimos_font_title_16.c` | `tools/convert_title_font.sh` (wraps `lv_font_conv@1.5.3`) | *Press Start 2P* by The Press Start 2P Project Authors (Cody "CodeMan38" Boisclair), sourced from the Google Fonts `google/fonts` repository | **OFL** (SIL Open Font License 1.1) — permissive, no attribution obligation beyond retaining the license itself; the source TTF is not committed (`assets/fonts/source/` is gitignored), only the generated bitmap C output |
 | Display font, 20px | `src/ratimos/fonts/ratimos_font_title_20.c` | `tools/convert_title_font.sh` (wraps `lv_font_conv@1.5.3`) | Same as above — same TTF, converted at a second size | **OFL** (SIL Open Font License 1.1) |
 | Body font (Montserrat) | LVGL bundled font (`lv_font_montserrat_14`) | — (bundled with LVGL, unchanged by this phase) | Julieta Ulanovsky / Google Fonts, bundled with the LVGL library this project already depends on | OFL, pre-existing project dependency, not a new asset introduced by this phase |
@@ -55,11 +57,15 @@ distinction between "inspired by" and "copied from" checkable side by side:
 |-----------|---------|------------|
 | Palette | 6 locked hex values sampled from `logo/RatimOS.png`: `#000000` bg, `#2a123f`/`#4e2277` violet panels, `#e6010f` red accent, `#f5f2f8`/`#a997ba` text (Phase 1 / D-17) | Not sampled, not measured, not reused — RatimOS never inspected or extracted color values from colombiaOS's UI |
 | Title typography | *Press Start 2P* (OFL), a widely available, generically "8-bit arcade" bitmap typeface converted at 16px/20px specifically for this project's chrome | Unknown/unverified — no font file, font name, or glyph asset was obtained from colombiaOS |
-| Icon style | Eleven procedurally generated 32x32 pixel icons drawn from geometric primitives (rectangles, ellipses, lines) in exactly two colors (`RATIMOS_COLOR_TEXT`, `RATIMOS_COLOR_PANEL_ACTIVE`), authored by `tools/generate_icon_art.py` | Unknown/unverified — no icon sprite, sprite sheet, or image file from colombiaOS was viewed, copied, or traced during this phase's implementation |
+| Icon style | Eleven procedurally generated 32x32 pixel icons drawn from geometric primitives (rectangles, ellipses, lines) in exactly two colors (`RATIMOS_COLOR_TEXT`, `RATIMOS_COLOR_PANEL_ACTIVE`), authored by `tools/generate_icon_art.py`, rendered as bare pixel-art images with no badge, circle, or container behind them (plan 02.1-09); plus the owner-supplied `system_rook` logo in the topbar | Unknown/unverified — no icon sprite, sprite sheet, or image file from colombiaOS was viewed, copied, or traced during this phase's implementation |
+| Surfaces / background | Pre-rendered dithered purple -> magenta -> orange gradient bitmap behind every screen; square-cornered translucent bevel cards with a dark 2px border; file-explorer breadcrumb sectionbar (`./home/jogos/conexo`) | Unknown/unverified — no background, card, or header asset was obtained from colombiaOS |
 
-**How they read differently:** RatimOS's badge is a solid `#e6010f` red circle behind a
-white/violet two-tone glyph — a flat, high-contrast, single-brand-color treatment driven
-entirely by the six palette tokens above. colombiaOS (per the general "retro handheld with a
+**How they read differently:** RatimOS's icons are bare two-tone (white/violet) pixel-art
+glyphs sitting directly on square-cornered translucent bevel cards over a dithered gradient
+background — no badge, circle, or other container behind them (the earlier solid red circle
+badge was removed in plan 02.1-09). The red `#e6010f` accent survives only as a highlight
+color (brand wordmark, breadcrumb current segment, CTAs), and the system is identified by
+the owner's own red rook logo. colombiaOS (per the general "retro handheld with a
 d-pad" concept description in `.planning/PROJECT.md`) served as a structural/menu-navigation
 inspiration, not a visual asset source: nothing in this repository's icon pixels, font
 glyphs, or hex values was extracted from it. The palette itself was independently sampled
@@ -79,6 +85,11 @@ Verification performed for this record:
   committed generator script: the 11 icon PNGs to `tools/generate_icon_art.py`, the compiled
   icon descriptors to `tools/convert_images.py`, and the two pixel fonts to
   `tools/convert_title_font.sh`. Nothing is a hand-pasted or manually-edited binary blob.
+- Gap-closure round (plans 02.1-09 to 02.1-12): the dithered background traces to
+  `tools/generate_bg_dither.py` + `tools/convert_bg_dither.py`, and the `system_rook` logo
+  traces to the owner-supplied reference image via `tools/prepare_system_rook.py` +
+  `tools/convert_images.py`. The `grep -ric 'colombiaos' src/ tools/ assets/` check above
+  was re-run after these files landed (plan 02.1-12) and still returns zero matches.
 - The one third-party binary this phase depends on (the Press Start 2P TTF) is never
   committed to the repository — only the generated, human-inspectable bitmap C output is.
 
@@ -91,6 +102,16 @@ The full visual identity can be rebuilt from source at any time:
 python3 tools/generate_icon_art.py
 python3 tools/convert_images.py --manifest assets/icons/manifest.json \
     --out-c src/ratimos/icons.c --out-h src/ratimos/icons.h --guard RATIMOS_ICONS_H
+
+# System logo: re-process the owner-supplied rook reference into the 14x20px icon
+# source (then rerun the icon convert_images.py command above -- it is the 12th
+# manifest entry) (plan 02.1-10)
+python3 tools/prepare_system_rook.py
+
+# Background: regenerate the dithered gradient PNG, then compile it to RGB565
+# (src/ratimos/bg_images.c/.h) (plan 02.1-09)
+python3 tools/generate_bg_dither.py
+python3 tools/convert_bg_dither.py
 
 # Title font: download Press Start 2P (OFL) into the gitignored assets/fonts/source/
 # directory, then convert both sizes
