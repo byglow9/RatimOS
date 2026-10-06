@@ -79,6 +79,21 @@
 /* Pilulas de modo/dificuldade e botoes de acao de uma linha nos jogos. */
 #define RATIMOS_PILL_H          26
 
+/*
+ * Ritmo vertical dos cards (plano 02.1-14, fix de checkpoint): cards do
+ * mesmo tipo tem a MESMA altura e o mesmo gap em todo menu.
+ * - Home: os 6 tiles (jogos largo, grade 2x2, castelo largo) = 4 fileiras
+ *   de RATIMOS_HOME_TILE_H com RATIMOS_HOME_GAP (4*80 + 3*10 = 350 <= 386).
+ *   Antes: jogos 70, grade 80, castelo 100.
+ * - Listas (jogos/musica/cartas/config/estado vazio): linhas de
+ *   RATIMOS_LIST_ROW_H (moldura 2+2, padding 9+9, icone 26 -- sketch 003-C)
+ *   com RATIMOS_LIST_GAP entre elas, com ou sem subtitulo.
+ */
+#define RATIMOS_HOME_TILE_H     80
+#define RATIMOS_HOME_GAP        10
+#define RATIMOS_LIST_ROW_H      48
+#define RATIMOS_LIST_GAP        14
+
 void ratimos_theme_apply_screen(lv_obj_t * scr);
 lv_obj_t * ratimos_panel_create(lv_obj_t * parent);
 

@@ -65,7 +65,7 @@ static void set_castelo_status_text(lv_obj_t * label)
 static lv_obj_t * castelo_tile_create(lv_obj_t * parent)
 {
     lv_obj_t * tile = ratimos_panel_create(parent);
-    lv_obj_set_size(tile, RATIMOS_SCREEN_W - 20, 100);
+    lv_obj_set_size(tile, RATIMOS_SCREEN_W - 2 * RATIMOS_CONTENT_PAD, RATIMOS_HOME_TILE_H);
     lv_obj_set_flex_flow(tile, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(tile, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_column(tile, 10, 0);
@@ -94,7 +94,10 @@ static lv_obj_t * castelo_tile_create(lv_obj_t * parent)
 
     s_castelo_status_label = lv_label_create(col);
     lv_obj_set_width(s_castelo_status_label, lv_pct(100));
+    /* Uma linha so' (DOTS precisa de altura fixa pra cortar em vez de quebrar). */
     lv_label_set_long_mode(s_castelo_status_label, LV_LABEL_LONG_MODE_DOTS);
+    lv_obj_set_height(s_castelo_status_label,
+                      lv_font_get_line_height(lv_obj_get_style_text_font(s_castelo_status_label, 0)));
     lv_obj_set_style_text_color(s_castelo_status_label, RATIMOS_COLOR_TEXT_MUTED, 0);
     set_castelo_status_text(s_castelo_status_label);
 
@@ -115,28 +118,31 @@ static lv_obj_t * build_home_screen(void)
     lv_obj_remove_style_all(content);
     lv_obj_set_width(content, RATIMOS_SCREEN_W);
     lv_obj_set_flex_grow(content, 1);
-    lv_obj_set_style_pad_all(content, 10, 0);
+    lv_obj_set_style_pad_all(content, RATIMOS_CONTENT_PAD, 0);
     lv_obj_set_flex_flow(content, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_row(content, 10, 0);
+    lv_obj_set_style_pad_row(content, RATIMOS_HOME_GAP, 0);
+
+    /* Todos os tiles da home com RATIMOS_HOME_TILE_H (theme.h, 02.1-14). */
+    const lv_coord_t full_w = RATIMOS_SCREEN_W - 2 * RATIMOS_CONTENT_PAD;
 
     /* tile largo: jogos */
-    tile_create(content, "home_jogos", "jogos", RATIMOS_SCREEN_W - 20, 70, ratimos_jogos_show);
+    tile_create(content, "home_jogos", "jogos", full_w, RATIMOS_HOME_TILE_H, ratimos_jogos_show);
 
     /* grid 2x2: musica / album / cartas / config */
     lv_obj_t * grid = lv_obj_create(content);
     lv_obj_remove_style_all(grid);
-    lv_obj_set_width(grid, RATIMOS_SCREEN_W - 20);
+    lv_obj_set_width(grid, full_w);
     lv_obj_set_height(grid, LV_SIZE_CONTENT);
     lv_obj_set_flex_flow(grid, LV_FLEX_FLOW_ROW_WRAP);
-    lv_obj_set_style_pad_column(grid, 10, 0);
-    lv_obj_set_style_pad_row(grid, 10, 0);
+    lv_obj_set_style_pad_column(grid, RATIMOS_HOME_GAP, 0);
+    lv_obj_set_style_pad_row(grid, RATIMOS_HOME_GAP, 0);
     lv_obj_clear_flag(grid, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_coord_t tile_w = (RATIMOS_SCREEN_W - 20 - 10) / 2;
-    tile_create(grid, "home_musica", "musica", tile_w, 80, ratimos_musica_show);
-    tile_create(grid, "home_album", "album", tile_w, 80, ratimos_album_show);
-    tile_create(grid, "home_cartas", "cartas", tile_w, 80, ratimos_cartas_show);
-    tile_create(grid, "home_config", "config", tile_w, 80, ratimos_config_show);
+    lv_coord_t tile_w = (full_w - RATIMOS_HOME_GAP) / 2;
+    tile_create(grid, "home_musica", "musica", tile_w, RATIMOS_HOME_TILE_H, ratimos_musica_show);
+    tile_create(grid, "home_album", "album", tile_w, RATIMOS_HOME_TILE_H, ratimos_album_show);
+    tile_create(grid, "home_cartas", "cartas", tile_w, RATIMOS_HOME_TILE_H, ratimos_cartas_show);
+    tile_create(grid, "home_config", "config", tile_w, RATIMOS_HOME_TILE_H, ratimos_config_show);
 
     /* tile largo abaixo da grade 2x2: progressao castelo/jardim (PROGRESSAO-01) */
     castelo_tile_create(content);

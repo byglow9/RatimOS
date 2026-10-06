@@ -7,6 +7,7 @@
  *   - o enter do termo submete "peste" e um palpite rejeitado mostra o
  *     motivo na tela (antes so' engrossava a borda em 1px);
  *   - o "voltar" de um jogo leva a ./home/jogos (antes ia pra ./home);
+ *   - cards do mesmo tipo tem a mesma altura (home e listas, theme.h);
  *   - tabuleiro + teclado de todo jogo (e dos 3 modos do termo) cabem no
  *     content sem rolar, e a sectionbar e' compacta (20px, sem gap);
  *
@@ -25,6 +26,8 @@
 #include "lvgl.h"
 #include "ratimos/theme.h"
 #include "ratimos/apps/cartas_app.h"
+#include "ratimos/home_screen.h"
+#include "ratimos/row_list.h"
 #include "ratimos/apps/jogos_app.h"
 #include "ratimos/apps/jogos/conexo.h"
 #include "ratimos/apps/jogos/cruzadinha.h"
@@ -319,6 +322,48 @@ void test_back_from_a_game_goes_to_jogos_and_from_an_app_goes_home(void)
     TEST_ASSERT_EQUAL_STRING("./home", active_path());
 }
 
+static void assert_h(lv_obj_t * o, int32_t h, const char * what)
+{
+    TEST_ASSERT_EQUAL_INT_MESSAGE(h, lv_obj_get_height(o), what);
+}
+
+void test_home_tiles_and_list_rows_follow_one_vertical_rhythm(void)
+{
+    ratimos_home_screen_show(NULL);
+    lv_obj_t * scr = lv_screen_active();
+    lv_obj_update_layout(scr);
+    lv_obj_t * content = lv_obj_get_child(scr, 3);
+    lv_obj_t * jogos = lv_obj_get_child(content, 0);
+    lv_obj_t * grid = lv_obj_get_child(content, 1);
+    lv_obj_t * castelo = lv_obj_get_child(content, 2);
+    assert_h(jogos, RATIMOS_HOME_TILE_H, "jogos tile");
+    assert_h(castelo, RATIMOS_HOME_TILE_H, "castelo tile");
+    TEST_ASSERT_EQUAL_UINT32(4, lv_obj_get_child_count(grid));
+    for (uint32_t i = 0; i < 4; i++) {
+        assert_h(lv_obj_get_child(grid, (int32_t) i), RATIMOS_HOME_TILE_H, "grid tile");
+    }
+    /* Mesmo gap entre as 4 fileiras e tudo dentro do content, sem rolar. */
+    lv_area_t a, b, c;
+    lv_obj_get_coords(jogos, &a);
+    lv_obj_get_coords(grid, &b);
+    lv_obj_get_coords(castelo, &c);
+    TEST_ASSERT_EQUAL_INT(RATIMOS_HOME_GAP, b.y1 - a.y2 - 1);
+    TEST_ASSERT_EQUAL_INT(RATIMOS_HOME_GAP, c.y1 - b.y2 - 1);
+    TEST_ASSERT_TRUE(lv_obj_get_scroll_bottom(content) <= 0);
+
+    /* Linhas de lista: mesma altura com ou sem subtitulo / icone. */
+    lv_obj_t * list = lv_obj_create(NULL);
+    lv_obj_set_flex_flow(list, LV_FLEX_FLOW_COLUMN);
+    lv_obj_t * r1 = ratimos_row_create(list, "game_sudoku", "sudoku", "grade 9x9", NULL);
+    lv_obj_t * r2 = ratimos_row_create(list, "cfg_brilho", "brilho", NULL, NULL);
+    lv_obj_t * r3 = ratimos_row_create(list, NULL, "sem icone", "texto", NULL);
+    lv_obj_update_layout(list);
+    assert_h(r1, RATIMOS_LIST_ROW_H, "row icon+subtitle");
+    assert_h(r2, RATIMOS_LIST_ROW_H, "row without subtitle");
+    assert_h(r3, RATIMOS_LIST_ROW_H, "row without icon");
+    lv_obj_delete(list);
+}
+
 int main(void)
 {
     char tmpl[] = "/tmp/ratimos_game_screens_XXXXXX";
@@ -348,5 +393,6 @@ int main(void)
     RUN_TEST(test_confirm_dialog_is_centered_on_screen_in_every_game);
     RUN_TEST(test_every_game_fits_without_scrolling);
     RUN_TEST(test_back_from_a_game_goes_to_jogos_and_from_an_app_goes_home);
+    RUN_TEST(test_home_tiles_and_list_rows_follow_one_vertical_rhythm);
     return UNITY_END();
 }

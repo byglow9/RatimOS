@@ -2,6 +2,7 @@
 #define RATIMOS_ROW_LIST_H
 
 #include "lvgl.h"
+#include "theme.h"
 
 /*
  * Linha padrão de lista usada por vários apps (jogos, config, cartas,
@@ -21,7 +22,7 @@
  * Espaco vertical entre linhas numa lista (gap do `.mock-content` do sketch
  * 003-C). Os apps de lista aplicam no `content` do app_shell.
  */
-#define RATIMOS_ROW_LIST_GAP 14
+#define RATIMOS_ROW_LIST_GAP RATIMOS_LIST_GAP /* theme.h */
 
 /*
  * Anatomia 003-C (plano 02.1-14): moldura bevel com padding 9, icone 26px

@@ -67,7 +67,9 @@ lv_obj_t * ratimos_row_create(lv_obj_t * parent,
 {
     lv_obj_t * row = ratimos_panel_create(parent);
     lv_obj_set_width(row, lv_pct(100));
-    lv_obj_set_height(row, LV_SIZE_CONTENT);
+    /* Altura fixa (theme.h): toda linha de lista tem o mesmo tamanho, com
+     * ou sem subtitulo/icone. */
+    lv_obj_set_height(row, RATIMOS_LIST_ROW_H);
     lv_obj_set_style_pad_all(row, RATIMOS_ROW_PAD, 0);
     lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
