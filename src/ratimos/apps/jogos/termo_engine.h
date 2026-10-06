@@ -88,6 +88,25 @@ void ratimos_termo_start_daily(ratimos_termo_state_t * out, ratimos_termo_mode_t
  * palavra nao esta na lista de palpites aceitos. */
 bool ratimos_termo_submit(ratimos_termo_state_t * st, const char * guess);
 
+/*
+ * Estado de cada letra a-z pro teclado (fix de checkpoint 02.1-14, como no
+ * Termo real). Considera so' os boards AINDA EM JOGO (nao resolvidos); se
+ * todos ja foram resolvidos, considera todos.
+ * - CORRECT: a letra ja saiu verde em algum desses boards (vence PRESENT);
+ * - PRESENT: ja saiu amarela em algum deles;
+ * - ABSENT: ja foi tentada e nao existe na resposta de NENHUM deles --
+ *   a tecla fica desabilitada;
+ * - UNUSED: nunca tentada (ou tentada mas ainda possivel, ex. letra repetida).
+ */
+typedef enum {
+    RATIMOS_TERMO_KEY_UNUSED = 0,
+    RATIMOS_TERMO_KEY_ABSENT,
+    RATIMOS_TERMO_KEY_PRESENT,
+    RATIMOS_TERMO_KEY_CORRECT
+} ratimos_termo_key_state_t;
+
+void ratimos_termo_key_states(const ratimos_termo_state_t * st, uint8_t out[26]);
+
 uint8_t ratimos_termo_board_count(ratimos_termo_mode_t mode);
 uint8_t ratimos_termo_max_tries(ratimos_termo_mode_t mode);
 

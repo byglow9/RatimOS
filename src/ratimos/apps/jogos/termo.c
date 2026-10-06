@@ -124,6 +124,11 @@ static const char * s_reject_msg = NULL;
 #define TERMO_MSG_INCOMPLETE "complete as 5 letras"
 #define TERMO_MSG_NOT_IN_LIST "palavra fora da lista"
 
+/* Estado por letra (a-z) do teclado, recalculado a cada render_all() a
+ * partir de s_state (ratimos_termo_key_states) -- por isso ja vale pra um
+ * save restaurado e zera sozinho em jogo novo / troca de modo. */
+static uint8_t s_key_states[26];
+
 static void render_all(void);
 static void render_boards(void);
 static void persist_state(void);
@@ -441,11 +446,76 @@ static void render_boards(void)
     }
 }
 
+/* Letra (a-z, 0..25) de uma tecla do teclado, ou -1 (enter/apagar/espacador). */
+static int key_letter(lv_obj_t * kb, uint32_t id)
+{
+    const char * t = lv_buttonmatrix_get_button_text(kb, id);
+    if (t == NULL || t[0] == '\0' || t[1] != '\0' || !isalpha((unsigned char) t[0])) {
+        return -1;
+    }
+    return tolower((unsigned char) t[0]) - 'a';
+}
+
+/*
+ * Teclado com o estado das letras (fix de checkpoint 02.1-14, como no Termo
+ * real): ABSENT -> LV_BUTTONMATRIX_CTRL_DISABLED (o toque nao faz nada) e
+ * tecla cinza; PRESENT/CORRECT -> tecla amarela/verde, ainda usavel. As
+ * cores entram no draw task da tecla (keyboard_draw_task_cb), por cima do
+ * bevel 003-C -- moldura e friso continuam.
+ */
+static void render_keyboard(void)
+{
+    ratimos_termo_key_states(&s_state, s_key_states);
+    for (uint32_t id = 0;; id++) {
+        const char * t = lv_buttonmatrix_get_button_text(s_keyboard, id);
+        if (t == NULL) {
+            break;
+        }
+        int l = key_letter(s_keyboard, id);
+        if (l < 0) {
+            continue;
+        }
+        if (s_key_states[l] == RATIMOS_TERMO_KEY_ABSENT) {
+            lv_buttonmatrix_set_button_ctrl(s_keyboard, id, LV_BUTTONMATRIX_CTRL_DISABLED);
+        } else {
+            lv_buttonmatrix_clear_button_ctrl(s_keyboard, id, LV_BUTTONMATRIX_CTRL_DISABLED);
+        }
+    }
+    lv_obj_invalidate(s_keyboard);
+}
+
+static void keyboard_draw_task_cb(lv_event_t * e)
+{
+    lv_draw_task_t * t = lv_event_get_draw_task(e);
+    lv_draw_dsc_base_t * base = lv_draw_task_get_draw_dsc(t);
+    if (base == NULL || base->part != LV_PART_ITEMS) {
+        return;
+    }
+    int l = key_letter(lv_event_get_target(e), base->id1);
+    if (l < 0 || s_key_states[l] == RATIMOS_TERMO_KEY_UNUSED) {
+        return;
+    }
+    uint8_t ks = s_key_states[l];
+
+    if (lv_draw_task_get_type(t) == LV_DRAW_TASK_TYPE_FILL) {
+        lv_draw_fill_dsc_t * fill = lv_draw_task_get_fill_dsc(t);
+        fill->color = ks == RATIMOS_TERMO_KEY_CORRECT ? RATIMOS_COLOR_GAME_CORRECT
+                    : ks == RATIMOS_TERMO_KEY_PRESENT ? RATIMOS_COLOR_GAME_PRESENT
+                    : RATIMOS_COLOR_GAME_ABSENT;
+        fill->opa = LV_OPA_COVER;
+    } else if (lv_draw_task_get_type(t) == LV_DRAW_TASK_TYPE_LABEL && ks == RATIMOS_TERMO_KEY_ABSENT) {
+        lv_draw_label_dsc_t * label = lv_draw_task_get_label_dsc(t);
+        label->color = RATIMOS_COLOR_TEXT_MUTED;
+        label->opa = LV_OPA_60;
+    }
+}
+
 static void render_all(void)
 {
     render_pills();
     render_status();
     render_boards();
+    render_keyboard();
     render_banner();
 }
 
@@ -500,6 +570,10 @@ static void keyboard_value_changed_cb(lv_event_t * e)
     uint16_t id = lv_buttonmatrix_get_selected_button(matrix);
     const char * text = lv_buttonmatrix_get_button_text(matrix, id);
     if (!text) {
+        return;
+    }
+    /* Letra ja descartada (ABSENT): a tecla esta desabilitada, nada a fazer. */
+    if (lv_buttonmatrix_has_button_ctrl(matrix, id, LV_BUTTONMATRIX_CTRL_DISABLED)) {
         return;
     }
 
@@ -657,6 +731,8 @@ static lv_obj_t * build_termo_screen(void)
     lv_obj_set_style_pad_row(s_keyboard, TERMO_KEY_GAP, 0);
     lv_obj_set_style_text_font(s_keyboard, &ratimos_font_mono_12, LV_PART_ITEMS);
     lv_obj_add_event_cb(s_keyboard, keyboard_value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    /* SEND_DRAW_TASK_EVENTS ja ligado por ratimos_bevel_style_buttonmatrix. */
+    lv_obj_add_event_cb(s_keyboard, keyboard_draw_task_cb, LV_EVENT_DRAW_TASK_ADDED, NULL);
 
     /* Banner de vitoria/derrota (Display-tier, UI-SPEC). */
     s_banner_label = lv_label_create(shell.content);

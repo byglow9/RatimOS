@@ -247,3 +247,65 @@ bool ratimos_termo_submit(ratimos_termo_state_t * st, const char * guess)
 
     return true;
 }
+
+void ratimos_termo_key_states(const ratimos_termo_state_t * st, uint8_t out[26])
+{
+    memset(out, RATIMOS_TERMO_KEY_UNUSED, 26);
+    if (st == NULL) {
+        return;
+    }
+
+    uint8_t boards = st->board_count > RATIMOS_TERMO_MAX_BOARDS ? RATIMOS_TERMO_MAX_BOARDS : st->board_count;
+    bool any_unsolved = false;
+    for (uint8_t b = 0; b < boards; b++) {
+        if (!st->boards[b].solved) {
+            any_unsolved = true;
+        }
+    }
+
+    bool guessed[26] = { false };
+    uint8_t tries = st->tries_used > RATIMOS_TERMO_MAX_TRIES ? RATIMOS_TERMO_MAX_TRIES : st->tries_used;
+    for (uint8_t r = 0; r < tries; r++) {
+        for (int c = 0; c < RATIMOS_TERMO_WORD_LEN; c++) {
+            int l = tolower((unsigned char) st->history[r][c]) - 'a';
+            if (l >= 0 && l < 26) {
+                guessed[l] = true;
+            }
+        }
+    }
+
+    bool in_answer[26] = { false };
+    for (uint8_t b = 0; b < boards; b++) {
+        const ratimos_termo_board_t * board = &st->boards[b];
+        if (any_unsolved && board->solved) {
+            continue; /* board resolvido nao conta mais (dueto/quarteto) */
+        }
+        for (int c = 0; c < RATIMOS_TERMO_WORD_LEN; c++) {
+            int l = tolower((unsigned char) board->answer[c]) - 'a';
+            if (l >= 0 && l < 26) {
+                in_answer[l] = true;
+            }
+        }
+        uint8_t rows = board->guesses_made > RATIMOS_TERMO_MAX_TRIES ? RATIMOS_TERMO_MAX_TRIES : board->guesses_made;
+        for (uint8_t r = 0; r < rows; r++) {
+            for (int c = 0; c < RATIMOS_TERMO_WORD_LEN; c++) {
+                int l = tolower((unsigned char) st->history[r][c]) - 'a';
+                if (l < 0 || l >= 26) {
+                    continue;
+                }
+                if (board->feedback[r][c] == RATIMOS_TERMO_FEEDBACK_CORRECT) {
+                    out[l] = RATIMOS_TERMO_KEY_CORRECT;
+                } else if (board->feedback[r][c] == RATIMOS_TERMO_FEEDBACK_PRESENT &&
+                           out[l] != RATIMOS_TERMO_KEY_CORRECT) {
+                    out[l] = RATIMOS_TERMO_KEY_PRESENT;
+                }
+            }
+        }
+    }
+
+    for (int l = 0; l < 26; l++) {
+        if (guessed[l] && !in_answer[l] && out[l] == RATIMOS_TERMO_KEY_UNUSED) {
+            out[l] = RATIMOS_TERMO_KEY_ABSENT;
+        }
+    }
+}

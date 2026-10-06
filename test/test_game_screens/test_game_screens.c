@@ -6,6 +6,8 @@
  *     no canto inferior esquerdo, cortado);
  *   - o enter do termo submete "peste" e um palpite rejeitado mostra o
  *     motivo na tela (antes so' engrossava a borda em 1px);
+ *   - o teclado do termo reflete o estado das letras (desabilita as fora da
+ *     palavra, tinge amarelas/verdes), inclusive num save restaurado;
  *   - o "voltar" de um jogo leva a ./home/jogos (antes ia pra ./home);
  *   - cards do mesmo tipo tem a mesma altura (home e listas, theme.h);
  *   - tabuleiro + teclado de todo jogo (e dos 3 modos do termo) cabem no
@@ -34,6 +36,9 @@
 #include "ratimos/apps/jogos/paciencia.h"
 #include "ratimos/apps/jogos/sudoku.h"
 #include "ratimos/apps/jogos/termo.h"
+#include "ratimos/apps/jogos/termo_engine.h"
+#include "ratimos/apps/jogos/daily_seed.h"
+#include "widgets/buttonmatrix/lv_buttonmatrix_private.h"
 #include "storage/content_api.h"
 
 static uint8_t s_disp_buf[RATIMOS_SCREEN_W * RATIMOS_SCREEN_H * 2]; /* LV_COLOR_DEPTH 16 */
@@ -178,6 +183,108 @@ static void termo_type(lv_obj_t * kb, const char * word)
         char k[2] = { (char) toupper((unsigned char) *c), 0 };
         termo_press(kb, k);
     }
+}
+
+/* Id da tecla com o rotulo `key` no teclado do termo. */
+static uint32_t termo_key_id(lv_obj_t * kb, const char * key)
+{
+    for (uint32_t id = 0; id < 64; id++) {
+        const char * t = lv_buttonmatrix_get_button_text(kb, id);
+        if (t == NULL) {
+            break;
+        }
+        if (strcmp(t, key) == 0) {
+            return id;
+        }
+    }
+    TEST_FAIL_MESSAGE(key);
+    return 0;
+}
+
+/* Cor RGB565 (expandida pra 8 bits) de um pixel dentro do fill da tecla
+ * (6px pra dentro: borda 2 + friso 1 + faixa 2), longe da letra. */
+static void key_fill_rgb(lv_obj_t * kb, const char * key, int * r, int * g, int * b)
+{
+    lv_buttonmatrix_t * bm = (lv_buttonmatrix_t *) kb;
+    lv_area_t a = bm->button_areas[termo_key_id(kb, key)];
+    lv_area_t o;
+    lv_obj_get_coords(kb, &o);
+    int32_t x = o.x1 + a.x1 + 6;
+    int32_t y = o.y1 + a.y1 + 6;
+    size_t idx = ((size_t) y * RATIMOS_SCREEN_W + (size_t) x) * 2u;
+    uint16_t c = (uint16_t) (s_disp_buf[idx] | (s_disp_buf[idx + 1] << 8));
+    *r = ((c >> 11) & 0x1F) << 3;
+    *g = ((c >> 5) & 0x3F) << 2;
+    *b = (c & 0x1F) << 3;
+}
+
+static bool key_disabled(lv_obj_t * kb, const char * key)
+{
+    return lv_buttonmatrix_has_button_ctrl(kb, termo_key_id(kb, key), LV_BUTTONMATRIX_CTRL_DISABLED);
+}
+
+static void termo_switch_mode(lv_obj_t * scr, int mode);
+
+/*
+ * Fix de checkpoint 02.1-14 (rodada 2): roda ANTES de qualquer outro teste
+ * do termo pra semear um save conhecido -- resposta "posse", palpites RESTO
+ * e TESTE -- e provar que a tela restaurada ja mostra o teclado certo.
+ */
+void test_termo_keyboard_reflects_letter_states_and_resets(void)
+{
+    ratimos_termo_state_t st;
+    ratimos_termo_start_daily(&st, RATIMOS_TERMO_MODE_TERMO, ratimos_daily_index());
+    snprintf(st.boards[0].answer, sizeof(st.boards[0].answer), "%s", "posse");
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "resto"));
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "teste"));
+    ratimos_game_state_t blob;
+    memset(&blob, 0, sizeof(blob));
+    memcpy(blob.bytes, &st, sizeof(st));
+    blob.used = sizeof(st);
+    TEST_ASSERT_TRUE(ratimos_storage_save_game_state(RATIMOS_GAME_TERMO, &blob));
+
+    lv_obj_t * scr = show_game(2);
+    lv_obj_t * content = lv_obj_get_child(scr, 3);
+    lv_obj_t * kb = lv_obj_get_child(content, 4);
+
+    /* Restaurado: R/T fora da palavra -> desabilitadas; o resto usavel. */
+    TEST_ASSERT_TRUE(key_disabled(kb, "R"));
+    TEST_ASSERT_TRUE(key_disabled(kb, "T"));
+    TEST_ASSERT_FALSE(key_disabled(kb, "S"));
+    TEST_ASSERT_FALSE(key_disabled(kb, "O"));
+    TEST_ASSERT_FALSE(key_disabled(kb, "Z"));
+
+    /* Cores renderizadas: S verde, O amarela, R cinza, Z sem tom (roxo). */
+    lv_refr_now(NULL);
+    int r, g, b, sr, sg, sb, rr, rg, rb;
+    key_fill_rgb(kb, "S", &sr, &sg, &sb);
+    TEST_ASSERT_TRUE_MESSAGE(sg > sr + 40 && sg > sb + 40, "S must be green (correct)");
+    key_fill_rgb(kb, "O", &r, &g, &b);
+    TEST_ASSERT_TRUE_MESSAGE(r > b + 60 && g > b + 60, "O must be yellow (present)");
+    key_fill_rgb(kb, "R", &rr, &rg, &rb);
+    TEST_ASSERT_TRUE_MESSAGE(abs(rr - rg) < 24 && abs(rg - rb) < 24, "R must be grey (absent)");
+    /* Z (nunca tentada): o roxo translucido normal da tecla, sem tom de jogo
+     * -- diferente do cinza de R e do verde de S. */
+    key_fill_rgb(kb, "Z", &r, &g, &b);
+    TEST_ASSERT_TRUE_MESSAGE(abs(r - rr) + abs(g - rg) + abs(b - rb) > 40, "Z must not be tinted grey");
+    TEST_ASSERT_TRUE_MESSAGE(abs(r - sr) + abs(g - sg) + abs(b - sb) > 40, "Z must not be tinted green");
+
+    /* Tocar numa tecla desabilitada nao digita nada. */
+    lv_obj_t * status = lv_obj_get_child(content, 2);
+    termo_press(kb, "R");
+    termo_press(kb, "enter");
+    TEST_ASSERT_EQUAL_STRING("complete as 5 letras", lv_label_get_text(status));
+    termo_press(kb, "S");
+    termo_press(kb, "enter");
+    TEST_ASSERT_EQUAL_STRING("complete as 5 letras", lv_label_get_text(status));
+    termo_press(kb, LV_SYMBOL_BACKSPACE);
+
+    /* Jogo novo (troca de modo): teclado zerado, R/T usaveis de novo. */
+    termo_switch_mode(scr, 1);
+    TEST_ASSERT_FALSE(key_disabled(kb, "R"));
+    TEST_ASSERT_FALSE(key_disabled(kb, "T"));
+    termo_switch_mode(scr, 0); /* volta pro termo do dia, limpo */
+    TEST_ASSERT_FALSE(key_disabled(kb, "R"));
 }
 
 void test_termo_enter_submits_and_rejections_are_visible(void)
@@ -383,6 +490,7 @@ int main(void)
     ratimos_storage_index_game_state();
 
     UNITY_BEGIN();
+    RUN_TEST(test_termo_keyboard_reflects_letter_states_and_resets);
     /* Ordem importa: cada tela de jogo e' construida uma vez e fica em
      * cache pra sempre (sem delete-on-navigate -- deferred-items #1, plano
      * 02.1-15), e as 5 juntas usam ~445KB dos 512KB do heap LVGL. Os testes

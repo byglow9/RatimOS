@@ -219,6 +219,77 @@ void test_blocklisted_common_words_are_accepted_guesses_but_never_answers(void)
     TEST_ASSERT_EQUAL_UINT8(1, st.tries_used);
 }
 
+/* Estado de uma letra (maiuscula ou minuscula) no vetor de 26. */
+static uint8_t key(const uint8_t ks[26], char c)
+{
+    return ks[(c | 0x20) - 'a'];
+}
+
+/*
+ * Fix de checkpoint 02.1-14: teclado reflete o estado das letras (Termo
+ * real). posse x RESTO, TESTE: S/E verdes (E repetida em TESTE sai cinza na
+ * 1a posicao mas a letra existe -> continua verde, nunca desabilitada),
+ * O amarela, R/T fora (desabilitadas), P/Z nunca tentadas.
+ */
+void test_key_states_termo_correct_beats_present_and_absent_letters(void)
+{
+    ratimos_termo_state_t st;
+    make_termo_state(&st, "posse");
+    uint8_t ks[26];
+
+    ratimos_termo_key_states(&st, ks);
+    for (int i = 0; i < 26; i++) {
+        TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_UNUSED, ks[i]);
+    }
+
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "resto"));
+    ratimos_termo_key_states(&st, ks);
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_PRESENT, key(ks, 'E'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_CORRECT, key(ks, 'S'));
+
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "teste"));
+    ratimos_termo_key_states(&st, ks);
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_ABSENT, key(ks, 'R'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_ABSENT, key(ks, 'T'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_PRESENT, key(ks, 'O'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_CORRECT, key(ks, 'S'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_CORRECT, key(ks, 'E'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_UNUSED, key(ks, 'P'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_UNUSED, key(ks, 'Z'));
+}
+
+/*
+ * Dueto: so' contam os boards ainda em jogo. Antes de resolver "posse", nada
+ * fica desabilitado (cada letra existe em algum board). Depois, so' "carta"
+ * conta: E/S/O/P (fora de carta) viram ABSENT -- S inclusive, que era verde
+ * no board ja resolvido -- e R/T mantem o tom vindo de carta.
+ */
+void test_key_states_dueto_only_count_boards_still_in_play(void)
+{
+    ratimos_termo_state_t st;
+    make_dueto_state(&st, "posse", "carta");
+    uint8_t ks[26];
+
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "resto"));
+    ratimos_termo_key_states(&st, ks);
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_PRESENT, key(ks, 'R'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_PRESENT, key(ks, 'E'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_CORRECT, key(ks, 'S'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_CORRECT, key(ks, 'T'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_PRESENT, key(ks, 'O'));
+
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "posse"));
+    TEST_ASSERT_EQUAL_UINT8(1, st.boards[0].solved);
+    ratimos_termo_key_states(&st, ks);
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_PRESENT, key(ks, 'R'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_CORRECT, key(ks, 'T'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_ABSENT, key(ks, 'S'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_ABSENT, key(ks, 'E'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_ABSENT, key(ks, 'O'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_ABSENT, key(ks, 'P'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_UNUSED, key(ks, 'C'));
+}
+
 void test_submit_consumes_exactly_one_try_per_guess(void)
 {
     ratimos_termo_state_t st;
@@ -309,6 +380,8 @@ int main(void)
 
     RUN_TEST(test_submit_rejects_guess_not_in_accepted_list_without_consuming_try);
     RUN_TEST(test_blocklisted_common_words_are_accepted_guesses_but_never_answers);
+    RUN_TEST(test_key_states_termo_correct_beats_present_and_absent_letters);
+    RUN_TEST(test_key_states_dueto_only_count_boards_still_in_play);
     RUN_TEST(test_submit_consumes_exactly_one_try_per_guess);
     RUN_TEST(test_submit_wins_when_all_boards_solved);
     RUN_TEST(test_submit_loses_when_tries_exhausted_with_unsolved_board);
