@@ -22,10 +22,13 @@
 #include "../../../storage/content_api.h"
 #include "daily_seed.h"
 
-#define SUDOKU_CELL_PX   32
+/* Orcamento vertical (fix de checkpoint 02.1-14): pilulas + tabuleiro +
+ * teclado + "novo jogo" + 3 gaps <= RATIMOS_CONTENT_INNER_H (386), sem
+ * rolar: 26+234+64+26+24 = 374. */
+#define SUDOKU_CELL_PX   26
 #define SUDOKU_BOARD_PX  (SUDOKU_CELL_PX * 9)
-#define SUDOKU_PILL_H    28
-#define SUDOKU_KEYPAD_H  72 /* 2 linhas de 34px + 4px de gap */
+#define SUDOKU_PILL_H    RATIMOS_PILL_H
+#define SUDOKU_KEYPAD_H  64 /* 2 linhas de 30px + 4px de gap */
 #define SUDOKU_NO_SELECTION 0xFFu
 
 /* ------------------------------------------------------------------------
@@ -441,14 +444,13 @@ static lv_obj_t * build_sudoku_screen(void)
         lv_obj_add_flag(s_error_label, LV_OBJ_FLAG_HIDDEN);
     }
 
-    /* Linha de dificuldade/modo -- 4 pilulas, lg(16px) de espaco abaixo. */
+    /* Linha de dificuldade/modo -- 4 pilulas (gap padrao do content, sem margem extra -- 02.1-14). */
     s_pill_row = lv_obj_create(shell.content);
     lv_obj_remove_style_all(s_pill_row);
     lv_obj_set_width(s_pill_row, lv_pct(100));
     lv_obj_set_height(s_pill_row, SUDOKU_PILL_H);
     lv_obj_set_flex_flow(s_pill_row, LV_FLEX_FLOW_ROW);
     lv_obj_set_style_pad_column(s_pill_row, 4, 0);
-    lv_obj_set_style_margin_bottom(s_pill_row, 16, 0);
     lv_obj_clear_flag(s_pill_row, LV_OBJ_FLAG_SCROLLABLE);
 
     for (int m = 0; m < RATIMOS_SUDOKU_MODE_COUNT; m++) {
@@ -546,7 +548,7 @@ static lv_obj_t * build_sudoku_screen(void)
     lv_obj_set_flex_flow(novo_jogo_row, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(novo_jogo_row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_clear_flag(novo_jogo_row, LV_OBJ_FLAG_SCROLLABLE);
-    ratimos_button_create(novo_jogo_row, "novo jogo", novo_jogo_clicked_cb, 140, LV_SIZE_CONTENT);
+    ratimos_button_create(novo_jogo_row, "novo jogo", novo_jogo_clicked_cb, 140, RATIMOS_PILL_H);
 
     /* Falha de geracao (UI-SPEC, estado de erro): nenhum tabuleiro, so a
      * copia de erro + pilula de retry. Escondido ate render_board() decidir

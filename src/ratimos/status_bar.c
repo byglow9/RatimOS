@@ -98,7 +98,7 @@ static lv_obj_t * pixel_battery_create(lv_obj_t * parent)
 
 void ratimos_topbar_create(lv_obj_t * parent)
 {
-    lv_obj_t * row = bar_row_create(parent, 26);
+    lv_obj_t * row = bar_row_create(parent, RATIMOS_TOPBAR_H);
     lv_obj_set_style_bg_opa(row, LV_OPA_40, 0);
     /* Scrim escuro translucido sobre o fundo ditherizado -- o design
      * aprovado (sketch 004, header-navegacao.md) e' `rgba(0,0,0,0.4)`:
@@ -194,7 +194,7 @@ static void format_breadcrumb(lv_obj_t * label, const char * path)
 
 void ratimos_sectionbar_create(lv_obj_t * parent, const char * path)
 {
-    lv_obj_t * row = bar_row_create(parent, 24);
+    lv_obj_t * row = bar_row_create(parent, RATIMOS_SECTIONBAR_H);
     lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
     lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
@@ -218,7 +218,7 @@ void ratimos_bottombar_create(lv_obj_t * parent, const char * left_text, lv_even
     /* 28px (era 22): cabe o botao bevel de "voltar" (label 16px + pad 2+2 +
      * borda 2+2). O content de app_shell.c usa flex_grow, entao ele so'
      * encolhe 6px -- nada e' empurrado pra fora dos 480px. */
-    lv_obj_t * row = bar_row_create(parent, 28);
+    lv_obj_t * row = bar_row_create(parent, RATIMOS_BOTTOMBAR_H);
     lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
 
     if (left_cb) {

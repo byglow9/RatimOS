@@ -26,6 +26,10 @@ void ratimos_theme_apply_screen(lv_obj_t * scr)
     lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
     lv_obj_set_style_text_color(scr, RATIMOS_COLOR_TEXT, 0);
     lv_obj_set_style_pad_all(scr, 0, 0);
+    /* Sem gap entre topbar/sectionbar/content/bottombar: o tema default do
+     * LVGL dava pad_row 10 a tela, e a sectionbar de 24px ocupava ~44px. */
+    lv_obj_set_style_pad_row(scr, 0, 0);
+    lv_obj_set_style_pad_column(scr, 0, 0);
     lv_obj_set_style_border_width(scr, 0, 0);
 
     lv_obj_t * bg = lv_image_create(scr);

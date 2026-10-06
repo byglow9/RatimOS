@@ -29,17 +29,26 @@
 #include "../../../storage/content_api.h"
 #include "daily_seed.h"
 
-#define TERMO_PILL_H     28
+/* Orcamento vertical (fix de checkpoint 02.1-14): pilulas + status +
+ * tabuleiro + teclado + 3 gaps <= RATIMOS_CONTENT_INNER_H (386), sem rolar.
+ * Termo: 26+14+198+114+24 = 376. */
+#define TERMO_PILL_H     RATIMOS_PILL_H
 #define TERMO_TILE_GAP   2
+/* Recuo interno do painel do tabuleiro = borda bevel (2) + padding (2).
+ * Antes o padding sozinho era 4 e a borda de 2px ficava fora da conta,
+ * cortando 4px da ultima coluna/linha. */
 #define TERMO_PANEL_PAD  4
-#define TERMO_KEYBOARD_H 110
+#define TERMO_PANEL_BORDER 2
+#define TERMO_KEY_H      36
+#define TERMO_KEY_GAP    3
+#define TERMO_KEYBOARD_H (3 * TERMO_KEY_H + 2 * TERMO_KEY_GAP)
 
 /* Tamanho de tile e linhas visiveis por modo, per UI-SPEC "Game Screen
  * Layouts" > Termo/Dueto/Quarteto. Quarteto usa um viewport de 5 linhas
  * (scrollavel) mesmo com ate 9 tentativas -- nove linhas em tamanho legivel
  * nao cabem no orcamento vertical (UI-SPEC, resolvido). */
-static const uint8_t TERMO_TILE_PX[RATIMOS_TERMO_MODE_COUNT] = { 40, 26, 22 };
-static const uint8_t TERMO_VISIBLE_ROWS[RATIMOS_TERMO_MODE_COUNT] = { 6, 7, 5 };
+static const uint8_t TERMO_TILE_PX[RATIMOS_TERMO_MODE_COUNT] = { 30, 26, 21 };
+static const uint8_t TERMO_VISIBLE_ROWS[RATIMOS_TERMO_MODE_COUNT] = { 6, 7, 4 };
 
 static const char * const TERMO_MODE_LABELS[RATIMOS_TERMO_MODE_COUNT] = {
     "termo", "dueto", "quarteto"
@@ -49,22 +58,28 @@ static const char * const TERMO_MODE_LABELS[RATIMOS_TERMO_MODE_COUNT] = {
  * o mais longo, 21 chars + NUL). */
 #define TERMO_PATH_BUF_LEN 32
 
-/* Teclado compartilhado -- layout QWERTY de 3 linhas com enter/apagar na
- * ultima linha (convencao Wordle/term.ooo padrao). Um unico
- * lv_buttonmatrix, neutro, nunca dividido nem colorido por board (UI-SPEC:
- * resolvido a favor da legibilidade num painel de 320px). */
+/* Teclado compartilhado -- QWERTY de 3 fileiras como o Termo real (fix de
+ * checkpoint 02.1-14): QWERTYUIOP / ASDFGHJKL / ENTER + ZXCVBNM + apagar.
+ * Um unico lv_buttonmatrix, neutro, nunca dividido nem colorido por board.
+ * Cada fileira soma 20 unidades e toda tecla de LETRA tem 2 unidades, entao
+ * as letras tem a mesma largura nas 3 fileiras (~27px): a do meio ganha um
+ * espacador oculto de meia tecla em cada ponta (o recuo do teclado real).
+ * O espacador e' " " + LV_BUTTONMATRIX_CTRL_HIDDEN: uma string VAZIA ""
+ * terminaria o map do lv_buttonmatrix ali mesmo.
+ * ENTER 4 unidades (cabe "enter" dentro do bevel), apagar = seta de apagar
+ * (LV_SYMBOL_BACKSPACE, vem do fallback Montserrat da fonte mono). */
+#define TERMO_KEY_ENTER "enter"
+#define TERMO_KEY_ERASE LV_SYMBOL_BACKSPACE
 static const char * const TERMO_KEYBOARD_MAP[] = {
-    "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "\n",
-    "a", "s", "d", "f", "g", "h", "j", "k", "l", "\n",
-    "enter", "z", "x", "c", "v", "b", "n", "m", "apagar", NULL
+    "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "\n",
+    " ", "A", "S", "D", "F", "G", "H", "J", "K", "L", " ", "\n",
+    TERMO_KEY_ENTER, "Z", "X", "C", "V", "B", "N", "M", TERMO_KEY_ERASE, NULL
 };
-/* 3a linha (plano 02.1-13): "enter" e "apagar" com 3 unidades cada -- em
- * largura igual o texto deles estourava a tecla, e com 2 unidades ainda
- * encostava na moldura bevel. */
+#define TERMO_KEY_SPACER (LV_BUTTONMATRIX_CTRL_HIDDEN | 1)
 static const lv_buttonmatrix_ctrl_t TERMO_KEYBOARD_CTRL[] = {
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1,
-    3, 1, 1, 1, 1, 1, 1, 1, 3
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    TERMO_KEY_SPACER, 2, 2, 2, 2, 2, 2, 2, 2, 2, TERMO_KEY_SPACER,
+    4, 2, 2, 2, 2, 2, 2, 2, 2
 };
 
 /* ------------------------------------------------------------------------
@@ -487,12 +502,12 @@ static void keyboard_value_changed_cb(lv_event_t * e)
         return;
     }
 
-    if (strcmp(text, "enter") == 0) {
+    if (strcmp(text, TERMO_KEY_ENTER) == 0) {
         try_submit();
         return;
     }
 
-    if (strcmp(text, "apagar") == 0) {
+    if (strcmp(text, TERMO_KEY_ERASE) == 0) {
         size_t len = strlen(s_state.current_guess);
         if (len > 0) {
             s_state.current_guess[len - 1] = '\0';
@@ -505,9 +520,12 @@ static void keyboard_value_changed_cb(lv_event_t * e)
         return;
     }
 
+    if (!isalpha((unsigned char) text[0])) {
+        return; /* espacador oculto / tecla sem letra */
+    }
     size_t len = strlen(s_state.current_guess);
     if (len < RATIMOS_TERMO_WORD_LEN) {
-        s_state.current_guess[len] = text[0];
+        s_state.current_guess[len] = (char) tolower((unsigned char) text[0]);
         s_state.current_guess[len + 1] = '\0';
         s_reject_flash = false;
         s_reject_msg = NULL;
@@ -589,7 +607,7 @@ static lv_obj_t * build_termo_screen(void)
 
     for (uint8_t b = 0; b < RATIMOS_TERMO_MAX_BOARDS; b++) {
         lv_obj_t * panel = ratimos_panel_create(s_boards_wrap);
-        lv_obj_set_style_pad_all(panel, TERMO_PANEL_PAD, 0);
+        lv_obj_set_style_pad_all(panel, TERMO_PANEL_PAD - TERMO_PANEL_BORDER, 0);
         lv_obj_set_flex_flow(panel, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_style_pad_row(panel, TERMO_TILE_GAP, 0);
         s_board_panel[b] = panel;
@@ -633,9 +651,10 @@ static lv_obj_t * build_termo_screen(void)
     lv_buttonmatrix_set_ctrl_map(s_keyboard, TERMO_KEYBOARD_CTRL);
     lv_obj_set_width(s_keyboard, lv_pct(100));
     lv_obj_set_height(s_keyboard, TERMO_KEYBOARD_H);
-    lv_obj_set_style_pad_column(s_keyboard, 2, 0);
-    lv_obj_set_style_pad_row(s_keyboard, 2, 0);
     ratimos_bevel_style_buttonmatrix(s_keyboard);
+    lv_obj_set_style_pad_column(s_keyboard, TERMO_KEY_GAP, 0);
+    lv_obj_set_style_pad_row(s_keyboard, TERMO_KEY_GAP, 0);
+    lv_obj_set_style_text_font(s_keyboard, &ratimos_font_mono_12, LV_PART_ITEMS);
     lv_obj_add_event_cb(s_keyboard, keyboard_value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
     /* Banner de vitoria/derrota (Display-tier, UI-SPEC). */

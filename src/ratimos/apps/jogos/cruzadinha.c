@@ -28,9 +28,16 @@
 #include "daily_seed.h"
 
 #define CRUZ_MAX_DIM        RATIMOS_CRUZADINHA_MAX_DIM
-#define CRUZ_BOARD_BUDGET_PX 300 /* largura util do conteudo (UI-SPEC screen budget) */
-#define CRUZ_CLUE_STRIP_H   40
-#define CRUZ_PILL_H         28
+/* Orcamento vertical (fix de checkpoint 02.1-14): dica + acoes + grade +
+ * teclado + 3 gaps <= RATIMOS_CONTENT_INNER_H (386), sem rolar:
+ * 30+26+208+98+24 = 386. A ALTURA e' o limite que manda (antes o grid
+ * usava os 300px de largura e o teclado ficava abaixo da dobra). */
+#define CRUZ_BOARD_BUDGET_PX 208
+#define CRUZ_CLUE_STRIP_H   30
+#define CRUZ_PILL_H         RATIMOS_PILL_H
+#define CRUZ_KEY_H          30
+#define CRUZ_KEY_GAP        4
+#define CRUZ_KEYBOARD_H     (3 * CRUZ_KEY_H + 2 * CRUZ_KEY_GAP)
 
 /* Teclado compartilhado A-Z + apagar -- mesma convencao visual do teclado do
  * termo (lv_buttonmatrix neutro, sem cor por tecla). */
@@ -266,6 +273,8 @@ static void render_grid(void)
     lv_coord_t cell_px = cell_px_for_dim(s_puzzle.grid_w);
     lv_coord_t board_px = (lv_coord_t) (cell_px * s_puzzle.grid_w);
     lv_obj_set_size(s_board, board_px, board_px);
+    /* Centraliza a grade (agora mais estreita que o content) no eixo X. */
+    lv_obj_set_style_margin_left(s_board, (RATIMOS_SCREEN_W - 2 * RATIMOS_CONTENT_PAD - board_px) / 2, 0);
 
     for (uint8_t r = 0; r < CRUZ_MAX_DIM; r++) {
         for (uint8_t c = 0; c < CRUZ_MAX_DIM; c++) {
@@ -601,19 +610,35 @@ static lv_obj_t * build_cruzadinha_screen(void)
     lv_obj_set_width(s_clue_strip, lv_pct(100));
     lv_obj_set_height(s_clue_strip, CRUZ_CLUE_STRIP_H);
     lv_obj_set_flex_flow(s_clue_strip, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(s_clue_strip, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(s_clue_strip, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_clear_flag(s_clue_strip, LV_OBJ_FLAG_SCROLLABLE);
 
     s_clue_strip_label = lv_label_create(s_clue_strip);
     lv_obj_set_flex_grow(s_clue_strip_label, 1);
-    lv_label_set_long_mode(s_clue_strip_label, LV_LABEL_LONG_MODE_WRAP);
+    lv_obj_set_height(s_clue_strip_label, CRUZ_CLUE_STRIP_H);
+    /* Ate 2 linhas; dica mais longa corta com "..." em vez de vazar. */
+    lv_label_set_long_mode(s_clue_strip_label, LV_LABEL_LONG_MODE_DOTS);
     lv_obj_set_style_text_color(s_clue_strip_label, RATIMOS_COLOR_TEXT, 0);
     lv_label_set_text(s_clue_strip_label, "");
 
-    /* Largura pelo conteudo (plano 02.1-13, deferred-items #5): com 90px
-     * fixos o texto aparecia cortado ("oxima palav"). */
-    s_next_word_btn = ratimos_button_create(s_clue_strip, "proxima palavra", next_word_clicked_cb,
-                                            LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    /* Acoes numa unica linha (fix de checkpoint 02.1-14): proxima / dicas /
+     * novo jogo, mesma altura de pilula. Antes eram 3 linhas separadas
+     * (botao ao lado da dica + 2 botoes de largura total) e empurravam o
+     * teclado pra baixo da dobra. */
+    lv_obj_t * actions = lv_obj_create(shell.content);
+    lv_obj_remove_style_all(actions);
+    lv_obj_set_width(actions, lv_pct(100));
+    lv_obj_set_height(actions, CRUZ_PILL_H);
+    lv_obj_set_flex_flow(actions, LV_FLEX_FLOW_ROW);
+    lv_obj_set_style_pad_column(actions, 4, 0);
+    lv_obj_clear_flag(actions, LV_OBJ_FLAG_SCROLLABLE);
+
+    s_next_word_btn = ratimos_button_create(actions, "proxima", next_word_clicked_cb, LV_SIZE_CONTENT, CRUZ_PILL_H);
+    lv_obj_set_flex_grow(s_next_word_btn, 1);
+    lv_obj_t * dicas_btn = ratimos_button_create(actions, "dicas", ver_todas_clicked_cb, LV_SIZE_CONTENT, CRUZ_PILL_H);
+    lv_obj_set_flex_grow(dicas_btn, 1);
+    lv_obj_t * novo_btn = ratimos_button_create(actions, "novo jogo", novo_jogo_clicked_cb, LV_SIZE_CONTENT, CRUZ_PILL_H);
+    lv_obj_set_flex_grow(novo_btn, 1);
 
     /* Grid -- construido UMA vez no tamanho maximo (11x11); render_grid()
      * decide quantas celulas ficam visiveis e o tamanho de cada uma por
@@ -638,6 +663,9 @@ static lv_obj_t * build_cruzadinha_screen(void)
             lv_obj_t * number_label = lv_label_create(cell);
             lv_label_set_text(number_label, "");
             lv_obj_set_style_text_color(number_label, RATIMOS_COLOR_TEXT_MUTED, 0);
+            /* Celulas de 18-23px: numero da dica em mono 10 pra nao
+             * encostar na letra (mono 12, centralizada). */
+            lv_obj_set_style_text_font(number_label, &ratimos_font_mono_10, 0);
             lv_obj_align(number_label, LV_ALIGN_TOP_LEFT, 1, 0);
             s_cell_number_label[r][c] = number_label;
 
@@ -649,9 +677,6 @@ static lv_obj_t * build_cruzadinha_screen(void)
         }
     }
 
-    /* Pilula "ver todas as dicas" (UI-SPEC affordance secundaria). */
-    ratimos_button_create(shell.content, "ver todas as dicas", ver_todas_clicked_cb, lv_pct(100), LV_SIZE_CONTENT);
-
     /* Teclado A-Z compartilhado + apagar -- risco flagueado (UI-SPEC/
      * RESEARCH): celulas de ~30px ficam abaixo do alvo de toque ideal de
      * 44px porque o grid precisa caber num painel de 300px -- risco aceito
@@ -661,10 +686,10 @@ static lv_obj_t * build_cruzadinha_screen(void)
     lv_buttonmatrix_set_map(s_keyboard, CRUZ_KEYBOARD_MAP);
     lv_buttonmatrix_set_ctrl_map(s_keyboard, CRUZ_KEYBOARD_CTRL);
     lv_obj_set_width(s_keyboard, lv_pct(100));
-    lv_obj_set_height(s_keyboard, 110);
-    lv_obj_set_style_pad_column(s_keyboard, 2, 0);
-    lv_obj_set_style_pad_row(s_keyboard, 2, 0);
+    lv_obj_set_height(s_keyboard, CRUZ_KEYBOARD_H);
     ratimos_bevel_style_buttonmatrix(s_keyboard);
+    lv_obj_set_style_pad_column(s_keyboard, 2, 0);
+    lv_obj_set_style_pad_row(s_keyboard, CRUZ_KEY_GAP, 0);
     lv_obj_add_event_cb(s_keyboard, keyboard_value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
     /* Banner de vitoria (Display-tier, UI-SPEC). */
@@ -683,8 +708,6 @@ static lv_obj_t * build_cruzadinha_screen(void)
     lv_obj_set_style_text_align(s_castle_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(s_castle_label, RATIMOS_COLOR_TEXT_MUTED, 0);
     lv_obj_add_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
-
-    ratimos_button_create(shell.content, "novo jogo", novo_jogo_clicked_cb, lv_pct(100), LV_SIZE_CONTENT);
 
     /* Overlay: lista completa de dicas (JOGOS-04's requisito literal de
      * dica numerada para quem quer navegar). Modal compartilhado

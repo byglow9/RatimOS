@@ -61,6 +61,24 @@
 #define RATIMOS_SCREEN_W 320
 #define RATIMOS_SCREEN_H 480
 
+/*
+ * Orcamento vertical de toda tela de app (plano 02.1-14, fix de checkpoint):
+ * barras fixas + content com padding/gap fixos. A tela (flex column) nao tem
+ * gap nenhum entre as barras (ratimos_theme_apply_screen zera pad_row --
+ * antes o tema default do LVGL punha 10px acima e abaixo da sectionbar, que
+ * parecia ter ~44px). Jogos dimensionam tabuleiro + teclado contra
+ * RATIMOS_CONTENT_INNER_H para caber sem rolagem.
+ */
+#define RATIMOS_TOPBAR_H        26
+#define RATIMOS_SECTIONBAR_H    20
+#define RATIMOS_BOTTOMBAR_H     28
+#define RATIMOS_CONTENT_PAD     10
+#define RATIMOS_CONTENT_GAP     8
+#define RATIMOS_CONTENT_INNER_H (RATIMOS_SCREEN_H - RATIMOS_TOPBAR_H - RATIMOS_SECTIONBAR_H \
+                                 - RATIMOS_BOTTOMBAR_H - 2 * RATIMOS_CONTENT_PAD)
+/* Pilulas de modo/dificuldade e botoes de acao de uma linha nos jogos. */
+#define RATIMOS_PILL_H          26
+
 void ratimos_theme_apply_screen(lv_obj_t * scr);
 lv_obj_t * ratimos_panel_create(lv_obj_t * parent);
 

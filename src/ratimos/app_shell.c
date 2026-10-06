@@ -20,9 +20,9 @@ ratimos_app_shell_t ratimos_app_shell_create(const char * section_label,
     lv_obj_remove_style_all(shell.content);
     lv_obj_set_width(shell.content, RATIMOS_SCREEN_W);
     lv_obj_set_flex_grow(shell.content, 1);
-    lv_obj_set_style_pad_all(shell.content, 10, 0);
+    lv_obj_set_style_pad_all(shell.content, RATIMOS_CONTENT_PAD, 0);
     lv_obj_set_flex_flow(shell.content, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_row(shell.content, 8, 0);
+    lv_obj_set_style_pad_row(shell.content, RATIMOS_CONTENT_GAP, 0);
 
     ratimos_bottombar_create(shell.screen, "voltar", ratimos_home_screen_show, bottom_right_hint);
 
