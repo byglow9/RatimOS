@@ -107,6 +107,16 @@ typedef enum {
 
 void ratimos_termo_key_states(const ratimos_termo_state_t * st, uint8_t out[26]);
 
+/*
+ * Letras travadas da linha ativa (fix de checkpoint 02.1-14, rodada 3):
+ * out[c] = letra minuscula ja confirmada CORRETA na posicao c em TODOS os
+ * boards ainda em jogo (a linha de entrada e' compartilhada no dueto/
+ * quarteto), ou '\0' se a posicao esta livre. Sem board em jogo (partida
+ * encerrada) nada fica travado. Derivado do historico, nunca salvo.
+ * Retorna quantas posicoes ficaram travadas.
+ */
+int ratimos_termo_locked_letters(const ratimos_termo_state_t * st, char out[RATIMOS_TERMO_WORD_LEN]);
+
 uint8_t ratimos_termo_board_count(ratimos_termo_mode_t mode);
 uint8_t ratimos_termo_max_tries(ratimos_termo_mode_t mode);
 

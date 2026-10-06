@@ -8,6 +8,8 @@
  *     motivo na tela (antes so' engrossava a borda em 1px);
  *   - o teclado do termo reflete o estado das letras (desabilita as fora da
  *     palavra, tinge amarelas/verdes), inclusive num save restaurado;
+ *   - letras verdes confirmadas ja aparecem travadas na linha ativa do
+ *     termo; os boards do quarteto abrem no topo e seguem a linha ativa;
  *   - o "voltar" de um jogo leva a ./home/jogos (antes ia pra ./home);
  *   - cards do mesmo tipo tem a mesma altura (home e listas, theme.h);
  *   - tabuleiro + teclado de todo jogo (e dos 3 modos do termo) cabem no
@@ -225,6 +227,22 @@ static bool key_disabled(lv_obj_t * kb, const char * key)
 
 static void termo_switch_mode(lv_obj_t * scr, int mode);
 
+/* Rotulo da celula (board b, linha r, coluna c) do termo. */
+static const char * termo_cell(lv_obj_t * scr, int b, int r, int c)
+{
+    lv_obj_t * wrap = lv_obj_get_child(lv_obj_get_child(scr, 3), 3);
+    lv_obj_t * row = lv_obj_get_child(lv_obj_get_child(wrap, b), r);
+    return lv_label_get_text(lv_obj_get_child(lv_obj_get_child(row, c), 0));
+}
+
+static void assert_row(lv_obj_t * scr, int r, const char * expect5)
+{
+    for (int c = 0; c < 5; c++) {
+        char e[2] = { expect5[c] == '_' ? 0 : expect5[c], 0 };
+        TEST_ASSERT_EQUAL_STRING_MESSAGE(e, termo_cell(scr, 0, r, c), expect5);
+    }
+}
+
 /*
  * Fix de checkpoint 02.1-14 (rodada 2): roda ANTES de qualquer outro teste
  * do termo pra semear um save conhecido -- resposta "posse", palpites RESTO
@@ -279,12 +297,107 @@ void test_termo_keyboard_reflects_letter_states_and_resets(void)
     TEST_ASSERT_EQUAL_STRING("complete as 5 letras", lv_label_get_text(status));
     termo_press(kb, LV_SYMBOL_BACKSPACE);
 
+    /* Rodada 3: S (pos 2) e E (pos 4) verdes ja vem travadas na linha
+     * ativa (linha 2) do save restaurado. */
+    assert_row(scr, 2, "__S_E");
+    /* Digitar preenche so' as livres: P -> pos 0, O -> pos 1, S -> pos 3. */
+    termo_press(kb, "P");
+    assert_row(scr, 2, "P_S_E");
+    termo_press(kb, "O");
+    /* Backspace apaga a ultima DIGITADA; nunca as travadas. */
+    termo_press(kb, LV_SYMBOL_BACKSPACE);
+    termo_press(kb, LV_SYMBOL_BACKSPACE);
+    termo_press(kb, LV_SYMBOL_BACKSPACE);
+    assert_row(scr, 2, "__S_E");
+    termo_type(kb, "pos");
+    assert_row(scr, 2, "POSSE");
+    /* Enter envia a palavra inteira (travadas + digitadas): POSSE acerta. */
+    termo_press(kb, "enter");
+    TEST_ASSERT_TRUE(lv_obj_has_flag(status, LV_OBJ_FLAG_HIDDEN)); /* partida encerrada */
+
     /* Jogo novo (troca de modo): teclado zerado, R/T usaveis de novo. */
     termo_switch_mode(scr, 1);
     TEST_ASSERT_FALSE(key_disabled(kb, "R"));
     TEST_ASSERT_FALSE(key_disabled(kb, "T"));
     termo_switch_mode(scr, 0); /* volta pro termo do dia, limpo */
     TEST_ASSERT_FALSE(key_disabled(kb, "R"));
+}
+
+/* Linha (board b, r) inteira dentro da area visivel do painel do board. */
+static bool termo_row_visible(lv_obj_t * scr, int b, int r)
+{
+    lv_obj_t * wrap = lv_obj_get_child(lv_obj_get_child(scr, 3), 3);
+    lv_obj_t * panel = lv_obj_get_child(wrap, b);
+    lv_area_t pa, ra;
+    lv_obj_get_content_coords(panel, &pa);
+    lv_obj_get_coords(lv_obj_get_child(panel, r), &ra);
+    return ra.y1 >= pa.y1 && ra.y2 <= pa.y2;
+}
+
+/*
+ * Rodada 3: no quarteto (4 linhas visiveis de 9) os 4 boards abrem no
+ * TOPO (antes os 2 de baixo abriam rolados pro fim) e, conforme os palpites
+ * avancam, cada board rola pra manter a linha ativa visivel.
+ */
+void test_termo_quarteto_boards_start_at_top_and_follow_active_row(void)
+{
+    static const char * const WORDS[] = {
+        "carta", "mundo", "bicho", "fruta", "lugar", "noite", "plano", "grupo",
+        "campo", "banho", "claro", "vinho", "jeito", "dizer", "feliz",
+    };
+    lv_obj_t * scr = show_game(2);
+    lv_obj_t * content = lv_obj_get_child(scr, 3);
+    lv_obj_t * kb = lv_obj_get_child(content, 4);
+    lv_obj_t * status = lv_obj_get_child(content, 2);
+    lv_obj_t * wrap = lv_obj_get_child(content, 3);
+
+    termo_switch_mode(scr, 2);
+    lv_obj_update_layout(scr);
+    for (int b = 0; b < 4; b++) {
+        TEST_ASSERT_EQUAL_INT_MESSAGE(0, lv_obj_get_scroll_y(lv_obj_get_child(wrap, b)), "board must open at row 1");
+        TEST_ASSERT_TRUE(termo_row_visible(scr, b, 0));
+    }
+
+    /* 5 palpites aceitos (linha ativa 5, alem das 4 visiveis). Pula
+     * palavra com letra desabilitada; digita so' nas posicoes livres. */
+    int accepted = 0;
+    for (size_t w = 0; w < sizeof(WORDS) / sizeof(WORDS[0]) && accepted < 5; w++) {
+        const char * word = WORDS[w];
+        bool usable = true;
+        for (int c = 0; c < 5 && usable; c++) {
+            char k[2] = { (char) toupper((unsigned char) word[c]), 0 };
+            usable = !key_disabled(kb, k);
+        }
+        if (!usable) {
+            continue;
+        }
+        for (int c = 0; c < 5; c++) {
+            if (termo_cell(scr, 0, accepted, c)[0] == '\0') {
+                char k[2] = { (char) toupper((unsigned char) word[c]), 0 };
+                termo_press(kb, k);
+            }
+        }
+        termo_press(kb, "enter");
+        char expect[24];
+        snprintf(expect, sizeof(expect), "tentativa %d de 9", accepted + 2);
+        if (strcmp(lv_label_get_text(status), expect) == 0) {
+            accepted++;
+        } else {
+            for (int i = 0; i < 5; i++) {
+                termo_press(kb, LV_SYMBOL_BACKSPACE);
+            }
+        }
+    }
+    TEST_ASSERT_EQUAL_INT(5, accepted);
+    lv_obj_update_layout(scr);
+    for (int b = 0; b < 4; b++) {
+        lv_obj_t * row = lv_obj_get_child(lv_obj_get_child(wrap, b), 5);
+        if (lv_obj_get_style_opa(row, LV_PART_MAIN) != LV_OPA_COVER) {
+            continue; /* board ja resolvido (linhas futuras esmaecidas) */
+        }
+        TEST_ASSERT_TRUE_MESSAGE(termo_row_visible(scr, b, 5), "active row must stay visible");
+    }
+    termo_switch_mode(scr, 0);
 }
 
 void test_termo_enter_submits_and_rejections_are_visible(void)
@@ -491,6 +604,7 @@ int main(void)
 
     UNITY_BEGIN();
     RUN_TEST(test_termo_keyboard_reflects_letter_states_and_resets);
+    RUN_TEST(test_termo_quarteto_boards_start_at_top_and_follow_active_row);
     /* Ordem importa: cada tela de jogo e' construida uma vez e fica em
      * cache pra sempre (sem delete-on-navigate -- deferred-items #1, plano
      * 02.1-15), e as 5 juntas usam ~445KB dos 512KB do heap LVGL. Os testes

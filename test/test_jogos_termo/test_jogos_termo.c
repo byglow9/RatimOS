@@ -290,6 +290,60 @@ void test_key_states_dueto_only_count_boards_still_in_play(void)
     TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_UNUSED, key(ks, 'C'));
 }
 
+/*
+ * Rodada 3: letras verdes ja confirmadas ficam pre-colocadas e travadas na
+ * proxima linha. posse x RESTO -> S travada na posicao 2; + TESTE -> S e E
+ * (posicao 4). Partida encerrada: nada travado.
+ */
+void test_locked_letters_termo_follow_confirmed_greens(void)
+{
+    ratimos_termo_state_t st;
+    make_termo_state(&st, "posse");
+    char lk[RATIMOS_TERMO_WORD_LEN];
+
+    TEST_ASSERT_EQUAL_INT(0, ratimos_termo_locked_letters(&st, lk));
+
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "resto"));
+    TEST_ASSERT_EQUAL_INT(1, ratimos_termo_locked_letters(&st, lk));
+    TEST_ASSERT_EQUAL_CHAR('s', lk[2]);
+    TEST_ASSERT_EQUAL_CHAR(0, lk[0]);
+
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "teste"));
+    TEST_ASSERT_EQUAL_INT(2, ratimos_termo_locked_letters(&st, lk));
+    TEST_ASSERT_EQUAL_CHAR('s', lk[2]);
+    TEST_ASSERT_EQUAL_CHAR('e', lk[4]);
+    TEST_ASSERT_EQUAL_CHAR(0, lk[1]);
+
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "posse"));
+    TEST_ASSERT_EQUAL_UINT8(1, st.finished);
+    TEST_ASSERT_EQUAL_INT(0, ratimos_termo_locked_letters(&st, lk));
+}
+
+/*
+ * Dueto: a linha e' compartilhada, so' trava o que e' verde na MESMA
+ * posicao em todos os boards ainda em jogo. posse/cesta x RESTO: S@2 e'
+ * verde nos dois (trava); E@1 so' em cesta (nao trava). Depois de resolver
+ * posse, so' cesta conta: E@1, S@2 e T@3 (todos verdes em cesta) travam.
+ */
+void test_locked_letters_dueto_require_all_boards_in_play(void)
+{
+    ratimos_termo_state_t st;
+    make_dueto_state(&st, "posse", "cesta");
+    char lk[RATIMOS_TERMO_WORD_LEN];
+
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "resto"));
+    TEST_ASSERT_EQUAL_INT(1, ratimos_termo_locked_letters(&st, lk));
+    TEST_ASSERT_EQUAL_CHAR('s', lk[2]);
+    TEST_ASSERT_EQUAL_CHAR(0, lk[1]);
+
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "posse"));
+    TEST_ASSERT_EQUAL_UINT8(1, st.boards[0].solved);
+    TEST_ASSERT_EQUAL_INT(3, ratimos_termo_locked_letters(&st, lk));
+    TEST_ASSERT_EQUAL_CHAR('e', lk[1]);
+    TEST_ASSERT_EQUAL_CHAR('s', lk[2]);
+    TEST_ASSERT_EQUAL_CHAR('t', lk[3]);
+}
+
 void test_submit_consumes_exactly_one_try_per_guess(void)
 {
     ratimos_termo_state_t st;
@@ -382,6 +436,8 @@ int main(void)
     RUN_TEST(test_blocklisted_common_words_are_accepted_guesses_but_never_answers);
     RUN_TEST(test_key_states_termo_correct_beats_present_and_absent_letters);
     RUN_TEST(test_key_states_dueto_only_count_boards_still_in_play);
+    RUN_TEST(test_locked_letters_termo_follow_confirmed_greens);
+    RUN_TEST(test_locked_letters_dueto_require_all_boards_in_play);
     RUN_TEST(test_submit_consumes_exactly_one_try_per_guess);
     RUN_TEST(test_submit_wins_when_all_boards_solved);
     RUN_TEST(test_submit_loses_when_tries_exhausted_with_unsolved_board);

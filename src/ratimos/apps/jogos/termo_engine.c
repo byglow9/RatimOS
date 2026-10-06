@@ -309,3 +309,44 @@ void ratimos_termo_key_states(const ratimos_termo_state_t * st, uint8_t out[26])
         }
     }
 }
+
+int ratimos_termo_locked_letters(const ratimos_termo_state_t * st, char out[RATIMOS_TERMO_WORD_LEN])
+{
+    memset(out, 0, RATIMOS_TERMO_WORD_LEN);
+    if (st == NULL || st->finished != 0) {
+        return 0;
+    }
+    uint8_t boards = st->board_count > RATIMOS_TERMO_MAX_BOARDS ? RATIMOS_TERMO_MAX_BOARDS : st->board_count;
+
+    int locked = 0;
+    for (int c = 0; c < RATIMOS_TERMO_WORD_LEN; c++) {
+        char common = 0;
+        bool ok = false;
+        for (uint8_t b = 0; b < boards; b++) {
+            const ratimos_termo_board_t * board = &st->boards[b];
+            if (board->solved) {
+                continue;
+            }
+            /* Letra correta conhecida nessa posicao, neste board. */
+            char known = 0;
+            uint8_t rows = board->guesses_made > RATIMOS_TERMO_MAX_TRIES ? RATIMOS_TERMO_MAX_TRIES : board->guesses_made;
+            for (uint8_t r = 0; r < rows && !known; r++) {
+                if (board->feedback[r][c] == RATIMOS_TERMO_FEEDBACK_CORRECT) {
+                    known = (char) tolower((unsigned char) st->history[r][c]);
+                }
+            }
+            if (!known || (common && known != common)) {
+                ok = false;
+                common = 0;
+                break;
+            }
+            common = known;
+            ok = true;
+        }
+        if (ok && common) {
+            out[c] = common;
+            locked++;
+        }
+    }
+    return locked;
+}
