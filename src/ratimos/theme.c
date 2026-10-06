@@ -256,6 +256,55 @@ void ratimos_bevel_style_buttonmatrix(lv_obj_t * m)
     }
 }
 
+lv_obj_t * ratimos_modal_create(lv_obj_t * screen, lv_coord_t w, lv_coord_t h)
+{
+    lv_obj_t * scrim = lv_obj_create(screen);
+    lv_obj_remove_style_all(scrim);
+    lv_obj_add_flag(scrim, LV_OBJ_FLAG_FLOATING);
+    lv_obj_set_pos(scrim, 0, 0);
+    lv_obj_set_size(scrim, RATIMOS_SCREEN_W, RATIMOS_SCREEN_H);
+    lv_obj_set_style_bg_color(scrim, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(scrim, LV_OPA_60, 0);
+    lv_obj_add_flag(scrim, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(scrim, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(scrim, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_t * panel = ratimos_panel_create(scrim);
+    lv_obj_set_size(panel, w, h);
+    lv_obj_center(panel);
+    lv_obj_set_flex_flow(panel, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(panel, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(panel, 12, 0);
+    /* Painel opaco por cima do scrim: o texto do dialogo nunca disputa
+     * contraste com o jogo por tras. */
+    lv_obj_set_style_bg_opa(panel, LV_OPA_COVER, 0);
+    return panel;
+}
+
+void ratimos_modal_show(lv_obj_t * modal_panel)
+{
+    lv_obj_t * scrim = modal_panel ? lv_obj_get_parent(modal_panel) : NULL;
+    if (scrim == NULL) {
+        return;
+    }
+    lv_obj_clear_flag(scrim, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(scrim);
+}
+
+void ratimos_modal_hide(lv_obj_t * modal_panel)
+{
+    lv_obj_t * scrim = modal_panel ? lv_obj_get_parent(modal_panel) : NULL;
+    if (scrim) {
+        lv_obj_add_flag(scrim, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+bool ratimos_modal_is_visible(lv_obj_t * modal_panel)
+{
+    lv_obj_t * scrim = modal_panel ? lv_obj_get_parent(modal_panel) : NULL;
+    return scrim && !lv_obj_has_flag(scrim, LV_OBJ_FLAG_HIDDEN);
+}
+
 /*
  * Icone solto usado pelos launchers/linhas de lista (row_list.c,
  * home_screen.c) -- SEM nenhum container/badge por baixo (G-02.1-1/

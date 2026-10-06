@@ -521,13 +521,13 @@ static void recolher_clicked_cb(lv_event_t * e)
 static void confirm_cancel_cb(lv_event_t * e)
 {
     (void) e;
-    lv_obj_add_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
+    ratimos_modal_hide(s_confirm_overlay);
 }
 
 static void confirm_restart_cb(lv_event_t * e)
 {
     (void) e;
-    lv_obj_add_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
+    ratimos_modal_hide(s_confirm_overlay);
 
     /* So apaga o TABULEIRO salvo -- a progressao ja conquistada (contador
      * compartilhado + desbloqueio exclusivo) nunca regride por causa de um
@@ -543,7 +543,7 @@ static void confirm_restart_cb(lv_event_t * e)
 static void novo_jogo_clicked_cb(lv_event_t * e)
 {
     (void) e;
-    lv_obj_clear_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
+    ratimos_modal_show(s_confirm_overlay);
 }
 
 /* ------------------------------------------------------------------------
@@ -733,18 +733,14 @@ static lv_obj_t * build_paciencia_screen(void)
     ratimos_button_create(actions_row, "novo jogo", novo_jogo_clicked_cb, 130, LV_SIZE_CONTENT);
 
     /* Dialogo de confirmacao destrutiva (Copywriting Contract): montado uma
-     * unica vez, escondido ate "novo jogo" ser tocado. Filho de
-     * shell.screen (nao de shell.content) para flutuar por cima do resto
-     * da tela, igual a sudoku.c/conexo.c. */
-    s_confirm_overlay = ratimos_panel_create(shell.screen);
-    lv_obj_set_size(s_confirm_overlay, 260, 150);
-    lv_obj_align(s_confirm_overlay, LV_ALIGN_CENTER, 0, 0);
+     * unica vez, escondido ate "novo jogo" ser tocado. Modal
+     * compartilhado centralizado na tela (ratimos_modal_create, theme.h). */
+    s_confirm_overlay = ratimos_modal_create(shell.screen, 260, 150);
     lv_obj_set_flex_flow(s_confirm_overlay, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(s_confirm_overlay, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_row(s_confirm_overlay, 12, 0);
     lv_obj_clear_flag(s_confirm_overlay, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_move_foreground(s_confirm_overlay);
+    ratimos_modal_hide(s_confirm_overlay);
 
     lv_obj_t * confirm_msg = lv_label_create(s_confirm_overlay);
     lv_label_set_text(confirm_msg, "comecar de novo? seu progresso atual nesse jogo sera perdido.");

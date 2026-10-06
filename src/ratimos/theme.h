@@ -108,6 +108,25 @@ void ratimos_button_set_selected(lv_obj_t * btn, bool selected);
 void ratimos_bevel_style_buttonmatrix(lv_obj_t * m);
 
 /*
+ * Dialogo modal centralizado na TELA (plano 02.1-14, fix de checkpoint):
+ * cria um scrim de tela cheia (320x480, preto translucido, clicavel -- o
+ * toque atras do dialogo nao chega no jogo) com LV_OBJ_FLAG_FLOATING, filho
+ * de `screen`, e dentro dele um painel bevel w x h centralizado (flex
+ * coluna, itens centralizados, pad_row 12). Retorna o PAINEL -- o chamador
+ * monta o conteudo nele. Nasce escondido; mostrar/esconder SEMPRE via
+ * ratimos_modal_show()/ratimos_modal_hide() (que agem no scrim).
+ *
+ * Por que FLOATING: toda tela de app e' um flex-column (topbar/sectionbar/
+ * content/bottombar). Um painel filho direto da tela SEM o flag vira o 6o
+ * item do flex quando aparece -- o lv_obj_align(CENTER) e' ignorado e o
+ * dialogo cai no canto inferior esquerdo, cortado, encolhendo o content.
+ */
+lv_obj_t * ratimos_modal_create(lv_obj_t * screen, lv_coord_t w, lv_coord_t h);
+void ratimos_modal_show(lv_obj_t * modal_panel);
+void ratimos_modal_hide(lv_obj_t * modal_panel);
+bool ratimos_modal_is_visible(lv_obj_t * modal_panel);
+
+/*
  * Cria o icone solto usado pelos launchers/linhas de lista -- SEM nenhum
  * container/badge por baixo (a bola vermelha circular foi removida, G-02.1-1/
  * G-02.1-2: ela era um lv_obj_create() clicavel por padrao que interceptava o

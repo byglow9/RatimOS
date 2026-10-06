@@ -502,33 +502,32 @@ static void clue_list_row_clicked_cb(lv_event_t * e)
     uint8_t entry_index = (uint8_t) (uintptr_t) lv_obj_get_user_data(row);
     jump_to_entry(entry_index);
     persist_state();
-    lv_obj_add_flag(s_clue_list_overlay, LV_OBJ_FLAG_HIDDEN);
+    ratimos_modal_hide(s_clue_list_overlay);
     render_all();
 }
 
 static void ver_todas_clicked_cb(lv_event_t * e)
 {
     (void) e;
-    lv_obj_clear_flag(s_clue_list_overlay, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_move_foreground(s_clue_list_overlay);
+    ratimos_modal_show(s_clue_list_overlay);
 }
 
 static void clue_list_close_clicked_cb(lv_event_t * e)
 {
     (void) e;
-    lv_obj_add_flag(s_clue_list_overlay, LV_OBJ_FLAG_HIDDEN);
+    ratimos_modal_hide(s_clue_list_overlay);
 }
 
 static void confirm_cancel_cb(lv_event_t * e)
 {
     (void) e;
-    lv_obj_add_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
+    ratimos_modal_hide(s_confirm_overlay);
 }
 
 static void confirm_restart_cb(lv_event_t * e)
 {
     (void) e;
-    lv_obj_add_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
+    ratimos_modal_hide(s_confirm_overlay);
     /* So apaga o TABULEIRO salvo -- a progressao ja conquistada nunca
      * regride por causa de um reset manual (proibicao do plano). */
     ratimos_storage_clear_game_state(RATIMOS_GAME_CRUZADINHA);
@@ -539,8 +538,7 @@ static void confirm_restart_cb(lv_event_t * e)
 static void novo_jogo_clicked_cb(lv_event_t * e)
 {
     (void) e;
-    lv_obj_clear_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_move_foreground(s_confirm_overlay);
+    ratimos_modal_show(s_confirm_overlay);
 }
 
 /* ------------------------------------------------------------------------
@@ -689,15 +687,16 @@ static lv_obj_t * build_cruzadinha_screen(void)
     ratimos_button_create(shell.content, "novo jogo", novo_jogo_clicked_cb, lv_pct(100), LV_SIZE_CONTENT);
 
     /* Overlay: lista completa de dicas (JOGOS-04's requisito literal de
-     * dica numerada para quem quer navegar). Filho de shell.screen (nao
-     * shell.content) para flutuar por cima do resto, igual aos dialogos de
-     * confirmacao das outras telas. */
-    s_clue_list_overlay = ratimos_panel_create(shell.screen);
-    lv_obj_set_size(s_clue_list_overlay, 300, 400);
-    lv_obj_align(s_clue_list_overlay, LV_ALIGN_CENTER, 0, 0);
+     * dica numerada para quem quer navegar). Modal compartilhado
+     * (ratimos_modal_create, theme.h): scrim FLOATING de tela cheia +
+     * painel centralizado -- igual aos dialogos de confirmacao. */
+    s_clue_list_overlay = ratimos_modal_create(shell.screen, 300, 400);
+    /* Lista longa e rolavel: comeca do topo (o centro do helper empurraria
+     * o inicio da lista pra cima, fora do alcance da rolagem). */
+    lv_obj_set_flex_align(s_clue_list_overlay, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
     lv_obj_set_flex_flow(s_clue_list_overlay, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_pad_row(s_clue_list_overlay, 6, 0);
-    lv_obj_add_flag(s_clue_list_overlay, LV_OBJ_FLAG_HIDDEN);
+    ratimos_modal_hide(s_clue_list_overlay);
 
     lv_obj_t * close_btn = ratimos_button_create(s_clue_list_overlay, "fechar", clue_list_close_clicked_cb, lv_pct(100), LV_SIZE_CONTENT);
     lv_obj_set_style_bg_color(close_btn, RATIMOS_COLOR_ACCENT, 0);
@@ -720,15 +719,12 @@ static lv_obj_t * build_cruzadinha_screen(void)
 
     /* Dialogo de confirmacao destrutiva (Copywriting Contract) -- mesmo
      * padrao de sudoku.c/termo.c/conexo.c. */
-    s_confirm_overlay = ratimos_panel_create(shell.screen);
-    lv_obj_set_size(s_confirm_overlay, 260, 150);
-    lv_obj_align(s_confirm_overlay, LV_ALIGN_CENTER, 0, 0);
+    s_confirm_overlay = ratimos_modal_create(shell.screen, 260, 150);
     lv_obj_set_flex_flow(s_confirm_overlay, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(s_confirm_overlay, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_row(s_confirm_overlay, 12, 0);
     lv_obj_clear_flag(s_confirm_overlay, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_move_foreground(s_confirm_overlay);
+    ratimos_modal_hide(s_confirm_overlay);
 
     lv_obj_t * confirm_msg = lv_label_create(s_confirm_overlay);
     lv_label_set_text(confirm_msg,
