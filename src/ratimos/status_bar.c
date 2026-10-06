@@ -252,18 +252,22 @@ void ratimos_sectionbar_set_path(lv_obj_t * title_label, const char * path)
 void ratimos_bottombar_create(lv_obj_t * parent, const char * left_text, lv_event_cb_t left_cb,
                                const char * right_text)
 {
-    lv_obj_t * row = bar_row_create(parent, 22);
+    /* 28px (era 22): cabe o botao bevel de "voltar" (label 16px + pad 2+2 +
+     * borda 2+2). O content de app_shell.c usa flex_grow, entao ele so'
+     * encolhe 6px -- nada e' empurrado pra fora dos 480px. */
+    lv_obj_t * row = bar_row_create(parent, 28);
     lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
 
     if (left_cb) {
-        lv_obj_t * btn = lv_button_create(row);
-        lv_obj_remove_style_all(btn);
-        lv_obj_add_event_cb(btn, left_cb, LV_EVENT_CLICKED, NULL);
-        lv_obj_t * lbl = lv_label_create(btn);
+        /* Acao "voltar" como botao bevel 003-C (plano 02.1-13) -- antes era
+         * so' texto vermelho num lv_button sem estilo. LV_SYMBOL_LEFT e'
+         * mantido: a fonte de chrome (Montserrat 14 built-in) tem o glifo. */
         char buf[48];
         lv_snprintf(buf, sizeof(buf), LV_SYMBOL_LEFT " %s", left_text);
-        lv_label_set_text(lbl, buf);
-        lv_obj_set_style_text_color(lbl, RATIMOS_COLOR_ACCENT, 0);
+        lv_obj_t * btn = ratimos_button_create(row, buf, left_cb, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+        lv_obj_set_style_pad_hor(btn, 8, 0);
+        lv_obj_set_style_pad_ver(btn, 2, 0);
+        lv_obj_set_style_text_color(lv_obj_get_child(btn, 0), RATIMOS_COLOR_TEXT, 0);
     }
     else {
         lv_obj_t * lbl = lv_label_create(row);
