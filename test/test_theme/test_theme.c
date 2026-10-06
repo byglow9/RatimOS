@@ -546,27 +546,74 @@ void test_splash_screen_is_plain_black_without_gradient(void)
         }
     }
 
-    /* Fix de checkpoint 02.1-14: barra retro -- moldura bevel 003-C de
-     * cantos retos com blocos quadrados discretos (nao um lv_bar
-     * arredondado), 3 blocos por passo real de boot, nenhum aceso no inicio. */
+    /* Fix de checkpoint 02.1-14 (rodada 3): barra retro -- moldura bevel
+     * 003-C de cantos retos, blocos DESENHADOS (nenhum objeto por bloco),
+     * rotulo de percentual em Press Start 2P 8px. */
     lv_obj_t * bar = lv_obj_get_child(scr, 1);
     TEST_ASSERT_TRUE(lv_obj_get_class(bar) != &lv_bar_class);
     TEST_ASSERT_EQUAL_INT(0, lv_obj_get_style_radius(bar, LV_PART_MAIN));
     TEST_ASSERT_EQUAL_INT(2, lv_obj_get_style_border_width(bar, LV_PART_MAIN));
     TEST_ASSERT_EQUAL_UINT32(lv_color_to_u32(RATIMOS_COLOR_BEVEL_DARK),
                               lv_color_to_u32(lv_obj_get_style_border_color(bar, LV_PART_MAIN)));
-    uint32_t n = lv_obj_get_child_count(bar);
-    TEST_ASSERT_EQUAL_UINT32(21, n); /* 7 passos x 3 blocos */
-    uint32_t lit = 0;
-    for (uint32_t i = 0; i < n; i++) {
-        lv_obj_t * b = lv_obj_get_child(bar, (int32_t) i);
-        TEST_ASSERT_EQUAL_INT(0, lv_obj_get_style_radius(b, LV_PART_MAIN));
-        TEST_ASSERT_EQUAL_INT(lv_obj_get_width(b), lv_obj_get_width(lv_obj_get_child(bar, 0)));
-        if (lv_color_to_u32(lv_obj_get_style_bg_color(b, LV_PART_MAIN)) == lv_color_to_u32(RATIMOS_COLOR_ACCENT)) {
-            lit++;
-        }
+    TEST_ASSERT_EQUAL_UINT32(0, lv_obj_get_child_count(bar));
+    lv_obj_update_layout(scr);
+    TEST_ASSERT_TRUE(lv_obj_get_height(bar) >= 24);
+    lv_obj_t * pct = lv_obj_get_child(scr, 2);
+    TEST_ASSERT_EQUAL_PTR(&lv_label_class, lv_obj_get_class(pct));
+    TEST_ASSERT_EQUAL_PTR(&ratimos_font_title_8, lv_obj_get_style_text_font(pct, LV_PART_MAIN));
+    TEST_ASSERT_EQUAL_STRING("carregando 000%", lv_label_get_text(pct));
+    TEST_ASSERT_EQUAL_UINT8(0, ratimos_splash_blocks_lit());
+}
+
+/* Avanca o relogio do LVGL em passos de 10ms rodando os timers. */
+static void pump_ms(int ms)
+{
+    for (int t = 0; t < ms; t += 10) {
+        lv_tick_inc(10);
+        lv_timer_handler();
     }
-    TEST_ASSERT_EQUAL_UINT32(0, lit);
+}
+
+/*
+ * Rodada 3: preenchimento CONTINUO, um bloco por vez, sempre atras do
+ * progresso REAL (lit <= alvo dos passos de boot concluidos, nunca a
+ * frente), completa 100% e so' entao abre a home. Bloco aceso tem brilho de
+ * 1px em cima (pixel art). Continua a splash do teste anterior.
+ */
+void test_splash_bar_fills_one_block_at_a_time_behind_real_progress(void)
+{
+    lv_obj_t * splash = lv_screen_active();
+    lv_obj_t * bar = lv_obj_get_child(splash, 1);
+    uint8_t prev = ratimos_splash_blocks_lit();
+    bool saw_partial = false;
+    int guard = 0;
+
+    while (lv_screen_active() == splash && guard++ < 600) {
+        pump_ms(10);
+        if (lv_screen_active() != splash) {
+            break;
+        }
+        uint8_t lit = ratimos_splash_blocks_lit();
+        TEST_ASSERT_TRUE_MESSAGE(lit <= ratimos_splash_blocks_target(), "bar ran ahead of real progress");
+        TEST_ASSERT_TRUE_MESSAGE(lit - prev <= 1, "bar jumped more than one block at once");
+        if (lit > 0 && lit < RATIMOS_SPLASH_BLOCKS && !saw_partial) {
+            saw_partial = true;
+            lv_refr_now(NULL);
+            lv_area_t c;
+            lv_obj_get_coords(bar, &c);
+            /* 1o bloco: brilho (y+6) mais claro que o miolo (y+12). */
+            uint32_t top = rgb565_luma(read_pixel_rgb565(c.x1 + 9, c.y1 + 6));
+            uint32_t mid = rgb565_luma(read_pixel_rgb565(c.x1 + 9, c.y1 + 12));
+            TEST_ASSERT_TRUE_MESSAGE(top > mid, "lit block needs a lighter 1px top highlight");
+            /* bloco apagado (ultimo) mais escuro que o aceso */
+            uint32_t off = rgb565_luma(read_pixel_rgb565(c.x2 - 9, c.y1 + 12));
+            TEST_ASSERT_TRUE(mid > off);
+        }
+        prev = lit;
+    }
+    TEST_ASSERT_TRUE(saw_partial);
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_SPLASH_BLOCKS, ratimos_splash_blocks_lit());
+    TEST_ASSERT_TRUE_MESSAGE(lv_screen_active() != splash, "home must open after 100%");
 }
 
 int main(void)
@@ -597,5 +644,6 @@ int main(void)
     RUN_TEST(test_row_with_icon_and_two_labels_is_compact);
     RUN_TEST(test_row_icon_ids_used_by_apps_are_compiled_26px_icons);
     RUN_TEST(test_splash_screen_is_plain_black_without_gradient);
+    RUN_TEST(test_splash_bar_fills_one_block_at_a_time_behind_real_progress);
     return UNITY_END();
 }

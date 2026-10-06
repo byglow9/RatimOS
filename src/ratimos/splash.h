@@ -8,4 +8,11 @@
  * Nao aceita toque (D-04) -- sempre roda ate o fim, sem pular. */
 void ratimos_splash_show(void);
 
+/* Barra de progresso (02.1-14): RATIMOS_SPLASH_BLOCKS blocos; `lit` acesos
+ * agora (anda 1 por vez) e `target` = blocos justificados pelos passos
+ * reais ja concluidos. Invariante: lit <= target. Expostos pro teste. */
+#define RATIMOS_SPLASH_BLOCKS 25
+uint8_t ratimos_splash_blocks_lit(void);
+uint8_t ratimos_splash_blocks_target(void);
+
 #endif
