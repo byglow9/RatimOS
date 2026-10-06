@@ -545,6 +545,28 @@ void test_splash_screen_is_plain_black_without_gradient(void)
                                      "splash must not carry the dithered background image");
         }
     }
+
+    /* Fix de checkpoint 02.1-14: barra retro -- moldura bevel 003-C de
+     * cantos retos com blocos quadrados discretos (nao um lv_bar
+     * arredondado), 3 blocos por passo real de boot, nenhum aceso no inicio. */
+    lv_obj_t * bar = lv_obj_get_child(scr, 1);
+    TEST_ASSERT_TRUE(lv_obj_get_class(bar) != &lv_bar_class);
+    TEST_ASSERT_EQUAL_INT(0, lv_obj_get_style_radius(bar, LV_PART_MAIN));
+    TEST_ASSERT_EQUAL_INT(2, lv_obj_get_style_border_width(bar, LV_PART_MAIN));
+    TEST_ASSERT_EQUAL_UINT32(lv_color_to_u32(RATIMOS_COLOR_BEVEL_DARK),
+                              lv_color_to_u32(lv_obj_get_style_border_color(bar, LV_PART_MAIN)));
+    uint32_t n = lv_obj_get_child_count(bar);
+    TEST_ASSERT_EQUAL_UINT32(21, n); /* 7 passos x 3 blocos */
+    uint32_t lit = 0;
+    for (uint32_t i = 0; i < n; i++) {
+        lv_obj_t * b = lv_obj_get_child(bar, (int32_t) i);
+        TEST_ASSERT_EQUAL_INT(0, lv_obj_get_style_radius(b, LV_PART_MAIN));
+        TEST_ASSERT_EQUAL_INT(lv_obj_get_width(b), lv_obj_get_width(lv_obj_get_child(bar, 0)));
+        if (lv_color_to_u32(lv_obj_get_style_bg_color(b, LV_PART_MAIN)) == lv_color_to_u32(RATIMOS_COLOR_ACCENT)) {
+            lit++;
+        }
+    }
+    TEST_ASSERT_EQUAL_UINT32(0, lit);
 }
 
 int main(void)
