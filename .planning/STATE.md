@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: "02.1"
 current_phase_name: Visual Identity & Games (Simulator-Buildable Scope)
 status: executing
-stopped_at: Completed 02.1-10-PLAN.md
-last_updated: "2026-10-05T19:04:40.278Z"
-last_activity: 2026-10-05
-last_activity_desc: Phase 02.1 execution started
-state_head: bf8096609be65e6cdb972a33ff32dc5dc0e4a39f
+stopped_at: Completed 02.1-13-PLAN.md
+last_updated: "2026-10-06T13:45:16.083Z"
+last_activity: 2026-10-06
+last_activity_desc: Phase 02.1 execution resumed (wave continue)
+state_head: ed7a16e3738a986ecb99be3c0ebdd3f1e9c9c765
 progress:
   total_phases: 10
   completed_phases: 2
-  total_plans: 19
-  completed_plans: 18
+  total_plans: 22
+  completed_plans: 20
 milestone_name: milestone
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-08-26)
 ## Current Position
 
 Phase: 02.1 (Visual Identity & Games (Simulator-Buildable Scope)) — EXECUTING
-Plan: 1 of 12
-Status: Executing Phase 02.1
-Last activity: 2026-10-05 — Phase 02.1 execution started
+Plan: 2 of 12
+Status: Ready to execute
+Last activity: 2026-10-06 — Phase 02.1 execution resumed (wave continue)
 
 Progress: [████████░░] 84%
 
@@ -72,6 +72,7 @@ Progress: [████████░░] 84%
 | Phase 02.1 P03 | 65min | 3 tasks | 23 files |
 | Phase 02.1 P04 | ~40min | 3 tasks | 6 files |
 | Phase 02.1 P10 | 45min | 3 tasks | 8 files |
+| Phase 02.1 P13 | 89min | 4 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 02.1-04: sudoku.c/.h and sudoku_engine.c/.h comments avoid the literal substrings rand(/srand( after self-defeating the plan's own forbidden-pattern grep, same fix class as 02.1-01's car jam and 02-03's cJSON
 - [Phase ?]: 02.1-10: sectionbar depth rule (>=2 '/' triggers muted/accent split; single-level path stays plain RATIMOS_COLOR_TEXT) follows the plan's <behavior> block over its more literal <action> prose
 - [Phase ?]: 02.1-10: battery charge-fill uses RATIMOS_COLOR_TEXT (not a game-semantic color) -- theme.h forbids using gameplay-feedback colors as chrome
+- [Phase 02.1]: 02.1-13: 003-C bevel frieze drawn in LV_EVENT_DRAW_POST / DRAW_TASK_ADDED callbacks, never as a child lv_obj
+- [Phase 02.1]: 02.1-13: all clickable chrome goes through ratimos_button_create(); selection via ratimos_button_set_selected() never touches the bevel frame
 
 ### Pending Todos
 
@@ -138,6 +141,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-11T17:51:16.309Z
-Stopped at: Completed 02.1-10-PLAN.md
+Last session: 2026-10-06T13:45:15.997Z
+Stopped at: Completed 02.1-13-PLAN.md
 Resume file: None
