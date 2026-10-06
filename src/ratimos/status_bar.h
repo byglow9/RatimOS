@@ -5,7 +5,7 @@
 
 /*
  * Barra superior: logo do sistema (peão-torre vermelho, resolvido via
- * ratimos_icon_by_id("system_rook")) com sombra em pixel + nome "RatimOS" +
+ * ratimos_icon_by_id("system_rook")) com sombra em pixel + "RATIMOS" (mono 10) +
  * relógio + bateria em ícone pixel-art. Relógio/bateria são placeholders
  * (hora do PC / percentual mockado) por enquanto — ficam "vivos" na Fase 4
  * do roadmap, quando o firmware tiver RTC (PCF85063) e PMIC (AXP2101 via
@@ -15,17 +15,16 @@ void ratimos_topbar_create(lv_obj_t * parent);
 
 /*
  * Barra de seção: renderiza `path` como um caminho estilo explorador de
- * arquivos (ex: "./home/jogos/conexo"), com os segmentos-pai em
- * RATIMOS_COLOR_TEXT_MUTED e o segmento atual em destaque
- * (RATIMOS_COLOR_ACCENT), como um único lv_label_t recolorido — sem cursor
- * piscando. O row criado tem exatamente um filho (o label do caminho).
+ * arquivos (ex: "./home/jogos/conexo"), inteiro em RATIMOS_COLOR_TEXT, mono
+ * 11px (sketch 003-C), como um único lv_label_t — sem cursor piscando. O row
+ * criado tem exatamente um filho (o label do caminho).
  */
 void ratimos_sectionbar_create(lv_obj_t * parent, const char * path);
 
 /*
  * Atualiza um label de sectionbar já criado por ratimos_sectionbar_create()
  * (o mesmo ponteiro de label retornado/armazenado por ela) para exibir um
- * novo `path`, reaplicando a mesma formatação muted/atual -- para telas
+ * novo `path`, com a mesma formatação -- para telas
  * cujo título muda depois da sectionbar já construída (ex: termo.c
  * trocando entre os modos termo/dueto/quarteto).
  */
@@ -34,7 +33,7 @@ void ratimos_sectionbar_set_path(lv_obj_t * title_label, const char * path);
 /*
  * Barra inferior. `left_text` + `left_cb` (opcional): se left_cb não for
  * NULL, o texto vira um botão clicável (ex: "voltar" -> Home). `right_text`
- * é sempre uma dica não-interativa.
+ * é uma dica não-interativa opcional: NULL = nenhum label de dica.
  */
 void ratimos_bottombar_create(lv_obj_t * parent, const char * left_text, lv_event_cb_t left_cb,
                                const char * right_text);

@@ -1,6 +1,7 @@
 #include "status_bar.h"
 #include "theme.h"
 #include "icons.h"
+#include "fonts/ratimos_fonts.h"
 
 #include <string.h>
 #include <time.h>
@@ -26,12 +27,6 @@
  * pronta; native_sim nao tem PMIC nenhum, entao nao ha valor vivo pra ler
  * aqui. Nao criar nenhum caminho que finja ler um valor que nao existe. */
 #define RATIMOS_BATTERY_MOCK_PCT 70
-
-/* Tamanho maximo do buffer de markup recolorido da sectionbar -- folga
- * generosa acima do maior caminho real esperado nesta fase ("./home/jogos/
- * cruzadinha", o nome de app mais longo) mais o overhead dos dois spans
- * "#RRGGBB ...#". */
-#define RATIMOS_SECTIONBAR_PATH_BUF_LEN 96
 
 static lv_obj_t * bar_row_create(lv_obj_t * parent, lv_coord_t height)
 {
@@ -145,10 +140,12 @@ void ratimos_topbar_create(lv_obj_t * parent)
         lv_obj_set_pos(logo_main, 0, 0);
     }
 
+    /* Marca como no sketch 003-C (`.mock-topbar`): "RATIMOS" em caixa
+     * alta, mono 10px, cor de texto clara -- o vermelho fica so' no rook. */
     lv_obj_t * brand_label = lv_label_create(brand);
-    lv_label_set_text(brand_label, "RatimOS");
-    lv_obj_set_style_text_color(brand_label, RATIMOS_COLOR_ACCENT, 0);
-    lv_obj_set_style_text_font(brand_label, &lv_font_montserrat_14, 0);
+    lv_label_set_text(brand_label, "RATIMOS");
+    lv_obj_set_style_text_color(brand_label, RATIMOS_COLOR_TEXT, 0);
+    lv_obj_set_style_text_font(brand_label, &ratimos_font_mono_10, 0);
 
     lv_obj_t * right = lv_obj_create(row);
     lv_obj_remove_style_all(right);
@@ -175,57 +172,24 @@ void ratimos_topbar_create(lv_obj_t * parent)
     lv_obj_t * clock = lv_label_create(right);
     lv_label_set_text(clock, clock_buf);
     lv_obj_set_style_text_color(clock, RATIMOS_COLOR_TEXT, 0);
+    lv_obj_set_style_text_font(clock, &ratimos_font_mono_10, 0);
 
     pixel_battery_create(right);
 }
 
 /*
- * Constroi (em `label`) o markup recolorido de um caminho de sectionbar --
- * unico lugar do arquivo que monta a string "#RRGGBB ...#" (create() e
- * set_path() chamam esta funcao, nunca duplicam a logica de recoloracao).
- *
- * Regra: caminhos com profundidade >=2 (2+ ocorrencias de '/', ex:
- * "./home/jogos/conexo") tem tudo ate a ULTIMA '/' (inclusive) esmaecido
- * (RATIMOS_COLOR_TEXT_MUTED) e o segmento final em destaque
- * (RATIMOS_COLOR_ACCENT). Um caminho de nivel unico (ex: "./home", que tem
- * so' uma '/', a do prefixo "./") nao tem segmento-pai nenhum pra esmaecer
- * nem drill-down nenhum pra destacar -- o texto inteiro usa a cor normal de
- * corpo (RATIMOS_COLOR_TEXT).
+ * Escreve um caminho de sectionbar no label. Sketch 003-C (`.mock-sectionbar`):
+ * o caminho inteiro numa cor so' (RATIMOS_COLOR_TEXT), mono 11px -- o
+ * segmento final em vermelho (RATIMOS_COLOR_ACCENT) foi removido no plano
+ * 02.1-14: era ilegivel onde a barra passa sobre o magenta do fundo
+ * (deferred-items #4) e nao existe no modelo aprovado. Unico ponto que
+ * escreve o texto do caminho (create() e set_path() chamam esta funcao).
  */
 static void format_breadcrumb(lv_obj_t * label, const char * path)
 {
-    lv_label_set_recolor(label, true);
-
-    const char * safe_path = path ? path : "";
-
-    size_t slash_count = 0;
-    for (const char * p = safe_path; *p; p++) {
-        if (*p == '/') {
-            slash_count++;
-        }
-    }
-
-    /* lv_color_to_u32() devolve 0xAARRGGBB (alpha sempre 0xff) -- mascara o
-     * byte de alpha pra sobrar so' os 6 digitos hex que o markup de recolor
-     * do LVGL espera. Nunca hardcoda uma segunda copia dos valores hex das
-     * macros de cor -- eles ficam com fonte unica em theme.h. */
-    unsigned long muted_rgb  = (unsigned long) (lv_color_to_u32(RATIMOS_COLOR_TEXT_MUTED) & 0x00FFFFFFu);
-    unsigned long accent_rgb = (unsigned long) (lv_color_to_u32(RATIMOS_COLOR_ACCENT) & 0x00FFFFFFu);
-    unsigned long text_rgb   = (unsigned long) (lv_color_to_u32(RATIMOS_COLOR_TEXT) & 0x00FFFFFFu);
-
-    char buf[RATIMOS_SECTIONBAR_PATH_BUF_LEN];
-    const char * last_slash = strrchr(safe_path, '/');
-
-    if (slash_count >= 2 && last_slash) {
-        int muted_len = (int) (last_slash - safe_path) + 1; /* inclui a '/' final */
-        lv_snprintf(buf, sizeof(buf), "#%06lx %.*s##%06lx %s#", muted_rgb, muted_len, safe_path,
-                    accent_rgb, last_slash + 1);
-    }
-    else {
-        lv_snprintf(buf, sizeof(buf), "#%06lx %s#", text_rgb, safe_path);
-    }
-
-    lv_label_set_text(label, buf);
+    lv_label_set_recolor(label, false);
+    lv_obj_set_style_text_color(label, RATIMOS_COLOR_TEXT, 0);
+    lv_label_set_text(label, path ? path : "");
 }
 
 void ratimos_sectionbar_create(lv_obj_t * parent, const char * path)
@@ -237,10 +201,9 @@ void ratimos_sectionbar_create(lv_obj_t * parent, const char * path)
     /* Unico filho do row: o label do caminho recolorido -- o antigo glifo
      * de checkmark (fonte padrao) foi removido (nao fazia parte do design
      * validado, ver header-navegacao.md "Sectionbar: caminho crescente").
-     * Fonte no tier Body (D-08) -- o tier Heading/pixel arriscava estourar
-     * a largura da sectionbar com um caminho de 3 segmentos. */
+     * JetBrains Mono 11px, como o `.mock-sectionbar` do sketch 003-C. */
     lv_obj_t * title = lv_label_create(row);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(title, &ratimos_font_mono_11, 0);
     format_breadcrumb(title, path);
 }
 
@@ -261,7 +224,8 @@ void ratimos_bottombar_create(lv_obj_t * parent, const char * left_text, lv_even
     if (left_cb) {
         /* Acao "voltar" como botao bevel 003-C (plano 02.1-13) -- antes era
          * so' texto vermelho num lv_button sem estilo. LV_SYMBOL_LEFT e'
-         * mantido: a fonte de chrome (Montserrat 14 built-in) tem o glifo. */
+         * mantido: o label usa a mono padrao, e o glifo da seta vem do
+         * `.fallback` dela (Montserrat 14), ver lv_conf.h. */
         char buf[48];
         lv_snprintf(buf, sizeof(buf), LV_SYMBOL_LEFT " %s", left_text);
         lv_obj_t * btn = ratimos_button_create(row, buf, left_cb, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
@@ -275,7 +239,11 @@ void ratimos_bottombar_create(lv_obj_t * parent, const char * left_text, lv_even
         lv_obj_set_style_text_color(lbl, RATIMOS_COLOR_TEXT_MUTED, 0);
     }
 
-    lv_obj_t * right = lv_label_create(row);
-    lv_label_set_text(right, right_text);
-    lv_obj_set_style_text_color(right, RATIMOS_COLOR_TEXT_MUTED, 0);
+    /* Dica opcional: NULL = nenhum label (o sketch 003-C nao tem dica
+     * nenhuma; a dica fixa de "toque" saiu dos 4 apps no plano 02.1-14). */
+    if (right_text) {
+        lv_obj_t * right = lv_label_create(row);
+        lv_label_set_text(right, right_text);
+        lv_obj_set_style_text_color(right, RATIMOS_COLOR_TEXT_MUTED, 0);
+    }
 }

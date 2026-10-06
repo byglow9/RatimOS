@@ -28,7 +28,7 @@ static lv_obj_t * photo_tile_create(lv_obj_t * parent, const char * title)
 
 static lv_obj_t * build_album_screen(void)
 {
-    ratimos_app_shell_t shell = ratimos_app_shell_create("./home/galeria", "toque para abrir");
+    ratimos_app_shell_t shell = ratimos_app_shell_create("./home/galeria", NULL);
 
     lv_obj_set_flex_flow(shell.content, LV_FLEX_FLOW_ROW_WRAP);
     lv_obj_set_style_pad_column(shell.content, 8, 0);

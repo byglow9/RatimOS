@@ -13,7 +13,7 @@ static lv_obj_t * s_musica_screen = NULL;
 
 static lv_obj_t * build_musica_screen(void)
 {
-    ratimos_app_shell_t shell = ratimos_app_shell_create("./home/musica", "toque para abrir");
+    ratimos_app_shell_t shell = ratimos_app_shell_create("./home/musica", NULL);
 
     ratimos_track_t tracks[4];
     size_t n = ratimos_storage_list_tracks(tracks, 4);

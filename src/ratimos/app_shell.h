@@ -11,7 +11,8 @@ typedef struct {
 /*
  * Monta o "chrome" padrão de qualquer app do RatimOS: barra superior
  * (marca/relógio/bateria), barra de seção (título), área de conteúdo
- * e rodapé com "voltar" (sempre leva pra Home) + uma dica à direita.
+ * e rodapé com "voltar" (sempre leva pra Home) + uma dica opcional à
+ * direita (`bottom_right_hint` NULL = sem dica).
  */
 ratimos_app_shell_t ratimos_app_shell_create(const char * section_label,
                                               const char * bottom_right_hint);
