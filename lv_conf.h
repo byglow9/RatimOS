@@ -75,6 +75,16 @@
  * ("Couldn't get the bitmap of a glyph"). */
 #define LV_USE_FONT_COMPRESSED 1
 
+/*
+ * Assert do LVGL ABORTA em vez do `while(1);` padrao (plano 02.1-14): um
+ * esgotamento de heap (lv_realloc NULL -> LV_ASSERT_MALLOC) congelava o
+ * simulador e travou uma suite de teste por ~2h girando a 100% de CPU. Com
+ * abort() o simulador sai com SIGABRT e o `pio test` falha na hora. O ESP32
+ * (Fase 3) define o seu (reset/log), este lv_conf e' o do native_sim.
+ */
+#define LV_ASSERT_HANDLER_INCLUDE <stdlib.h>
+#define LV_ASSERT_HANDLER abort();
+
 #define LV_USE_LOG 1
 #define LV_LOG_LEVEL LV_LOG_LEVEL_WARN
 #define LV_LOG_PRINTF 1
