@@ -50,8 +50,16 @@ void ratimos_splash_show(void)
 {
     s_step_index = 0;
 
+    /* Boot com fundo preto liso (plano 02.1-14) -- sem o degrade
+     * ditherizado de ratimos_theme_apply_screen(), que fica pras demais
+     * telas. O logo (logo_image.c) tem fundo preto proprio, entao se
+     * funde com a tela em vez de virar uma caixa sobre o degrade. */
     lv_obj_t * scr = lv_obj_create(NULL);
-    ratimos_theme_apply_screen(scr);
+    lv_obj_set_style_bg_color(scr, RATIMOS_COLOR_BG, 0);
+    lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
+    lv_obj_set_style_text_color(scr, RATIMOS_COLOR_TEXT, 0);
+    lv_obj_set_style_border_width(scr, 0, 0);
+    lv_obj_set_style_pad_all(scr, 0, 0);
     lv_obj_set_flex_flow(scr, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(scr, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);

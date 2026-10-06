@@ -1,113 +1,100 @@
 #!/usr/bin/env python3
 """
-Gera o PNG fonte 80x120 do fundo gradiente ditherizado
+Gera o PNG fonte 320x480 do fundo gradiente ditherizado
 (assets/backgrounds/bg_dither.png) de forma procedural (Pillow), no mesmo
 espirito de tools/generate_icon_art.py/generate_progress_art.py: um script
-project-owned, deterministico e reproduzivel a partir do codigo fonte, sem
-depender de nenhum binario nao versionado nem de um editor externo.
+project-owned, deterministico e reproduzivel a partir do codigo fonte.
 
-Direcao validada em .claude/skills/sketch-findings-ratimos/references/
-fundo-e-ambiente.md (sketch 001, variante C vencedora): gradiente vertical
-de 4 stops (roxo escuro -> magenta -> rosa/vermelho -> laranja), dithering
-ORDENADO (matriz Bayer 4x4) escolhendo entre as DUAS cores de stop mais
-proximas por pixel -- nunca um blend continuo -- mais scanlines horizontais
-sutis (1 a cada 3 linhas, ~12%) escurecendo a cor ja escolhida naquele
-pixel.
+Algoritmo IDENTICO ao do sketch aprovado (001-C, usado como fundo do
+003-C): .planning/sketches/themes/gen_dither_bg.py -> bg-dither-scan.png.
+Plano 02.1-14 reescreveu este gerador porque a versao anterior divergia
+do sketch em tres pontos que a usuaria viu na tela ("pixels maiores/mais
+pesados"):
+  1. escolhia so' entre os DOIS stops vizinhos por pixel -- o sketch
+     interpola o gradiente e quantiza cada canal em 10 niveis com
+     limiar Bayer 4x4 (muito mais degraus, granulacao mais fina);
+  2. aplicava as scanlines na resolucao 80x120 e o LVGL esticava 4x em
+     runtime -> cada scanline virava uma faixa de 4px;
+  3. stops em 0/42/68/100% em vez dos tres segmentos iguais do sketch.
 
-Gerado em 80x120 (NAO 320x480) de proposito -- decisao estrutural de
-seguranca de RAM, nao um atalho: o LVGL decodifica uma imagem indexada na
-resolucao FONTE independente do tamanho de destino em tela, entao uma
-fonte 80x120 mantem o buffer de decode em ~19KB, enquanto uma fonte
-320x480 ingenua precisaria de ~300KB -- mais da metade do LV_MEM_SIZE de
-512KB deste projeto (ja levantado uma vez na Fase 1 especificamente por
-causa de uma classe de bug de esgotamento de heap do LVGL; nao reabrir
-esse risco). O tamanho final 320x480 em tela e' alcancado via
-image-rendering scale/stretch do LVGL em tempo de execucao (theme.c), nao
-gravando um bitmap maior aqui.
+Pipeline do sketch, reproduzido aqui passo a passo:
+  - grade baixa 80x120: cor do gradiente de 4 stops (3 segmentos iguais),
+    + limiar Bayer 4x4 * (255/10), quantizada em 10 niveis por canal;
+  - sobe NEAREST pra 320x480 (cada pixel baixo vira um bloco de 4x4);
+  - so' DEPOIS escurece 1 linha a cada 3 (x0.85) -> scanline de 1px real.
 
-O numero total de cores distintas fica bem abaixo do orcamento de 16 cores
-de tools/convert_images.py's LV_COLOR_FORMAT_I4 (4 stops + 4 variantes
-escurecidas de scanline = 8 cores opacas, + 1 indice reservado pra
-transparencia = 9 de 16) -- rodar este script duas vezes produz um PNG
-byte-identico (nenhuma aleatoriedade, matriz Bayer fixa, paleta fixa).
+O PNG sai 320x480 e e' desenhado 1:1 (sem stretch) por theme.c. Rodar
+duas vezes produz um PNG pixel-identico; `--check` compara o resultado
+com o PNG do sketch.
 
-Uso: python3 tools/generate_bg_dither.py
+Uso: python3 tools/generate_bg_dither.py [--check]
 """
+import sys
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageChops
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT_PATH = REPO_ROOT / "assets" / "backgrounds" / "bg_dither.png"
+SKETCH_REF = REPO_ROOT / ".planning" / "sketches" / "themes" / "bg-dither-scan.png"
 
-W = 80
-H = 120
-
-# Paleta dos 4 stops (vertical, topo -> base), hex exatos de
-# fundo-e-ambiente.md.
-STOPS = [
-    (0x1c, 0x0a, 0x3d),  # 0%
-    (0x7a, 0x15, 0x60),  # ~42%
-    (0xc8, 0x1f, 0x4c),  # ~68%
-    (0xe8, 0x63, 0x0f),  # 100%
-]
-STOP_POSITIONS = [0.0, 0.42, 0.68, 1.0]
+W, H = 320, 480
+LOWW, LOWH = 80, 120
+PALETTE_STEPS = 10
 
 # Matriz de dithering ordenado Bayer 4x4 classica (valores 0..15).
-BAYER_4X4 = [
+BAYER4 = [
     [0, 8, 2, 10],
     [12, 4, 14, 6],
     [3, 11, 1, 9],
     [15, 7, 13, 5],
 ]
 
-# Scanlines horizontais sutis: escurece a cor escolhida em ~12% a cada 3a
-# linha -- validado como o teto seguro em fundo-e-ambiente.md ("mais que
-# isso arrisca 'sujar' texto pequeno").
+# 4 stops verticais (topo -> base), hex exatos de fundo-e-ambiente.md.
+STOPS = [
+    (0x1C, 0x0A, 0x3D),
+    (0x7A, 0x15, 0x60),
+    (0xC8, 0x1F, 0x4C),
+    (0xE8, 0x63, 0x0F),
+]
+
 SCANLINE_EVERY = 3
-SCANLINE_DARKEN = 0.12
+SCANLINE_FACTOR = 0.85
 
 
-def darken(rgb, amount):
-    return tuple(max(0, int(round(c * (1.0 - amount)))) for c in rgb)
+def color_at(t):
+    seg = min(2, int(t * 3))
+    local_t = (t * 3) - seg
+    a, b = STOPS[seg], STOPS[seg + 1]
+    return tuple(a[i] + (b[i] - a[i]) * local_t for i in range(3))
 
 
-def segment_for(t: float):
-    """Retorna (cor_perto, cor_longe, t_local) para o segmento de gradiente
-    (par de stops adjacentes) que contem a posicao vertical normalizada
-    `t` (0..1) -- t_local e' a posicao de t dentro desse segmento (0..1),
-    usada pelo dithering ordenado pra escolher entre as duas cores."""
-    for i in range(len(STOP_POSITIONS) - 1):
-        p0, p1 = STOP_POSITIONS[i], STOP_POSITIONS[i + 1]
-        if t <= p1 or i == len(STOP_POSITIONS) - 2:
-            span = p1 - p0
-            t_local = (t - p0) / span if span > 0 else 0.0
-            t_local = min(max(t_local, 0.0), 1.0)
-            return STOPS[i], STOPS[i + 1], t_local
-    return STOPS[-1], STOPS[-1], 1.0
+def quantize(v, levels):
+    step = 255 / (levels - 1)
+    return round(v / step) * step
 
 
 def generate() -> Image.Image:
-    im = Image.new("RGB", (W, H))
-    px = im.load()
+    low = Image.new("RGB", (LOWW, LOWH))
+    px = low.load()
+    amt = 255 / PALETTE_STEPS
+    for y in range(LOWH):
+        t = y / (LOWH - 1)
+        r, g, b = color_at(t)
+        for x in range(LOWW):
+            threshold = (BAYER4[y % 4][x % 4] / 16) - 0.5
+            rr = min(255, max(0, quantize(r + threshold * amt, PALETTE_STEPS)))
+            gg = min(255, max(0, quantize(g + threshold * amt, PALETTE_STEPS)))
+            bb = min(255, max(0, quantize(b + threshold * amt, PALETTE_STEPS)))
+            px[x, y] = (int(rr), int(gg), int(bb))
 
-    for y in range(H):
-        t = y / (H - 1) if H > 1 else 0.0
-        near, far, t_local = segment_for(t)
-        scanline_row = (y % SCANLINE_EVERY) == 0
-
+    big = low.resize((W, H), Image.NEAREST).convert("RGB")
+    bpx = big.load()
+    for y in range(0, H, SCANLINE_EVERY):
         for x in range(W):
-            # Threshold Bayer normalizado em (0, 1) -- ordenado, nao
-            # aleatorio, garante determinismo pixel-a-pixel.
-            threshold = (BAYER_4X4[y % 4][x % 4] + 0.5) / 16.0
-            color = far if t_local > threshold else near
-
-            if scanline_row:
-                color = darken(color, SCANLINE_DARKEN)
-
-            px[x, y] = color
-
-    return im
+            r, g, b = bpx[x, y]
+            bpx[x, y] = (int(r * SCANLINE_FACTOR), int(g * SCANLINE_FACTOR), int(b * SCANLINE_FACTOR))
+    return big
 
 
 def main() -> None:
@@ -115,6 +102,14 @@ def main() -> None:
     im = generate()
     im.save(OUT_PATH)
     print(f"wrote {OUT_PATH} ({W}x{H})")
+
+    if "--check" in sys.argv[1:]:
+        ref = Image.open(SKETCH_REF).convert("RGB")
+        if ref.size != im.size:
+            sys.exit(f"MISMATCH: size {im.size} != sketch {ref.size}")
+        if ImageChops.difference(im, ref).getbbox() is not None:
+            sys.exit("MISMATCH: pixels differ from the sketch's bg-dither-scan.png")
+        print(f"OK: pixel-identical to {SKETCH_REF.relative_to(REPO_ROOT)}")
 
 
 if __name__ == "__main__":

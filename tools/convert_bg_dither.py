@@ -5,39 +5,24 @@ tools/generate_bg_dither.py) num asset de imagem LVGL compilado em RGB565
 (sem paleta) -- mesmo padrao de tools/convert_logo.py, NAO o pipeline
 indexado (LV_COLOR_FORMAT_I4) de tools/convert_images.py.
 
-Por que RGB565 aqui e nao I4 (como icons.c/progress_images.c usam)?
-Diagnostico real (plano 02.1-09, apos verificacao humana no simulador
-SDL2): com este projeto's LV_BIN_DECODER_RAM_LOAD desligado (padrao do
-LVGL, nao definido em lv_conf.h), o decoder de imagem indexada do LVGL
-(lv_bin_decoder.c:decode_indexed()) NUNCA produz um buffer decodificado
-completo para uma imagem LV_IMAGE_SRC_VARIABLE -- o proprio comentario do
-LVGL vendorizado diz "Convert to ARGB8888, since sw renderer cannot render
-it directly even it's in RAM", codigo que so' roda quando
-LV_BIN_DECODER_RAM_LOAD=1. Sem isso, o LVGL cai no caminho de decode
-"em pedacos" (lv_image_decoder_get_area(), lv_draw_image.c:
-img_decode_and_draw()) -- que funciona bem pro caminho de blit 1:1 (por
-isso os icones I4 desta fase renderizam certo, nenhum usa
-LV_IMAGE_ALIGN_STRETCH), mas nao e' compativel com o caminho de desenho
-TRANSFORMADO (rotacao/escala) que ratimos_theme_apply_screen() usa pra
-esticar este fundo de 80x120 pra 320x480 (LV_IMAGE_ALIGN_STRETCH seta
-scale_x/scale_y != LV_SCALE_NONE, ver lv_image.c). O resultado observado
-no simulador real foi ruido visual/estatico, nao o gradiente pretendido --
-os bytes do array C em si estavam 100% corretos (confirmados por
-decodificacao manual contra a paleta), o bug e' especificamente na
-combinacao decode-indexado-em-pedacos + escala do LVGL, nao nos dados.
+Plano 02.1-14: o PNG agora e' 320x480 (o frame inteiro) e theme.c o
+desenha 1:1, sem stretch. Antes era 80x120 esticado 4x em runtime, o que
+transformava cada scanline de 1px numa faixa de 4px (divergia do sketch
+001-C). O limite de 80x120 vinha do medo de um buffer de decode de
+~300KB no heap do LVGL -- esse risco era do formato INDEXADO (I4), cujo
+decode gera um buffer. RGB565 cru num array `const` e' desenhado direto
+da flash pelo caminho de blit padrao do LVGL: nenhum buffer de decode,
+nenhum byte do heap (medido no SUMMARY do 02.1-14 com lv_mem_monitor).
+O custo vai pra flash: 320*480*2 = 307200 bytes, folgado no slot OTA de
+~6MB.
 
-RGB565 nao e' um formato indexado (sem paleta, sem decode_indexed()
-nenhum) -- 2 bytes/pixel, cada pixel decodificado diretamente pelo
-caminho de blit padrao do LVGL, que ja suporta corretamente o desenho
-transformado (mesmo formato usado por src/ratimos/logo_image.c, o logo
-da splash, ja comprovado funcionando em producao). Custo de RAM pra
-80x120 RGB565: 80*120*2 = 19200 bytes (~19KB) -- praticamente identico
-ao orcamento de decode que a fonte 80x120 (nao 320x480) ja visava desde
-o inicio (ver generate_bg_dither.py), so' que agora alcancado com o
-formato certo em vez do indexado que o LVGL nao consegue esticar aqui.
-NUNCA reverter isto pra I4 "pra economizar espaco" sem antes resolver o
-bug de decode acima -- indexado volta a corromper a tela inteira assim
-que qualquer image_align diferente de 1:1 for usado.
+Por que nao I4 (como icons.c/progress_images.c)? Com
+LV_BIN_DECODER_RAM_LOAD desligado (padrao), o decoder indexado do LVGL
+nunca produz um buffer completo para LV_IMAGE_SRC_VARIABLE e cai no
+decode "em pedacos", incompativel com desenho transformado (diagnostico
+do plano 02.1-09, que viu ruido/estatico no simulador). Mesmo sem stretch
+hoje, RGB565 e' o formato que o display usa nativamente (LV_COLOR_DEPTH
+16) e nao gasta decode nenhum. NUNCA reverter isto pra I4 sem medir.
 
 Uso: python3 tools/convert_bg_dither.py
 """
@@ -88,10 +73,10 @@ def main() -> None:
  * assets/backgrounds/bg_dither.png -- nao editar a mao. Reexecute o script
  * se o PNG fonte mudar (tools/generate_bg_dither.py).
  *
- * RGB565, {w}x{h}px, sem paleta/canal alpha -- NAO o formato indexado
- * LV_COLOR_FORMAT_I4 que icons.c/progress_images.c usam. Ver o docstring
- * de tools/convert_bg_dither.py para o porque (bug real de renderizacao
- * do LVGL ao combinar decode indexado-em-pedacos com escala/stretch).
+ * RGB565, {w}x{h}px (frame inteiro, desenhado 1:1 direto da flash), sem
+ * paleta/canal alpha -- NAO o formato indexado LV_COLOR_FORMAT_I4 que
+ * icons.c/progress_images.c usam. Ver o docstring de
+ * tools/convert_bg_dither.py para o porque.
  */
 #include "bg_images.h"
 

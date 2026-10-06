@@ -17,6 +17,7 @@
 #include "ratimos/row_list.h"
 #include "ratimos/bg_images.h"
 #include "ratimos/fonts/ratimos_fonts.h"
+#include "ratimos/splash.h"
 
 static uint8_t s_disp_buf[RATIMOS_SCREEN_W * RATIMOS_SCREEN_H * 2]; /* LV_COLOR_DEPTH 16 */
 
@@ -347,11 +348,9 @@ void test_row_create_text_col_is_not_clickable(void)
 }
 
 /*
- * T-02.1-30: o fundo ditherizado (Task 3) e' decodificado a partir de uma
- * fonte 80x120 RGB565 (nao 320x480), mantendo o buffer de decode ~19KB em
- * vez de ~300KB (RGB565 = 2 bytes/pixel -- ver o comentario de formato em
- * theme.c/tools/convert_bg_dither.py para o porque RGB565 e nao o I4
- * indexado usado pelos icones). Prova empirica (nao so o calculo): constroi
+ * T-02.1-30 (revisto no 02.1-14): o fundo ditherizado agora e' 320x480
+ * RGB565 desenhado 1:1 direto da flash (array const, sem decode -- ver
+ * theme.c/tools/convert_bg_dither.py). Prova empirica (nao so o calculo): constroi
  * e carrega pelo menos duas telas distintas via ratimos_theme_apply_screen()
  * (cada uma cria seu proprio lv_image de fundo) e confirma que o heap
  * builtin do LVGL (LV_MEM_SIZE, 512KB) continua com folga confortavel
@@ -438,6 +437,55 @@ void test_mono_font_symbols_resolve_through_montserrat_fallback(void)
     }
 }
 
+/*
+ * Plano 02.1-14, Task 3: o fundo e' o bitmap do sketch 001-C em resolucao
+ * cheia (320x480 RGB565), desenhado 1:1 -- sem LV_IMAGE_ALIGN_STRETCH nem
+ * escala (o stretch 4x de uma fonte 80x120 engordava as scanlines).
+ */
+void test_background_is_full_frame_and_drawn_one_to_one(void)
+{
+    TEST_ASSERT_EQUAL_UINT32(RATIMOS_SCREEN_W, ratimos_bg_dither_desc.header.w);
+    TEST_ASSERT_EQUAL_UINT32(RATIMOS_SCREEN_H, ratimos_bg_dither_desc.header.h);
+    TEST_ASSERT_EQUAL_UINT32(LV_COLOR_FORMAT_RGB565, ratimos_bg_dither_desc.header.cf);
+    TEST_ASSERT_EQUAL_UINT32(RATIMOS_SCREEN_W * RATIMOS_SCREEN_H * 2u, ratimos_bg_dither_desc.data_size);
+
+    lv_obj_t * scr = lv_obj_create(NULL);
+    ratimos_theme_apply_screen(scr);
+    lv_obj_t * bg = lv_obj_get_child(scr, 0);
+    TEST_ASSERT_EQUAL_PTR(&lv_image_class, lv_obj_get_class(bg));
+    TEST_ASSERT_EQUAL_PTR(&ratimos_bg_dither_desc, lv_image_get_src(bg));
+    TEST_ASSERT_NOT_EQUAL(LV_IMAGE_ALIGN_STRETCH, lv_image_get_inner_align(bg));
+    TEST_ASSERT_EQUAL_INT(LV_SCALE_NONE, lv_image_get_scale_x(bg));
+    TEST_ASSERT_EQUAL_INT(LV_SCALE_NONE, lv_image_get_scale_y(bg));
+
+    lv_obj_delete(scr);
+}
+
+/*
+ * Plano 02.1-14, Task 3: o boot (splash) tem fundo preto liso e opaco --
+ * nenhum filho e' a imagem do degrade (as demais telas continuam com ele).
+ * Fica por ultimo na suite: a splash agenda um lv_timer de boot que os
+ * outros testes nao precisam ver.
+ */
+void test_splash_screen_is_plain_black_without_gradient(void)
+{
+    lv_obj_t * prev = lv_screen_active();
+    ratimos_splash_show();
+    lv_obj_t * scr = lv_screen_active();
+    TEST_ASSERT_TRUE(scr != prev);
+
+    TEST_ASSERT_EQUAL_UINT32(lv_color_to_u32(lv_color_hex(0x000000)),
+                              lv_color_to_u32(lv_obj_get_style_bg_color(scr, LV_PART_MAIN)));
+    TEST_ASSERT_EQUAL_UINT8(LV_OPA_COVER, lv_obj_get_style_bg_opa(scr, LV_PART_MAIN));
+    for (uint32_t i = 0; i < lv_obj_get_child_count(scr); i++) {
+        lv_obj_t * c = lv_obj_get_child(scr, (int32_t) i);
+        if (lv_obj_get_class(c) == &lv_image_class) {
+            TEST_ASSERT_TRUE_MESSAGE(lv_image_get_src(c) != (const void *) &ratimos_bg_dither_desc,
+                                     "splash must not carry the dithered background image");
+        }
+    }
+}
+
 int main(void)
 {
     lv_init();
@@ -462,5 +510,7 @@ int main(void)
     RUN_TEST(test_default_theme_font_is_jetbrains_mono_12);
     RUN_TEST(test_mono_fonts_have_middle_dot_and_pt_br_glyphs);
     RUN_TEST(test_mono_font_symbols_resolve_through_montserrat_fallback);
+    RUN_TEST(test_background_is_full_frame_and_drawn_one_to_one);
+    RUN_TEST(test_splash_screen_is_plain_black_without_gradient);
     return UNITY_END();
 }
