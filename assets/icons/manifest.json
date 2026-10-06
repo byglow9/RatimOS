@@ -7,11 +7,19 @@
     { "id": "home_cartas", "file": "home_cartas.png", "w": 32, "h": 32 },
     { "id": "home_config", "file": "home_config.png", "w": 32, "h": 32 },
     { "id": "home_castelo", "file": "home_castelo.png", "w": 32, "h": 32 },
-    { "id": "game_sudoku", "file": "game_sudoku.png", "w": 32, "h": 32 },
-    { "id": "game_paciencia", "file": "game_paciencia.png", "w": 32, "h": 32 },
-    { "id": "game_termo", "file": "game_termo.png", "w": 32, "h": 32 },
-    { "id": "game_cruzadinha", "file": "game_cruzadinha.png", "w": 32, "h": 32 },
-    { "id": "game_conexo", "file": "game_conexo.png", "w": 32, "h": 32 },
-    { "id": "system_rook", "file": "system_rook.png", "w": 14, "h": 20 }
+    { "id": "game_sudoku", "file": "game_sudoku.png", "w": 26, "h": 26 },
+    { "id": "game_paciencia", "file": "game_paciencia.png", "w": 26, "h": 26 },
+    { "id": "game_termo", "file": "game_termo.png", "w": 26, "h": 26 },
+    { "id": "game_cruzadinha", "file": "game_cruzadinha.png", "w": 26, "h": 26 },
+    { "id": "game_conexo", "file": "game_conexo.png", "w": 26, "h": 26 },
+    { "id": "system_rook", "file": "system_rook.png", "w": 14, "h": 20 },
+    { "id": "row_empty", "file": "row_empty.png", "w": 26, "h": 26 },
+    { "id": "row_carta", "file": "row_carta.png", "w": 26, "h": 26 },
+    { "id": "row_playlist", "file": "row_playlist.png", "w": 26, "h": 26 },
+    { "id": "row_track", "file": "row_track.png", "w": 26, "h": 26 },
+    { "id": "cfg_brilho", "file": "cfg_brilho.png", "w": 26, "h": 26 },
+    { "id": "cfg_volume", "file": "cfg_volume.png", "w": 26, "h": 26 },
+    { "id": "cfg_firmware", "file": "cfg_firmware.png", "w": 26, "h": 26 },
+    { "id": "cfg_armazenamento", "file": "cfg_armazenamento.png", "w": 26, "h": 26 }
   ]
 }

@@ -17,6 +17,18 @@
  * ratimos_badge_create() (theme.h), que este helper delega diretamente —
  * inclusive o não-clicável garantido, que fecha o bug de hitbox G-02.1-1.
  */
+/*
+ * Espaco vertical entre linhas numa lista (gap do `.mock-content` do sketch
+ * 003-C). Os apps de lista aplicam no `content` do app_shell.
+ */
+#define RATIMOS_ROW_LIST_GAP 14
+
+/*
+ * Anatomia 003-C (plano 02.1-14): moldura bevel com padding 9, icone 26px
+ * com sombra em pixel, titulo em Press Start 2P 8px e descricao em
+ * JetBrains Mono 10px esmaecida -- a linha mede ~48px. Filhos: badge=0,
+ * text_col=1 (titulo=0, subtitulo=1), contrato lido por jogos_app.c.
+ */
 lv_obj_t * ratimos_row_create(lv_obj_t * parent,
                                const char * letter,
                                const char * title,

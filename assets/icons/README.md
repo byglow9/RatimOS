@@ -1,6 +1,10 @@
 # RatimOS icon source art
 
-Eleven 32x32 pixel-art PNGs, project-authored source art for VISUAL-01 (D-07).
+Project-authored pixel-art PNGs for VISUAL-01 (D-07): the six `home_*` launcher icons are 32x32;
+the list-row icons (`game_*`, `row_*`, `cfg_*`) are 26x26, the exact size of a row icon in sketch
+003-C (plan 02.1-14). Every drawing is authored in a 32x32 coordinate space and rasterized straight
+at its final size by `ScaledDraw` in the generator -- nothing is resampled afterwards, so the 26px
+icons stay crisp. `system_rook` is 14x20.
 
 ## Authorship
 
@@ -46,6 +50,14 @@ commands are deterministic — running them twice in a row produces byte-identic
 | `game_termo` | letter tile |
 | `game_cruzadinha` | crossword grid with blocked cells |
 | `game_conexo` | four dots joined into two pairs |
+| `row_empty` | empty tray (empty-state rows in musica/album/cartas/jogos) |
+| `row_carta` | sealed envelope (one letter) |
+| `row_playlist` | track list with a music note |
+| `row_track` | play button in a frame |
+| `cfg_brilho` | sun (brightness) |
+| `cfg_volume` | speaker with sound waves |
+| `cfg_firmware` | chip with pins |
+| `cfg_armazenamento` | microSD card with contacts |
 
 See `docs/visual-identity/README.md` for the full asset provenance table and the
 distinctness record against the reference project.

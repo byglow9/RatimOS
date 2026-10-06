@@ -14,6 +14,7 @@ static lv_obj_t * s_config_screen = NULL;
 static lv_obj_t * build_config_screen(void)
 {
     ratimos_app_shell_t shell = ratimos_app_shell_create("./home/config", "fase 0 local");
+    lv_obj_set_style_pad_row(shell.content, RATIMOS_ROW_LIST_GAP, 0);
 
     ratimos_settings_t s = ratimos_storage_get_settings();
 
@@ -22,10 +23,10 @@ static lv_obj_t * build_config_screen(void)
     snprintf(brightness, sizeof(brightness), "%d%%", s.brightness_pct);
     snprintf(volume, sizeof(volume), "%d%%", s.volume_pct);
 
-    ratimos_row_create(shell.content, "B", "brilho", brightness, NULL);
-    ratimos_row_create(shell.content, "V", "volume", volume, NULL);
-    ratimos_row_create(shell.content, "F", "firmware", s.firmware_version, NULL);
-    ratimos_row_create(shell.content, "S", "armazenamento", s.storage_used_label, NULL);
+    ratimos_row_create(shell.content, "cfg_brilho", "brilho", brightness, NULL);
+    ratimos_row_create(shell.content, "cfg_volume", "volume", volume, NULL);
+    ratimos_row_create(shell.content, "cfg_firmware", "firmware", s.firmware_version, NULL);
+    ratimos_row_create(shell.content, "cfg_armazenamento", "armazenamento", s.storage_used_label, NULL);
 
     return shell.screen;
 }

@@ -18,6 +18,7 @@
 #include "ratimos/bg_images.h"
 #include "ratimos/fonts/ratimos_fonts.h"
 #include "ratimos/splash.h"
+#include "ratimos/icons.h"
 
 static uint8_t s_disp_buf[RATIMOS_SCREEN_W * RATIMOS_SCREEN_H * 2]; /* LV_COLOR_DEPTH 16 */
 
@@ -462,6 +463,66 @@ void test_background_is_full_frame_and_drawn_one_to_one(void)
 }
 
 /*
+ * Plano 02.1-14, Task 4: linha do sketch 003-C (icone 26px + titulo +
+ * descricao) mede ~46-48px -- nunca os ~150px de antes (text_col sem
+ * altura herdava LV_DPI_DEF). Titulo em Press Start 2P 8px, descricao em
+ * mono 10, text_col com altura de conteudo.
+ */
+void test_row_with_icon_and_two_labels_is_compact(void)
+{
+    lv_obj_t * scr = lv_obj_create(NULL);
+    lv_obj_t * list = lv_obj_create(scr);
+    lv_obj_remove_style_all(list);
+    lv_obj_set_size(list, 300, 400);
+    lv_obj_set_flex_flow(list, LV_FLEX_FLOW_COLUMN);
+
+    /* Descricao longa de proposito (o "continuar · ..." do launcher): tem
+     * que cortar com "..." numa linha, nunca quebrar e esticar a linha. */
+    lv_obj_t * row = ratimos_row_create(list, "game_sudoku", "sudoku",
+                                        "continuar · grade 9x9 · fácil, médio, difícil", NULL);
+    lv_obj_update_layout(scr);
+
+    int32_t h = lv_obj_get_height(row);
+    TEST_ASSERT_TRUE_MESSAGE(h >= 40 && h <= 56, "list row must be 40..56px tall (sketch 003-C ~46px)");
+
+    lv_obj_t * icon = lv_obj_get_child(row, 0);
+    TEST_ASSERT_EQUAL_PTR(&lv_image_class, lv_obj_get_class(icon));
+    TEST_ASSERT_EQUAL_INT(26, lv_obj_get_width(icon));
+    TEST_ASSERT_EQUAL_INT(26, lv_obj_get_height(icon));
+
+    lv_obj_t * text_col = lv_obj_get_child(row, 1);
+    TEST_ASSERT_TRUE(lv_obj_get_height(text_col) < 40);
+    lv_obj_t * title = lv_obj_get_child(text_col, 0);
+    lv_obj_t * sub = lv_obj_get_child(text_col, 1);
+    TEST_ASSERT_EQUAL_PTR(&ratimos_font_title_8, lv_obj_get_style_text_font(title, LV_PART_MAIN));
+    TEST_ASSERT_EQUAL_PTR(&ratimos_font_mono_10, lv_obj_get_style_text_font(sub, LV_PART_MAIN));
+    TEST_ASSERT_EQUAL_INT(lv_font_get_line_height(&ratimos_font_mono_10), lv_obj_get_height(sub));
+    TEST_ASSERT_EQUAL_INT(lv_font_get_line_height(&ratimos_font_title_8), lv_obj_get_height(title));
+
+    lv_obj_delete(scr);
+}
+
+/*
+ * Plano 02.1-14, Task 4: todo icon id que os apps de lista passam pra
+ * ratimos_row_create() existe compilado (nenhuma letra crua como "!" ou
+ * "B" no lugar de icone) e os icones de linha sao 26x26 nativos.
+ */
+void test_row_icon_ids_used_by_apps_are_compiled_26px_icons(void)
+{
+    const char * ids[] = {
+        "game_sudoku", "game_paciencia", "game_termo", "game_cruzadinha", "game_conexo",
+        "row_empty", "row_carta", "row_playlist", "row_track",
+        "cfg_brilho", "cfg_volume", "cfg_firmware", "cfg_armazenamento",
+    };
+    for (size_t i = 0; i < sizeof(ids) / sizeof(ids[0]); i++) {
+        const lv_image_dsc_t * d = ratimos_icon_by_id(ids[i]);
+        TEST_ASSERT_NOT_NULL_MESSAGE(d, ids[i]);
+        TEST_ASSERT_EQUAL_UINT32_MESSAGE(26, d->header.w, ids[i]);
+        TEST_ASSERT_EQUAL_UINT32_MESSAGE(26, d->header.h, ids[i]);
+    }
+}
+
+/*
  * Plano 02.1-14, Task 3: o boot (splash) tem fundo preto liso e opaco --
  * nenhum filho e' a imagem do degrade (as demais telas continuam com ele).
  * Fica por ultimo na suite: a splash agenda um lv_timer de boot que os
@@ -511,6 +572,8 @@ int main(void)
     RUN_TEST(test_mono_fonts_have_middle_dot_and_pt_br_glyphs);
     RUN_TEST(test_mono_font_symbols_resolve_through_montserrat_fallback);
     RUN_TEST(test_background_is_full_frame_and_drawn_one_to_one);
+    RUN_TEST(test_row_with_icon_and_two_labels_is_compact);
+    RUN_TEST(test_row_icon_ids_used_by_apps_are_compiled_26px_icons);
     RUN_TEST(test_splash_screen_is_plain_black_without_gradient);
     return UNITY_END();
 }

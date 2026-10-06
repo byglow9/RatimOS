@@ -20,15 +20,16 @@ static lv_obj_t * s_cartas_screen = NULL;
 static lv_obj_t * build_cartas_screen(void)
 {
     ratimos_app_shell_t shell = ratimos_app_shell_create("./home/cartas", NULL);
+    lv_obj_set_style_pad_row(shell.content, RATIMOS_ROW_LIST_GAP, 0);
 
     ratimos_letter_t letters[4];
     size_t n = ratimos_storage_list_letters(letters, 4);
 
     if (n == 0) {
-        ratimos_row_create(shell.content, "!", "nenhuma carta ainda", "chegam aqui quando sincronizadas", NULL);
+        ratimos_row_create(shell.content, "row_empty", "nenhuma carta ainda", "chegam aqui quando sincronizadas", NULL);
     } else {
         for (size_t i = 0; i < n; i++) {
-            ratimos_row_create(shell.content, "L", letters[i].title, "abrir", NULL);
+            ratimos_row_create(shell.content, "row_carta", letters[i].title, "abrir", NULL);
         }
     }
 

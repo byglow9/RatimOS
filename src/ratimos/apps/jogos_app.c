@@ -2,6 +2,7 @@
 #include "../app_shell.h"
 #include "../row_list.h"
 #include "../../storage/content_api.h"
+#include <stdio.h>
 #include "jogos/conexo.h"
 #include "jogos/cruzadinha.h"
 #include "jogos/paciencia.h"
@@ -41,6 +42,22 @@ static const char * const s_game_icon_ids[RATIMOS_GAME_COUNT] = {
     "game_conexo",
 };
 
+/*
+ * Descricao de cada jogo (subtitulo da linha, sketch 003-C), mesma ordem
+ * de ratimos_game_kind_t -- entra na regra de CONSISTENCIA acima junto
+ * com as tabelas de icones e callbacks.
+ */
+static const char * const s_game_descriptions[RATIMOS_GAME_COUNT] = {
+    "grade 9x9 · fácil, médio, difícil",
+    "clássico de baralho, 7 colunas",
+    "adivinhe a palavra em 6 tentativas",
+    "palavras cruzadas temáticas",
+    "agrupe 16 palavras em 4 categorias",
+};
+
+/* "continuar · " + a maior descricao, com folga. */
+#define RATIMOS_JOGOS_SUBTITLE_LEN 96
+
 static const lv_event_cb_t s_game_callbacks[RATIMOS_GAME_COUNT] = {
     ratimos_sudoku_show,
     ratimos_paciencia_show,
@@ -63,23 +80,25 @@ static lv_obj_t * s_game_subtitle_labels[RATIMOS_GAME_COUNT] = { NULL };
 static lv_obj_t * build_jogos_screen(void)
 {
     ratimos_app_shell_t shell = ratimos_app_shell_create("./home/jogos", NULL);
+    lv_obj_set_style_pad_row(shell.content, RATIMOS_ROW_LIST_GAP, 0);
 
     ratimos_game_t games[RATIMOS_GAME_COUNT];
     size_t n = ratimos_storage_list_games(games, RATIMOS_GAME_COUNT);
 
     if (n == 0) {
-        ratimos_row_create(shell.content, "!", "nenhum jogo disponivel", "verifique a instalacao do RatimOS", NULL);
+        ratimos_row_create(shell.content, "row_empty", "nenhum jogo disponivel", "verifique a instalacao do RatimOS", NULL);
     } else {
         for (size_t i = 0; i < n; i++) {
             /* Todos os 5 jogos (02.1-01/02.1-04/02.1-05/02.1-06/02.1-07) ja
              * estao prontos -- cada linha do launcher abre sua tela real.
-             * O texto inicial do subtitulo e' sempre "jogar";
-             * refresh_jogos_rows() corrige para "continuar" logo em
-             * seguida, em toda visita, com base em progresso salvo real. */
+             * O subtitulo inicial e' a descricao do jogo;
+             * refresh_jogos_rows() prefixa "continuar · " logo em seguida,
+             * em toda visita, com base em progresso salvo real. */
             const char * icon_id = (i < RATIMOS_GAME_COUNT) ? s_game_icon_ids[i] : NULL;
             lv_event_cb_t click_cb = (i < RATIMOS_GAME_COUNT) ? s_game_callbacks[i] : NULL;
 
-            lv_obj_t * row = ratimos_row_create(shell.content, icon_id, games[i].title, "jogar", click_cb);
+            const char * desc = (i < RATIMOS_GAME_COUNT) ? s_game_descriptions[i] : "";
+            lv_obj_t * row = ratimos_row_create(shell.content, icon_id, games[i].title, desc, click_cb);
 
             if (i < RATIMOS_GAME_COUNT) {
                 lv_obj_t * text_col = lv_obj_get_child(row, 1);
@@ -93,10 +112,11 @@ static lv_obj_t * build_jogos_screen(void)
 
 /*
  * Reavalia a probe barata ratimos_storage_has_game_state() (plano 08 Task 1)
- * pra cada jogo e atualiza os cinco labels de subtitulo -- chamada em TODA
+ * pra cada jogo e atualiza os cinco labels de subtitulo ("<descricao>" ou
+ * "continuar · <descricao>") -- chamada em TODA
  * visita ao launcher. A tela e' cacheada uma unica vez (build_jogos_screen
  * so roda no primeiro ratimos_jogos_show()), entao sem isto o rotulo
- * "jogar" ficaria congelado mesmo depois da jogadora voltar de um jogo em
+ * sem progresso ficaria congelado mesmo depois da jogadora voltar de um jogo em
  * que acabou de salvar progresso real.
  */
 static void refresh_jogos_rows(void)
@@ -106,7 +126,13 @@ static void refresh_jogos_rows(void)
             continue;
         }
         bool has_progress = ratimos_storage_has_game_state((ratimos_game_kind_t) i);
-        lv_label_set_text(s_game_subtitle_labels[i], has_progress ? "continuar" : "jogar");
+        if (has_progress) {
+            char buf[RATIMOS_JOGOS_SUBTITLE_LEN];
+            snprintf(buf, sizeof(buf), "continuar · %s", s_game_descriptions[i]);
+            lv_label_set_text(s_game_subtitle_labels[i], buf);
+        } else {
+            lv_label_set_text(s_game_subtitle_labels[i], s_game_descriptions[i]);
+        }
     }
 }
 

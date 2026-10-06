@@ -37,7 +37,7 @@ static lv_obj_t * build_album_screen(void)
     size_t n = ratimos_storage_list_photos(photos, 4);
 
     if (n == 0) {
-        ratimos_row_create(shell.content, "!", "nenhuma foto ainda", "tire uma foto ou aguarde a sincronizacao", NULL);
+        ratimos_row_create(shell.content, "row_empty", "nenhuma foto ainda", "tire uma foto ou aguarde a sincronizacao", NULL);
     } else {
         for (size_t i = 0; i < n; i++) {
             photo_tile_create(shell.content, photos[i].title);

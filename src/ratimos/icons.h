@@ -23,6 +23,14 @@ extern const lv_image_dsc_t ratimos_icon_game_termo_desc;
 extern const lv_image_dsc_t ratimos_icon_game_cruzadinha_desc;
 extern const lv_image_dsc_t ratimos_icon_game_conexo_desc;
 extern const lv_image_dsc_t ratimos_icon_system_rook_desc;
+extern const lv_image_dsc_t ratimos_icon_row_empty_desc;
+extern const lv_image_dsc_t ratimos_icon_row_carta_desc;
+extern const lv_image_dsc_t ratimos_icon_row_playlist_desc;
+extern const lv_image_dsc_t ratimos_icon_row_track_desc;
+extern const lv_image_dsc_t ratimos_icon_cfg_brilho_desc;
+extern const lv_image_dsc_t ratimos_icon_cfg_volume_desc;
+extern const lv_image_dsc_t ratimos_icon_cfg_firmware_desc;
+extern const lv_image_dsc_t ratimos_icon_cfg_armazenamento_desc;
 
 const lv_image_dsc_t * ratimos_icon_by_id(const char * id);
 

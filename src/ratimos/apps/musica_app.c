@@ -14,12 +14,13 @@ static lv_obj_t * s_musica_screen = NULL;
 static lv_obj_t * build_musica_screen(void)
 {
     ratimos_app_shell_t shell = ratimos_app_shell_create("./home/musica", NULL);
+    lv_obj_set_style_pad_row(shell.content, RATIMOS_ROW_LIST_GAP, 0);
 
     ratimos_track_t tracks[4];
     size_t n = ratimos_storage_list_tracks(tracks, 4);
 
     if (n == 0) {
-        ratimos_row_create(shell.content, "!", "nenhuma musica ainda", "adicione via SD ou sync", NULL);
+        ratimos_row_create(shell.content, "row_empty", "nenhuma musica ainda", "adicione via SD ou sync", NULL);
     } else {
         char subtitle[32];
         if (n == 1) {
@@ -27,10 +28,10 @@ static lv_obj_t * build_musica_screen(void)
         } else {
             snprintf(subtitle, sizeof(subtitle), "%zu faixas", n);
         }
-        ratimos_row_create(shell.content, "P", "playlist", subtitle, NULL);
+        ratimos_row_create(shell.content, "row_playlist", "playlist", subtitle, NULL);
 
         for (size_t i = 0; i < n; i++) {
-            ratimos_row_create(shell.content, "T", tracks[i].title, "tocar", NULL);
+            ratimos_row_create(shell.content, "row_track", tracks[i].title, "tocar", NULL);
         }
     }
 
