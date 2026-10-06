@@ -27,6 +27,18 @@
 #define RATIMOS_COLOR_BEVEL_DARK    lv_color_hex(0x0d0515)
 
 /*
+ * Friso interno claro do bevel 003-C (plano 02.1-13): branco usado a ~15-20%
+ * de opacidade (RATIMOS_BEVEL_LIGHT_OPA), 1px logo dentro da borda externa
+ * -- o `inset 0 0 0 1px rgba(255,255,255,0.15)` do CSS do sketch. Seguido de
+ * uma faixa preta de 2px a ~30% (RATIMOS_BEVEL_SHADE_OPA), o
+ * `inset 0 0 0 3px rgba(0,0,0,0.35)`. Mesma regra do BEVEL_DARK: token de
+ * moldura, nunca cor de acento/CTA/texto.
+ */
+#define RATIMOS_COLOR_BEVEL_LIGHT   lv_color_hex(0xffffff)
+#define RATIMOS_BEVEL_LIGHT_OPA     LV_OPA_20
+#define RATIMOS_BEVEL_SHADE_OPA     LV_OPA_30
+
+/*
  * Cores semanticas de JOGO (novas nesta fase, D-17 intacto).
  *
  * D-17 travou a paleta de MARCA/CHROME (as 6 macros acima) — nao havia jogo
@@ -51,6 +63,17 @@
 
 void ratimos_theme_apply_screen(lv_obj_t * scr);
 lv_obj_t * ratimos_panel_create(lv_obj_t * parent);
+
+/*
+ * Aplica a moldura bevel 003-C completa (cards-superficies.md, variante C)
+ * a um objeto ja existente: radius 0, fundo RATIMOS_COLOR_PANEL a LV_OPA_70,
+ * borda externa 2px RATIMOS_COLOR_BEVEL_DARK, sem sombra -- mais o friso
+ * interno (1px claro + 2px escuro) desenhado num callback LV_EVENT_DRAW_POST.
+ * NUNCA cria objeto filho (contrato de indice de filho de row_list.c,
+ * jogos_app.c, termo.c). Idempotente: chamar duas vezes no mesmo objeto
+ * registra o callback de desenho uma unica vez.
+ */
+void ratimos_bevel_apply(lv_obj_t * obj);
 
 /*
  * Cria o icone solto usado pelos launchers/linhas de lista -- SEM nenhum

@@ -48,29 +48,116 @@ void ratimos_theme_apply_screen(lv_obj_t * scr)
 }
 
 /*
+ * Friso interno do bevel 003-C desenhado dentro de `area` (as coordenadas
+ * EXTERNAS do objeto/tecla), logo depois de uma borda externa de
+ * `border_w` px: 1px branco translucido (o `inset 0 0 0 1px` claro do
+ * sketch) seguido de 2px pretos translucidos (o `inset 0 0 0 3px` escuro).
+ * Desenha so' bordas (bg_opa TRANSP) -- nunca cobre conteudo no miolo.
+ * Compartilhado pelo callback DRAW_POST dos paineis e pelo callback
+ * DRAW_TASK_ADDED das teclas de lv_buttonmatrix.
+ */
+static void bevel_draw_frieze(lv_layer_t * layer, const lv_area_t * area, int32_t border_w)
+{
+    if (layer == NULL || area == NULL) {
+        return;
+    }
+    /* Area pequena demais pra caber borda + friso + faixa: desenha nada. */
+    if (lv_area_get_width(area) <= 2 * (border_w + 3) ||
+        lv_area_get_height(area) <= 2 * (border_w + 3)) {
+        return;
+    }
+
+    lv_draw_rect_dsc_t dsc;
+
+    lv_area_t light = *area;
+    lv_area_increase(&light, -border_w, -border_w);
+    lv_draw_rect_dsc_init(&dsc);
+    dsc.bg_opa = LV_OPA_TRANSP;
+    dsc.radius = 0;
+    dsc.border_width = 1;
+    dsc.border_color = RATIMOS_COLOR_BEVEL_LIGHT;
+    dsc.border_opa = RATIMOS_BEVEL_LIGHT_OPA;
+    lv_draw_rect(layer, &dsc, &light);
+
+    lv_area_t shade = light;
+    lv_area_increase(&shade, -1, -1);
+    lv_draw_rect_dsc_init(&dsc);
+    dsc.bg_opa = LV_OPA_TRANSP;
+    dsc.radius = 0;
+    dsc.border_width = 2;
+    dsc.border_color = lv_color_hex(0x000000);
+    dsc.border_opa = RATIMOS_BEVEL_SHADE_OPA;
+    lv_draw_rect(layer, &dsc, &shade);
+}
+
+/*
+ * LV_EVENT_DRAW_POST: roda depois do fundo, da borda e dos filhos do
+ * objeto, na mesma layer -- o friso fica por cima da borda interna, como o
+ * `box-shadow: inset` do CSS. Acompanha a borda REAL do objeto naquele
+ * instante (alguns chamadores trocam a borda em runtime, ex. tiles do
+ * conexo 1px/2px): o friso sempre encosta por dentro dela. Borda 0 =
+ * objeto saiu da moldura (ex. faixas resolvidas do conexo) -> sem friso.
+ */
+static void bevel_draw_post_cb(lv_event_t * e)
+{
+    lv_obj_t * obj = lv_event_get_target(e);
+    int32_t border_w = lv_obj_get_style_border_width(obj, LV_PART_MAIN);
+    if (border_w <= 0) {
+        return;
+    }
+    lv_area_t coords;
+    lv_obj_get_coords(obj, &coords);
+    bevel_draw_frieze(lv_event_get_layer(e), &coords, border_w);
+}
+
+static bool obj_has_event_cb(lv_obj_t * obj, lv_event_cb_t cb)
+{
+    uint32_t n = lv_obj_get_event_count(obj);
+    for (uint32_t i = 0; i < n; i++) {
+        lv_event_dsc_t * d = lv_obj_get_event_dsc(obj, i);
+        if (d && lv_event_dsc_get_cb(d) == cb) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * Moldura bevel 003-C completa (cards-superficies.md, variante C vencedora,
+ * confirmada pela usuaria em 2026-10-05: "e' exatamente o visual da C").
+ * O friso interno -- pulado no 02.1-09 por medo de criar um segundo lv_obj
+ * filho e deslocar indices estruturais -- agora e' desenhado direto na layer
+ * pelo callback DRAW_POST acima: nenhum lv_obj_create aqui, o numero de
+ * filhos do objeto nao muda.
+ */
+void ratimos_bevel_apply(lv_obj_t * obj)
+{
+    lv_obj_set_style_radius(obj, 0, 0);
+    lv_obj_set_style_bg_color(obj, RATIMOS_COLOR_PANEL, 0);
+    lv_obj_set_style_bg_opa(obj, LV_OPA_70, 0);
+    lv_obj_set_style_border_color(obj, RATIMOS_COLOR_BEVEL_DARK, 0);
+    lv_obj_set_style_border_width(obj, 2, 0);
+    lv_obj_set_style_border_opa(obj, LV_OPA_COVER, 0);
+    lv_obj_set_style_shadow_width(obj, 0, 0);
+    if (!obj_has_event_cb(obj, bevel_draw_post_cb)) {
+        lv_obj_add_event_cb(obj, bevel_draw_post_cb, LV_EVENT_DRAW_POST, NULL);
+    }
+}
+
+/*
  * Card/painel compartilhado (row_list.c, home_screen.c, todo painel/pill/
- * overlay de jogo). Bevel retro de cantos retos (D-17 revision escopada,
- * plano 02.1-09 -- variante C vencedora de cards-superficies.md): fundo
- * translucido liso (LV_OPA_70, calibrado contra o fundo ditherizado
- * aplicado por ratimos_theme_apply_screen()), borda externa escura de 2px
- * (RATIMOS_COLOR_BEVEL_DARK, nao mais o acento). Sem friso interno claro
- * (cards-superficies.md's "aceitar uma unica borda mais grossa como
- * fallback mais simples") -- NUNCA adicionar um segundo lv_obj_t filho
- * aqui: varios chamadores (row_list.c, jogos_app.c) leem filhos do valor
- * retornado por indice posicional, e um filho extra shiftaria esses
- * indices silenciosamente.
+ * overlay de jogo). Bevel retro 003-C completo via ratimos_bevel_apply():
+ * cantos retos, fundo translucido liso (LV_OPA_70, calibrado contra o fundo
+ * ditherizado de ratimos_theme_apply_screen()), borda externa escura 2px +
+ * friso interno claro + faixa escura -- sem nenhum filho extra (varios
+ * chamadores leem filhos do valor retornado por indice posicional).
  */
 lv_obj_t * ratimos_panel_create(lv_obj_t * parent)
 {
     lv_obj_t * panel = lv_obj_create(parent);
-    lv_obj_set_style_bg_color(panel, RATIMOS_COLOR_PANEL, 0);
-    lv_obj_set_style_bg_opa(panel, LV_OPA_70, 0);
-    lv_obj_set_style_border_color(panel, RATIMOS_COLOR_BEVEL_DARK, 0);
-    lv_obj_set_style_border_width(panel, 2, 0);
-    lv_obj_set_style_radius(panel, 0, 0);
+    ratimos_bevel_apply(panel);
     lv_obj_set_style_pad_all(panel, 8, 0);
     lv_obj_set_style_text_color(panel, RATIMOS_COLOR_TEXT, 0);
-    lv_obj_set_style_shadow_width(panel, 0, 0);
     return panel;
 }
 
