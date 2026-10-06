@@ -23,6 +23,7 @@
 #include "termo_words.h"
 
 #include "../../app_shell.h"
+#include "../jogos_app.h" /* voltar -> ./home/jogos (02.1-14) */
 #include "../../status_bar.h"
 #include "../../theme.h"
 #include "../../fonts/ratimos_fonts.h"
@@ -541,7 +542,7 @@ static lv_obj_t * build_termo_screen(void)
 
     char initial_path[TERMO_PATH_BUF_LEN];
     format_termo_path(initial_path, sizeof(initial_path), s_state.mode);
-    ratimos_app_shell_t shell = ratimos_app_shell_create(initial_path, "digite uma palavra");
+    ratimos_app_shell_t shell = ratimos_app_shell_create_with_back(initial_path, "digite uma palavra", ratimos_jogos_show);
 
     /* app_shell.h/status_bar.h nao expoe um handle pro label de titulo da
      * sectionbar (nenhum app antes de termo precisava mudar o titulo

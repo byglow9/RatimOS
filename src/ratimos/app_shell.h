@@ -17,4 +17,13 @@ typedef struct {
 ratimos_app_shell_t ratimos_app_shell_create(const char * section_label,
                                               const char * bottom_right_hint);
 
+/*
+ * Mesmo chrome, mas o "voltar" chama `back_cb` em vez da Home -- telas de
+ * segundo nivel voltam pro pai do breadcrumb (plano 02.1-14: um jogo em
+ * ./home/jogos/<jogo> volta pra ./home/jogos, nao pra ./home).
+ */
+ratimos_app_shell_t ratimos_app_shell_create_with_back(const char * section_label,
+                                                        const char * bottom_right_hint,
+                                                        lv_event_cb_t back_cb);
+
 #endif

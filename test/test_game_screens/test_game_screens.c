@@ -6,6 +6,7 @@
  *     no canto inferior esquerdo, cortado);
  *   - o enter do termo submete "peste" e um palpite rejeitado mostra o
  *     motivo na tela (antes so' engrossava a borda em 1px);
+ *   - o "voltar" de um jogo leva a ./home/jogos (antes ia pra ./home);
  *   - tabuleiro + teclado de todo jogo (e dos 3 modos do termo) cabem no
  *     content sem rolar, e a sectionbar e' compacta (20px, sem gap);
  *
@@ -23,6 +24,8 @@
 
 #include "lvgl.h"
 #include "ratimos/theme.h"
+#include "ratimos/apps/cartas_app.h"
+#include "ratimos/apps/jogos_app.h"
 #include "ratimos/apps/jogos/conexo.h"
 #include "ratimos/apps/jogos/cruzadinha.h"
 #include "ratimos/apps/jogos/paciencia.h"
@@ -282,6 +285,40 @@ void test_sectionbar_is_compact_and_content_moves_up(void)
     TEST_ASSERT_EQUAL_INT(sec.y2 + 1, content.y1);
 }
 
+/* Texto da sectionbar (filho 2 da tela -> label 0) da tela ativa. */
+static const char * active_path(void)
+{
+    lv_obj_t * sec = lv_obj_get_child(lv_screen_active(), 2);
+    return lv_label_get_text(lv_obj_get_child(sec, 0));
+}
+
+/* Clica no botao "voltar" da bottombar (filho 4 da tela -> botao 0). */
+static void press_back(lv_obj_t * scr)
+{
+    lv_obj_t * bottombar = lv_obj_get_child(scr, 4);
+    lv_obj_t * back = lv_obj_get_child(bottombar, 0);
+    TEST_ASSERT_TRUE(lv_obj_has_flag(back, LV_OBJ_FLAG_CLICKABLE));
+    lv_obj_send_event(back, LV_EVENT_CLICKED, NULL);
+}
+
+void test_back_from_a_game_goes_to_jogos_and_from_an_app_goes_home(void)
+{
+    for (size_t g = 0; g < GAME_N; g++) {
+        lv_obj_t * scr = show_game(g);
+        TEST_ASSERT_TRUE_MESSAGE(strncmp(active_path(), "./home/jogos/", 13) == 0, GAME_NAME[g]);
+        press_back(scr);
+        TEST_ASSERT_EQUAL_STRING_MESSAGE("./home/jogos", active_path(), GAME_NAME[g]);
+    }
+
+    ratimos_jogos_show(NULL);
+    press_back(lv_screen_active());
+    TEST_ASSERT_EQUAL_STRING("./home", active_path());
+
+    ratimos_cartas_show(NULL);
+    press_back(lv_screen_active());
+    TEST_ASSERT_EQUAL_STRING("./home", active_path());
+}
+
 int main(void)
 {
     char tmpl[] = "/tmp/ratimos_game_screens_XXXXXX";
@@ -310,5 +347,6 @@ int main(void)
     RUN_TEST(test_sectionbar_is_compact_and_content_moves_up);
     RUN_TEST(test_confirm_dialog_is_centered_on_screen_in_every_game);
     RUN_TEST(test_every_game_fits_without_scrolling);
+    RUN_TEST(test_back_from_a_game_goes_to_jogos_and_from_an_app_goes_home);
     return UNITY_END();
 }

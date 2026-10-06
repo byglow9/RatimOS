@@ -16,6 +16,7 @@
 #include "conexo.h"
 
 #include "../../app_shell.h"
+#include "../jogos_app.h" /* voltar -> ./home/jogos (02.1-14) */
 #include "../../theme.h"
 #include "../../../storage/content_api.h"
 #include "daily_seed.h"
@@ -455,7 +456,7 @@ static bool load_or_start_state(void)
 
 static lv_obj_t * build_conexo_screen(void)
 {
-    ratimos_app_shell_t shell = ratimos_app_shell_create("./home/jogos/conexo", "toque 4 para agrupar");
+    ratimos_app_shell_t shell = ratimos_app_shell_create_with_back("./home/jogos/conexo", "toque 4 para agrupar", ratimos_jogos_show);
 
     /* Banco vazio/quebrado: caminho defensivo, sem grid nenhum. */
     if (ratimos_conexo_puzzle_count() == 0) {

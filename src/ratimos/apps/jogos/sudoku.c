@@ -17,6 +17,7 @@
 #include "sudoku_engine.h"
 
 #include "../../app_shell.h"
+#include "../jogos_app.h" /* voltar -> ./home/jogos (02.1-14) */
 #include "../../theme.h"
 #include "../../fonts/ratimos_fonts.h"
 #include "../../../storage/content_api.h"
@@ -428,7 +429,7 @@ static void novo_jogo_clicked_cb(lv_event_t * e)
 
 static lv_obj_t * build_sudoku_screen(void)
 {
-    ratimos_app_shell_t shell = ratimos_app_shell_create("./home/jogos/sudoku", "numeros 1-9");
+    ratimos_app_shell_t shell = ratimos_app_shell_create_with_back("./home/jogos/sudoku", "numeros 1-9", ratimos_jogos_show);
 
     bool show_load_error = load_or_start_state();
 
