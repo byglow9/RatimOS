@@ -708,6 +708,7 @@ bafum
 bagar
 bagel
 bagem
+bagre
 bagua
 baiao
 baiar
@@ -852,6 +853,7 @@ bibla
 bical
 bicao
 bicar
+bicha
 bicho
 bidao
 biduo
@@ -862,6 +864,7 @@ bigla
 bigle
 bigua
 bijui
+bilau
 bilha
 bilho
 bilis
@@ -974,6 +977,7 @@ borro
 bosca
 boson
 bossa
+bosta
 botao
 botar
 botim
@@ -1022,6 +1026,7 @@ bromo
 brota
 brote
 broto
+broxa
 bruaa
 bruco
 bruma
@@ -1055,6 +1060,7 @@ bulha
 bulir
 bumba
 bumbo
+bunda
 bundo
 bunho
 buque
@@ -1065,6 +1071,8 @@ burgo
 buril
 burla
 burnu
+burra
+burro
 bursa
 busca
 busto
@@ -1116,6 +1124,8 @@ cafta
 cafua
 cafus
 cafuz
+cagao
+cagar
 cagoa
 caiar
 caiba
@@ -1195,6 +1205,7 @@ capsa
 caput
 capuz
 caqui
+carai
 carao
 carda
 cardo
@@ -1488,6 +1499,7 @@ coisa
 coiso
 coita
 coite
+coito
 colar
 coleo
 colha
@@ -1545,6 +1557,7 @@ corja
 cormo
 corna
 corne
+corno
 coroa
 corpo
 corra
@@ -1595,6 +1608,7 @@ coxia
 coxim
 cozer
 craca
+crack
 crapo
 crase
 crato
@@ -1880,6 +1894,7 @@ drica
 drilo
 drink
 drive
+droga
 dromo
 drone
 drope
@@ -1892,6 +1907,7 @@ dubio
 duble
 ducal
 ducha
+duche
 ducto
 duelo
 dueto
@@ -2152,6 +2168,7 @@ fazer
 febeu
 febra
 febre
+fecal
 fecha
 fecho
 fecio
@@ -2172,6 +2189,7 @@ femea
 femeo
 femur
 fenar
+fenda
 fenil
 fenix
 fenol
@@ -2270,6 +2288,7 @@ fobos
 focal
 focar
 focio
+foder
 fofao
 fofar
 fogal
@@ -2599,6 +2618,7 @@ gosma
 gosto
 gouda
 gouve
+gozar
 graal
 graca
 grade
@@ -3469,6 +3489,7 @@ mente
 mento
 merca
 merce
+merda
 merla
 merlo
 merlu
@@ -3502,6 +3523,7 @@ migar
 miina
 miite
 mijao
+mijar
 mijos
 mijui
 milao
@@ -4125,6 +4147,7 @@ pegao
 pegar
 pegas
 pegma
+peido
 peina
 peita
 peito
@@ -4145,6 +4168,7 @@ pence
 penco
 pengo
 penha
+penis
 penny
 penol
 penso
@@ -4172,6 +4196,7 @@ perum
 pesar
 pesca
 pesga
+peste
 petar
 petia
 petiz
@@ -4237,6 +4262,7 @@ pinha
 pinhe
 pinho
 pinta
+pinto
 pinus
 pioca
 piola
@@ -4363,6 +4389,8 @@ porao
 porca
 porco
 porem
+porno
+porra
 porre
 porro
 porta
@@ -4948,6 +4976,7 @@ selio
 selva
 semea
 semel
+semen
 semis
 senal
 senao
@@ -5355,6 +5384,7 @@ tesla
 testa
 teste
 testo
+tetas
 teteu
 tetim
 tetra
@@ -5721,6 +5751,7 @@ vacar
 vacua
 vacum
 vacuo
+vadia
 vadio
 vafro
 vagal
@@ -5765,6 +5796,7 @@ vazar
 vazia
 vazio
 veada
+veado
 vedar
 vedor
 vedro
@@ -5805,6 +5837,7 @@ vetar
 vetor
 vexar
 vezar
+viado
 vicar
 vichi
 vicia
@@ -5891,6 +5924,7 @@ vouve
 vozao
 vulgo
 vulto
+vulva
 vunje
 vurmo
 weber
@@ -5923,6 +5957,7 @@ xerox
 xerva
 xeura
 xexeu
+xibio
 xibiu
 xiita
 xilol

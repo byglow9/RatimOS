@@ -197,6 +197,28 @@ void test_submit_rejects_guess_not_in_accepted_list_without_consuming_try(void)
     TEST_ASSERT_EQUAL_UINT8(0, st.finished);
 }
 
+/*
+ * Fix do checkpoint 02.1-14: "peste" (palavra comum) era recusada porque o
+ * bloqueio listas/negativas do fserb/pt-br tambem cortava a lista de
+ * PALPITES. O bloqueio agora vale so' pro pool de respostas: palavras
+ * bloqueadas sao palpites validos, mas nunca resposta do dia.
+ */
+void test_blocklisted_common_words_are_accepted_guesses_but_never_answers(void)
+{
+    const char * blocked[] = { "peste", "bagre", "burro", "droga", "fenda" };
+    for (size_t i = 0; i < sizeof(blocked) / sizeof(blocked[0]); i++) {
+        TEST_ASSERT_TRUE_MESSAGE(ratimos_termo_is_accepted_guess(blocked[i]), blocked[i]);
+        for (size_t a = 0; a < ratimos_termo_answer_count(); a++) {
+            TEST_ASSERT_TRUE_MESSAGE(strcmp(ratimos_termo_answer_at(a), blocked[i]) != 0, blocked[i]);
+        }
+    }
+
+    ratimos_termo_state_t st;
+    make_termo_state(&st, "posse");
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "peste"));
+    TEST_ASSERT_EQUAL_UINT8(1, st.tries_used);
+}
+
 void test_submit_consumes_exactly_one_try_per_guess(void)
 {
     ratimos_termo_state_t st;
@@ -286,6 +308,7 @@ int main(void)
     RUN_TEST(test_start_daily_quarteto_answers_distinct);
 
     RUN_TEST(test_submit_rejects_guess_not_in_accepted_list_without_consuming_try);
+    RUN_TEST(test_blocklisted_common_words_are_accepted_guesses_but_never_answers);
     RUN_TEST(test_submit_consumes_exactly_one_try_per_guess);
     RUN_TEST(test_submit_wins_when_all_boards_solved);
     RUN_TEST(test_submit_loses_when_tries_exhausted_with_unsolved_board);

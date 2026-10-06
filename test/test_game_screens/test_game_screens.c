@@ -4,6 +4,8 @@
  * verifica o que a usuaria reportou no simulador:
  *   - o dialogo "comecar de novo?" aparece centralizado na TELA (antes caia
  *     no canto inferior esquerdo, cortado);
+ *   - o enter do termo submete "peste" e um palpite rejeitado mostra o
+ *     motivo na tela (antes so' engrossava a borda em 1px);
  *
  * Isolamento: main() faz chdir() pra um diretorio temporario antes de
  * qualquer chamada de storage -- os saves (assets/save/, caminho relativo)
@@ -126,6 +128,59 @@ void test_confirm_dialog_is_centered_on_screen_in_every_game(void)
     }
 }
 
+/* Termo: content = [0 erro, 1 pilulas, 2 status, 3 boards, 4 teclado, ...]. */
+static void termo_press(lv_obj_t * kb, const char * key)
+{
+    for (uint32_t id = 0; id < 64; id++) {
+        const char * t = lv_buttonmatrix_get_button_text(kb, id);
+        if (t == NULL) {
+            break;
+        }
+        if (strcmp(t, key) == 0) {
+            lv_buttonmatrix_set_selected_button(kb, id);
+            lv_obj_send_event(kb, LV_EVENT_VALUE_CHANGED, NULL);
+            return;
+        }
+    }
+    TEST_FAIL_MESSAGE(key);
+}
+
+static void termo_type(lv_obj_t * kb, const char * word)
+{
+    for (const char * c = word; *c; c++) {
+        char k[2] = { *c, 0 };
+        termo_press(kb, k);
+    }
+}
+
+void test_termo_enter_submits_and_rejections_are_visible(void)
+{
+    lv_obj_t * scr = show_game(2);
+    lv_obj_t * content = lv_obj_get_child(scr, 3);
+    lv_obj_t * status = lv_obj_get_child(content, 2);
+    lv_obj_t * kb = lv_obj_get_child(content, 4);
+    TEST_ASSERT_EQUAL_PTR(&lv_label_class, lv_obj_get_class(status));
+    TEST_ASSERT_EQUAL_PTR(&lv_buttonmatrix_class, lv_obj_get_class(kb));
+
+    /* Palpite incompleto: motivo na tela, nenhuma tentativa gasta. */
+    termo_type(kb, "pes");
+    termo_press(kb, "enter");
+    TEST_ASSERT_EQUAL_STRING("complete as 5 letras", lv_label_get_text(status));
+    termo_type(kb, "te");
+    TEST_ASSERT_EQUAL_STRING("tentativa 1 de 6", lv_label_get_text(status));
+
+    /* "peste": aceita, consome a tentativa 1. */
+    termo_press(kb, "enter");
+    TEST_ASSERT_EQUAL_STRING("tentativa 2 de 6", lv_label_get_text(status));
+
+    /* Fora da lista: motivo na tela, ainda tentativa 2. */
+    termo_type(kb, "zzzzz");
+    termo_press(kb, "enter");
+    TEST_ASSERT_EQUAL_STRING("palavra fora da lista", lv_label_get_text(status));
+    termo_press(kb, "apagar");
+    TEST_ASSERT_EQUAL_STRING("tentativa 2 de 6", lv_label_get_text(status));
+}
+
 int main(void)
 {
     char tmpl[] = "/tmp/ratimos_game_screens_XXXXXX";
@@ -144,6 +199,7 @@ int main(void)
     ratimos_storage_index_game_state();
 
     UNITY_BEGIN();
+    RUN_TEST(test_termo_enter_submits_and_rejections_are_visible);
     RUN_TEST(test_confirm_dialog_is_centered_on_screen_in_every_game);
     return UNITY_END();
 }

@@ -34,7 +34,7 @@ Uso:
   python3 tools/curate_termo_words.py --source <path-para-pt-br> \
       --out-c src/ratimos/apps/jogos/termo_words.c \
       --out-h src/ratimos/apps/jogos/termo_words.h \
-      [--answers-max 600] [--regenerate]
+      [--answers-max 600] [--regenerate | --sync-accepted]
 """
 import argparse
 import sys
@@ -116,6 +116,9 @@ def curate(source: Path, answers_max: int):
     dropped_non_letter = 0
     dropped_blocklist = 0
     collapsed_duplicates = 0
+    # Formas normalizadas bloqueadas pela lista de negativas: ficam FORA do
+    # pool de respostas, mas DENTRO dos palpites aceitos (plano 02.1-14).
+    blocked_guesses = set()
 
     for entry in raw_entries:
         # (c) descarta qualquer coisa capitalizada na fonte (nome proprio).
@@ -143,8 +146,15 @@ def curate(source: Path, answers_max: int):
         # `listas/negativas` do proprio fserb/pt-br -- NAO substitui a
         # revisao manual obrigatoria (Tarefa 1, passo 2), apenas remove os
         # casos mais obvios antes mesmo de um humano olhar a lista.
+        #
+        # Plano 02.1-14: o bloqueio vale SO' pro pool de respostas (o que a
+        # jogadora le todo dia). Aplicado tambem aos palpites, ele recusava
+        # palavras comuns que ela digita ("peste", "bagre", "burro", "droga",
+        # "fenda"...) e o enter parecia nao funcionar. Bloqueada aqui = nunca
+        # resposta, mas sempre um palpite valido.
         if entry in blocklist or normalized in blocklist:
             dropped_blocklist += 1
+            blocked_guesses.add(normalized)
             continue
 
         score = icf_scores.get(entry, float("inf"))  # sem score = tratado como raro
@@ -159,7 +169,7 @@ def curate(source: Path, answers_max: int):
     # accepted-guess list: toda a lista filtrada, ordenada alfabeticamente
     # (a ordenacao e o que permite ratimos_termo_is_accepted_guess() usar
     # busca binaria no array C gerado).
-    accepted = sorted(candidates.keys())
+    accepted = sorted(set(candidates.keys()) | blocked_guesses)
 
     # answer pool: as --answers-max entradas mais comuns (menor pontuacao
     # ICF primeiro), com a palavra normalizada como desempate deterministico
@@ -302,6 +312,10 @@ def main() -> int:
     ap.add_argument("--out-c", required=True, type=Path)
     ap.add_argument("--out-h", required=True, type=Path)
     ap.add_argument("--answers-max", type=int, default=600)
+    ap.add_argument("--sync-accepted", action="store_true",
+                     help="reescreve SO' termo_accepted.txt a partir do --source (a lista "
+                          "de palpites e' 100%% derivada do lexico, sem revisao manual); "
+                          "termo_answers.txt, que tem a revisao manual, nao e' tocado.")
     ap.add_argument("--regenerate", action="store_true",
                      help="reescreve assets/wordlists/termo_answers.txt e termo_accepted.txt a "
                           "partir do --source, DESCARTANDO qualquer revisao manual ja feita. Sem "
@@ -331,6 +345,11 @@ def main() -> int:
         print("[curate_termo_words] PROXIMO PASSO OBRIGATORIO: leia termo_answers.txt "
               "inteiro e apague qualquer entrada impropria antes de confiar nele como "
               "pool de respostas final (ver assets/wordlists/README.md).")
+    elif args.sync_accepted:
+        _, accepted_new, stats = curate(source, args.answers_max)
+        ACCEPTED_TXT.write_text("\n".join(accepted_new) + "\n", encoding="utf-8")
+        print(f"[curate_termo_words] lista de palpites aceitos sincronizada: "
+              f"{stats['accepted_count']} palavras -> {ACCEPTED_TXT} (respostas intactas)")
     else:
         print(f"[curate_termo_words] {ANSWERS_TXT} e {ACCEPTED_TXT} ja existem -- usando como "
               f"estao (curadoria manual preservada). Use --regenerate para redescartar tudo e "

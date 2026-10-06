@@ -20,6 +20,7 @@
 
 #include "termo.h"
 #include "termo_engine.h"
+#include "termo_words.h"
 
 #include "../../app_shell.h"
 #include "../../status_bar.h"
@@ -97,6 +98,15 @@ static ratimos_termo_mode_t s_pending_mode = RATIMOS_TERMO_MODE_TERMO;
  * borda da linha atual em vez de limpar o que o jogador digitou (UI-SPEC:
  * "flashes its outline ... rather than clearing the player's typing"). */
 static bool s_reject_flash = false;
+
+/* Motivo do ultimo palpite rejeitado, mostrado no lugar de "tentativa X de
+ * Y" ate a proxima tecla (fix do checkpoint 02.1-14: antes a unica reacao a
+ * um enter rejeitado era a borda da linha passar de 2 pra 3px, e a usuaria
+ * leu isso como "o enter nao funciona"). NULL = nenhuma rejeicao pendente. */
+static const char * s_reject_msg = NULL;
+
+#define TERMO_MSG_INCOMPLETE "complete as 5 letras"
+#define TERMO_MSG_NOT_IN_LIST "palavra fora da lista"
 
 static void render_all(void);
 static void render_boards(void);
@@ -184,6 +194,8 @@ static void format_termo_path(char * buf, size_t buf_size, ratimos_termo_mode_t 
 
 static void switch_to_mode(ratimos_termo_mode_t mode)
 {
+    s_reject_msg = NULL;
+    s_reject_flash = false;
     ratimos_termo_start_daily(&s_state, mode, ratimos_daily_index());
     persist_state();
     /* Passa pelo helper compartilhado (status_bar.c), nunca por
@@ -242,6 +254,13 @@ static void render_status(void)
     }
 
     lv_obj_clear_flag(s_status_label, LV_OBJ_FLAG_HIDDEN);
+
+    if (s_reject_msg) {
+        lv_label_set_text(s_status_label, s_reject_msg);
+        lv_obj_set_style_text_color(s_status_label, RATIMOS_COLOR_ACCENT, 0);
+        return;
+    }
+    lv_obj_set_style_text_color(s_status_label, RATIMOS_COLOR_TEXT_MUTED, 0);
 
     unsigned attempt = (unsigned) s_state.tries_used + 1;
     if (attempt > s_state.max_tries) {
@@ -414,10 +433,27 @@ static void render_all(void)
     render_banner();
 }
 
+/* Motivo legivel de uma rejeicao do motor (ratimos_termo_submit so'
+ * devolve bool): incompleta ou fora da lista de palpites aceitos. */
+static const char * reject_reason(const char * guess)
+{
+    if (strlen(guess) != RATIMOS_TERMO_WORD_LEN) {
+        return TERMO_MSG_INCOMPLETE;
+    }
+    char lower[RATIMOS_TERMO_WORD_LEN + 1];
+    for (int i = 0; i < RATIMOS_TERMO_WORD_LEN; i++) {
+        lower[i] = (char) tolower((unsigned char) guess[i]);
+    }
+    lower[RATIMOS_TERMO_WORD_LEN] = '\0';
+    return ratimos_termo_is_accepted_guess(lower) ? NULL : TERMO_MSG_NOT_IN_LIST;
+}
+
 static void try_submit(void)
 {
+    const char * reason = reject_reason(s_state.current_guess);
     bool ok = ratimos_termo_submit(&s_state, s_state.current_guess);
     s_reject_flash = !ok;
+    s_reject_msg = ok ? NULL : (reason ? reason : TERMO_MSG_NOT_IN_LIST);
 
     if (ok) {
         memset(s_state.current_guess, 0, sizeof(s_state.current_guess));
@@ -461,8 +497,10 @@ static void keyboard_value_changed_cb(lv_event_t * e)
         if (len > 0) {
             s_state.current_guess[len - 1] = '\0';
             s_reject_flash = false;
+            s_reject_msg = NULL;
             persist_state();
             render_boards();
+            render_status();
         }
         return;
     }
@@ -472,8 +510,10 @@ static void keyboard_value_changed_cb(lv_event_t * e)
         s_state.current_guess[len] = text[0];
         s_state.current_guess[len + 1] = '\0';
         s_reject_flash = false;
+        s_reject_msg = NULL;
         persist_state();
         render_boards();
+        render_status();
     }
 }
 
