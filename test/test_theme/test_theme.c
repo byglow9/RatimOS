@@ -110,11 +110,10 @@ void test_badge_create_adds_exactly_one_child_per_call(void)
 }
 
 /*
- * ratimos_panel_create() (Task 2): cantos 100% retos, fundo levemente
- * translucido, borda externa escura de 2px (RATIMOS_COLOR_BEVEL_DARK) -- e
- * nenhum filho extra por baixo (friso interno via segundo lv_obj foi
- * explicitamente rejeitado, cards-superficies.md's fallback de borda
- * unica).
+ * ratimos_panel_create(): cantos 100% retos, fundo levemente translucido,
+ * borda externa escura de 2px (RATIMOS_COLOR_BEVEL_DARK) -- e nenhum filho
+ * extra por baixo (o friso interno da variante 003-C e' desenhado num
+ * callback LV_EVENT_DRAW_POST, plano 02.1-13, nunca num segundo lv_obj).
  */
 void test_panel_create_has_square_translucent_dark_bevel(void)
 {
@@ -131,6 +130,84 @@ void test_panel_create_has_square_translucent_dark_bevel(void)
     TEST_ASSERT_EQUAL_UINT32(0, lv_obj_get_child_count(panel));
 
     lv_obj_delete(parent);
+}
+
+/*
+ * Plano 02.1-13, Task 1: o painel recem-criado continua sem NENHUM filho
+ * depois de ganhar o friso interno -- chamadores (row_list.c, jogos_app.c,
+ * termo.c) leem filhos por indice posicional.
+ */
+void test_panel_bevel_adds_no_child_objects(void)
+{
+    lv_obj_t * parent = lv_obj_create(NULL);
+
+    lv_obj_t * panel = ratimos_panel_create(parent);
+
+    TEST_ASSERT_EQUAL_UINT32(0, lv_obj_get_child_count(panel));
+    TEST_ASSERT_EQUAL_UINT32(1, lv_obj_get_child_count(parent));
+
+    lv_obj_delete(parent);
+}
+
+/* Luminancia aproximada de um pixel RGB565 (soma dos canais em 8 bits). */
+static uint32_t rgb565_luma(uint16_t c)
+{
+    uint32_t r = ((c >> 11) & 0x1F) << 3;
+    uint32_t g = ((c >> 5) & 0x3F) << 2;
+    uint32_t b = (c & 0x1F) << 3;
+    return r + g + b;
+}
+
+static uint16_t read_pixel_rgb565(int32_t x, int32_t y)
+{
+    size_t idx = ((size_t) y * (size_t) RATIMOS_SCREEN_W + (size_t) x) * 2u;
+    return (uint16_t) (s_disp_buf[idx] | (uint16_t) (s_disp_buf[idx + 1] << 8));
+}
+
+/*
+ * Plano 02.1-13, Task 1: renderiza um painel 100x40 num display headless
+ * (mesmo harness de amostragem do test_castelo_render: buffer FULL lido
+ * direto depois de lv_refr_now) e confirma a anatomia da variante 003-C:
+ *   y+0..1 -> borda externa escura (BEVEL_DARK)
+ *   y+2    -> friso claro de 1px (branco translucido)
+ *   y+3..4 -> faixa escura de 2px (preto translucido)
+ *   centro -> fundo roxo translucido liso
+ * O friso tem que ser mais claro que a faixa escura E que o centro.
+ */
+void test_panel_bevel_renders_light_frieze_inside_dark_border(void)
+{
+    lv_obj_t * scr = lv_obj_create(NULL);
+    lv_obj_remove_style_all(scr);
+    lv_obj_set_style_bg_color(scr, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
+
+    lv_obj_t * panel = ratimos_panel_create(scr);
+    lv_obj_set_size(panel, 100, 40);
+    lv_obj_set_pos(panel, 20, 20);
+
+    lv_screen_load(scr);
+    lv_refr_now(NULL);
+
+    lv_area_t c;
+    lv_obj_get_coords(panel, &c);
+    int32_t mx = (c.x1 + c.x2) / 2;
+    int32_t my = (c.y1 + c.y2) / 2;
+
+    uint32_t frieze = rgb565_luma(read_pixel_rgb565(mx, c.y1 + 2));
+    uint32_t band   = rgb565_luma(read_pixel_rgb565(mx, c.y1 + 4));
+    uint32_t center = rgb565_luma(read_pixel_rgb565(mx, my));
+
+    TEST_ASSERT_TRUE_MESSAGE(frieze > band,
+                              "inner light frieze (y+2) must be lighter than the dark band (y+4)");
+    TEST_ASSERT_TRUE_MESSAGE(frieze > center,
+                              "inner light frieze (y+2) must be lighter than the panel center");
+    /* Mesma anatomia na lateral esquerda (o friso e' uma moldura, nao so' uma linha). */
+    uint32_t frieze_l = rgb565_luma(read_pixel_rgb565(c.x1 + 2, my));
+    uint32_t band_l   = rgb565_luma(read_pixel_rgb565(c.x1 + 4, my));
+    TEST_ASSERT_TRUE_MESSAGE(frieze_l > band_l,
+                              "left inner frieze (x+2) must be lighter than the left dark band (x+4)");
+
+    lv_obj_delete(scr);
 }
 
 /*
@@ -208,6 +285,8 @@ int main(void)
     RUN_TEST(test_badge_null_id_never_dereferences_and_falls_back);
     RUN_TEST(test_badge_create_adds_exactly_one_child_per_call);
     RUN_TEST(test_panel_create_has_square_translucent_dark_bevel);
+    RUN_TEST(test_panel_bevel_adds_no_child_objects);
+    RUN_TEST(test_panel_bevel_renders_light_frieze_inside_dark_border);
     RUN_TEST(test_row_create_text_col_is_not_clickable);
     RUN_TEST(test_background_decode_across_two_screens_does_not_exhaust_heap);
     return UNITY_END();
