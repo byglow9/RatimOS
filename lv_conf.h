@@ -45,17 +45,29 @@
 #define LV_FONT_MONTSERRAT_14 1
 #define LV_FONT_MONTSERRAT_20 1
 #define LV_FONT_MONTSERRAT_28 1
-#define LV_FONT_DEFAULT &lv_font_montserrat_14
 
 /*
- * Tier Heading/Display (D-08) -- fontes pixel/bitmap proprias geradas por
- * tools/convert_title_font.sh (src/ratimos/fonts/ratimos_font_title_16.c
- * e _20.c). Corpo de texto (LV_FONT_DEFAULT acima) continua em
- * Montserrat, inalterado.
+ * Tipografia do sketch 003-C (plano 02.1-14): corpo/chrome em JetBrains
+ * Mono (ratimos_font_mono_10/11/12) e titulos de linha em Press Start 2P 8px
+ * (ratimos_font_title_8); ratimos_font_title_16/_20 continuam pros banners/
+ * titulos de secao (D-08). Todas geradas por tools/convert_title_font.sh,
+ * const (ficam na flash, nao no heap do LVGL).
+ *
+ * LV_FONT_DEFAULT e' a mono 12. Ela NAO tem os glifos LV_SYMBOL_* (area de
+ * uso privado do FontAwesome): as tres mono tem `.fallback =
+ * &lv_font_montserrat_14`, entao qualquer LV_SYMBOL_* num label mono cai
+ * na Montserrat built-in em vez de virar caixa vazia. Por isso
+ * LV_FONT_MONTSERRAT_14 acima precisa continuar ligado.
  */
 #define LV_FONT_CUSTOM_DECLARE \
+    LV_FONT_DECLARE(ratimos_font_mono_10) \
+    LV_FONT_DECLARE(ratimos_font_mono_11) \
+    LV_FONT_DECLARE(ratimos_font_mono_12) \
+    LV_FONT_DECLARE(ratimos_font_title_8) \
     LV_FONT_DECLARE(ratimos_font_title_16) \
     LV_FONT_DECLARE(ratimos_font_title_20)
+
+#define LV_FONT_DEFAULT &ratimos_font_mono_12
 
 /* lv_font_conv emite bitmaps de glifo comprimidos por padrao (menor
  * footprint em flash, o que importa no ESP32-S3 real) -- sem isto os

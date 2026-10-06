@@ -16,6 +16,7 @@
 #include "ratimos/theme.h"
 #include "ratimos/row_list.h"
 #include "ratimos/bg_images.h"
+#include "ratimos/fonts/ratimos_fonts.h"
 
 static uint8_t s_disp_buf[RATIMOS_SCREEN_W * RATIMOS_SCREEN_H * 2]; /* LV_COLOR_DEPTH 16 */
 
@@ -378,6 +379,65 @@ void test_background_decode_across_two_screens_does_not_exhaust_heap(void)
     lv_obj_delete(scr2);
 }
 
+
+/*
+ * Plano 02.1-14, Task 1: a tipografia do sketch 003-C e' o padrao -- um
+ * label sem fonte explicita herda JetBrains Mono 12 (LV_FONT_DEFAULT via
+ * tema default do LVGL), nao mais Montserrat (D-08 antigo).
+ */
+void test_default_theme_font_is_jetbrains_mono_12(void)
+{
+    lv_obj_t * scr = lv_obj_create(NULL);
+    lv_obj_t * lbl = lv_label_create(scr);
+
+    TEST_ASSERT_EQUAL_PTR(&ratimos_font_mono_12, LV_FONT_DEFAULT);
+    TEST_ASSERT_EQUAL_PTR(&ratimos_font_mono_12, lv_obj_get_style_text_font(lbl, LV_PART_MAIN));
+
+    lv_obj_delete(scr);
+}
+
+/* Glifo resolvido na PROPRIA fonte (sem cair em fallback). */
+static bool font_has_own_glyph(const lv_font_t * font, uint32_t cp)
+{
+    lv_font_glyph_dsc_t dsc;
+    bool ok = lv_font_get_glyph_dsc(font, &dsc, cp, 0);
+    return ok && dsc.resolved_font == font;
+}
+
+/*
+ * As descricoes de linha usam "·" (U+00B7) e o texto PT-BR usa acentos:
+ * as tres mono tem os glifos de verdade (nao caixa vazia, nao fallback).
+ */
+void test_mono_fonts_have_middle_dot_and_pt_br_glyphs(void)
+{
+    const lv_font_t * fonts[] = { &ratimos_font_mono_10, &ratimos_font_mono_11, &ratimos_font_mono_12 };
+    const uint32_t cps[] = { 0x00B7 /* · */, 0x00E7 /* ç */, 0x00E3 /* ã */, 0x00E9 /* é */, 'a', '9' };
+    for (size_t f = 0; f < sizeof(fonts) / sizeof(fonts[0]); f++) {
+        for (size_t c = 0; c < sizeof(cps) / sizeof(cps[0]); c++) {
+            TEST_ASSERT_TRUE_MESSAGE(font_has_own_glyph(fonts[f], cps[c]),
+                                     "mono font is missing a glyph the UI uses");
+        }
+    }
+    TEST_ASSERT_TRUE(font_has_own_glyph(&ratimos_font_title_8, 'a'));
+    TEST_ASSERT_TRUE(font_has_own_glyph(&ratimos_font_title_8, 0x00EA /* ê */));
+}
+
+/*
+ * LV_SYMBOL_* (area de uso privado do FontAwesome) nao existe na
+ * JetBrains Mono: o fallback das mono pra Montserrat 14 garante que o
+ * "voltar" da bottombar (LV_SYMBOL_LEFT) nunca vira caixa vazia.
+ */
+void test_mono_font_symbols_resolve_through_montserrat_fallback(void)
+{
+    const lv_font_t * fonts[] = { &ratimos_font_mono_10, &ratimos_font_mono_11, &ratimos_font_mono_12 };
+    for (size_t f = 0; f < sizeof(fonts) / sizeof(fonts[0]); f++) {
+        lv_font_glyph_dsc_t dsc;
+        TEST_ASSERT_TRUE(lv_font_get_glyph_dsc(fonts[f], &dsc, 0xF053 /* LV_SYMBOL_LEFT */, 0));
+        TEST_ASSERT_EQUAL_PTR(&lv_font_montserrat_14, dsc.resolved_font);
+        TEST_ASSERT_TRUE(dsc.box_w > 0);
+    }
+}
+
 int main(void)
 {
     lv_init();
@@ -399,5 +459,8 @@ int main(void)
     RUN_TEST(test_buttonmatrix_keys_get_square_translucent_bevel_with_frieze);
     RUN_TEST(test_row_create_text_col_is_not_clickable);
     RUN_TEST(test_background_decode_across_two_screens_does_not_exhaust_heap);
+    RUN_TEST(test_default_theme_font_is_jetbrains_mono_12);
+    RUN_TEST(test_mono_fonts_have_middle_dot_and_pt_br_glyphs);
+    RUN_TEST(test_mono_font_symbols_resolve_through_montserrat_fallback);
     return UNITY_END();
 }
