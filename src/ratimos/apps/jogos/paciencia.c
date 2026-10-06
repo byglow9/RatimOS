@@ -546,24 +546,6 @@ static void novo_jogo_clicked_cb(lv_event_t * e)
     lv_obj_clear_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
 }
 
-static lv_obj_t * make_pill(lv_obj_t * parent, const char * text, lv_color_t bg, lv_event_cb_t cb, lv_coord_t width)
-{
-    lv_obj_t * pill = ratimos_panel_create(parent);
-    lv_obj_set_size(pill, width, LV_SIZE_CONTENT);
-    lv_obj_set_style_pad_all(pill, 8, 0);
-    lv_obj_set_style_bg_color(pill, bg, 0);
-    lv_obj_clear_flag(pill, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(pill, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(pill, cb, LV_EVENT_CLICKED, NULL);
-
-    lv_obj_t * label = lv_label_create(pill);
-    lv_label_set_text(label, text);
-    lv_obj_set_style_text_color(label, RATIMOS_COLOR_TEXT, 0);
-    lv_obj_center(label);
-
-    return pill;
-}
-
 /* ------------------------------------------------------------------------
  * Persistencia
  * ------------------------------------------------------------------------ */
@@ -747,8 +729,8 @@ static lv_obj_t * build_paciencia_screen(void)
     lv_obj_set_flex_align(actions_row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_column(actions_row, 8, 0);
     lv_obj_clear_flag(actions_row, LV_OBJ_FLAG_SCROLLABLE);
-    make_pill(actions_row, "recolher", RATIMOS_COLOR_PANEL, recolher_clicked_cb, 130);
-    make_pill(actions_row, "novo jogo", RATIMOS_COLOR_PANEL, novo_jogo_clicked_cb, 130);
+    ratimos_button_create(actions_row, "recolher", recolher_clicked_cb, 130, LV_SIZE_CONTENT);
+    ratimos_button_create(actions_row, "novo jogo", novo_jogo_clicked_cb, 130, LV_SIZE_CONTENT);
 
     /* Dialogo de confirmacao destrutiva (Copywriting Contract): montado uma
      * unica vez, escondido ate "novo jogo" ser tocado. Filho de
@@ -783,8 +765,9 @@ static lv_obj_t * build_paciencia_screen(void)
     /* ASCII-only, igual ao precedente ja estabelecido em sudoku.c/conexo.c
      * (o UI-SPEC/PLAN literal usa "recomeçar" com cedilha, mas toda copia
      * nova do projeto fica ASCII -- ver Deviations do SUMMARY). */
-    make_pill(confirm_actions, "cancelar", RATIMOS_COLOR_PANEL, confirm_cancel_cb, 100);
-    make_pill(confirm_actions, "recomecar", RATIMOS_COLOR_ACCENT, confirm_restart_cb, 100);
+    ratimos_button_create(confirm_actions, "cancelar", confirm_cancel_cb, 100, LV_SIZE_CONTENT);
+    lv_obj_t * restart_btn = ratimos_button_create(confirm_actions, "recomecar", confirm_restart_cb, 100, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_color(restart_btn, RATIMOS_COLOR_ACCENT, 0);
 
     render_all();
 

@@ -211,6 +211,113 @@ void test_panel_bevel_renders_light_frieze_inside_dark_border(void)
 }
 
 /*
+ * Plano 02.1-13, Task 2: ratimos_button_create() produz a MESMA arvore dos
+ * make_pill() locais que substitui (painel -> 1 label), com o bevel 003-C
+ * completo e o label nao-clicavel (licao de hitbox do 02.1-09).
+ */
+void test_button_create_is_bevel_panel_with_single_unclickable_label(void)
+{
+    lv_obj_t * parent = lv_obj_create(NULL);
+
+    lv_obj_t * btn = ratimos_button_create(parent, "novo jogo", NULL, 120, 32);
+
+    TEST_ASSERT_NOT_NULL(btn);
+    TEST_ASSERT_TRUE(lv_obj_has_flag(btn, LV_OBJ_FLAG_CLICKABLE));
+    TEST_ASSERT_FALSE(lv_obj_has_flag(btn, LV_OBJ_FLAG_SCROLLABLE));
+    TEST_ASSERT_EQUAL_INT(0, lv_obj_get_style_radius(btn, LV_PART_MAIN));
+    TEST_ASSERT_EQUAL_INT(2, lv_obj_get_style_border_width(btn, LV_PART_MAIN));
+    TEST_ASSERT_EQUAL_UINT32(lv_color_to_u32(RATIMOS_COLOR_BEVEL_DARK),
+                              lv_color_to_u32(lv_obj_get_style_border_color(btn, LV_PART_MAIN)));
+    TEST_ASSERT_EQUAL_UINT32(1, lv_obj_get_child_count(btn));
+    lv_obj_t * label = lv_obj_get_child(btn, 0);
+    TEST_ASSERT_EQUAL_PTR(&lv_label_class, lv_obj_get_class(label));
+    TEST_ASSERT_EQUAL_STRING("novo jogo", lv_label_get_text(label));
+    TEST_ASSERT_FALSE(lv_obj_has_flag(label, LV_OBJ_FLAG_CLICKABLE));
+
+    lv_obj_delete(parent);
+}
+
+/*
+ * Plano 02.1-13, Task 2: selecionar/desselecionar um botao muda so' fundo e
+ * cor do texto -- a moldura (borda 2px BEVEL_DARK, radius 0) nunca some
+ * (o render_pills antigo do sudoku zerava a borda dos nao-selecionados).
+ */
+void test_button_set_selected_never_touches_the_bevel_frame(void)
+{
+    lv_obj_t * parent = lv_obj_create(NULL);
+    lv_obj_t * btn = ratimos_button_create(parent, "medio", NULL, 70, 28);
+    lv_obj_t * label = lv_obj_get_child(btn, 0);
+
+    ratimos_button_set_selected(btn, true);
+    TEST_ASSERT_EQUAL_UINT32(lv_color_to_u32(RATIMOS_COLOR_PANEL_ACTIVE),
+                              lv_color_to_u32(lv_obj_get_style_bg_color(btn, LV_PART_MAIN)));
+    TEST_ASSERT_EQUAL_UINT32(lv_color_to_u32(RATIMOS_COLOR_ACCENT),
+                              lv_color_to_u32(lv_obj_get_style_text_color(label, LV_PART_MAIN)));
+    TEST_ASSERT_EQUAL_INT(2, lv_obj_get_style_border_width(btn, LV_PART_MAIN));
+    TEST_ASSERT_EQUAL_INT(0, lv_obj_get_style_radius(btn, LV_PART_MAIN));
+
+    ratimos_button_set_selected(btn, false);
+    TEST_ASSERT_EQUAL_UINT32(lv_color_to_u32(RATIMOS_COLOR_PANEL),
+                              lv_color_to_u32(lv_obj_get_style_bg_color(btn, LV_PART_MAIN)));
+    TEST_ASSERT_EQUAL_UINT32(lv_color_to_u32(RATIMOS_COLOR_TEXT_MUTED),
+                              lv_color_to_u32(lv_obj_get_style_text_color(label, LV_PART_MAIN)));
+    TEST_ASSERT_EQUAL_INT(2, lv_obj_get_style_border_width(btn, LV_PART_MAIN));
+    TEST_ASSERT_EQUAL_UINT32(lv_color_to_u32(RATIMOS_COLOR_BEVEL_DARK),
+                              lv_color_to_u32(lv_obj_get_style_border_color(btn, LV_PART_MAIN)));
+    TEST_ASSERT_EQUAL_INT(0, lv_obj_get_style_radius(btn, LV_PART_MAIN));
+
+    lv_obj_delete(parent);
+}
+
+/*
+ * Plano 02.1-13, Task 2: teclas de lv_buttonmatrix com o bevel 003-C --
+ * radius 0, translucidas (nunca LV_OPA_COVER), borda 2px BEVEL_DARK -- e o
+ * friso interno realmente desenhado em cada tecla (amostragem de pixel).
+ */
+void test_buttonmatrix_keys_get_square_translucent_bevel_with_frieze(void)
+{
+    static const char * const map[] = { "a", "b", NULL };
+
+    lv_obj_t * scr = lv_obj_create(NULL);
+    lv_obj_remove_style_all(scr);
+    lv_obj_set_style_bg_color(scr, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
+
+    lv_obj_t * m = lv_buttonmatrix_create(scr);
+    lv_buttonmatrix_set_map(m, map);
+    lv_obj_set_size(m, 200, 40);
+    lv_obj_set_pos(m, 20, 100);
+    lv_obj_set_style_pad_column(m, 4, 0);
+    ratimos_bevel_style_buttonmatrix(m);
+
+    TEST_ASSERT_EQUAL_INT(0, lv_obj_get_style_radius(m, LV_PART_ITEMS));
+    TEST_ASSERT_EQUAL_UINT8(LV_OPA_70, lv_obj_get_style_bg_opa(m, LV_PART_ITEMS));
+    TEST_ASSERT_EQUAL_INT(2, lv_obj_get_style_border_width(m, LV_PART_ITEMS));
+    TEST_ASSERT_EQUAL_UINT32(lv_color_to_u32(RATIMOS_COLOR_BEVEL_DARK),
+                              lv_color_to_u32(lv_obj_get_style_border_color(m, LV_PART_ITEMS)));
+    TEST_ASSERT_EQUAL_UINT8(LV_OPA_TRANSP, lv_obj_get_style_bg_opa(m, LV_PART_MAIN));
+    TEST_ASSERT_EQUAL_INT(0, lv_obj_get_style_border_width(m, LV_PART_MAIN));
+
+    lv_screen_load(scr);
+    lv_refr_now(NULL);
+
+    /* Primeira tecla: com pad 0 do container ela comeca na borda esquerda da
+     * matriz; amostra no meio da altura. */
+    lv_area_t c;
+    lv_obj_get_coords(m, &c);
+    int32_t my = (c.y1 + c.y2) / 2;
+    uint32_t frieze = rgb565_luma(read_pixel_rgb565(c.x1 + 2, my));
+    uint32_t band   = rgb565_luma(read_pixel_rgb565(c.x1 + 4, my));
+    uint32_t center = rgb565_luma(read_pixel_rgb565(c.x1 + 20, c.y1 + 10));
+    TEST_ASSERT_TRUE_MESSAGE(frieze > band,
+                              "key inner frieze (x+2) must be lighter than its dark band (x+4)");
+    TEST_ASSERT_TRUE_MESSAGE(frieze > center,
+                              "key inner frieze (x+2) must be lighter than the key fill");
+
+    lv_obj_delete(scr);
+}
+
+/*
  * Segunda ocorrencia da MESMA classe de bug de hitbox que a Task 1 fechou
  * pro badge, encontrada em revisao manual (verificacao real no simulador
  * SDL2): ratimos_row_create() (row_list.c) cria `text_col` via
@@ -287,6 +394,9 @@ int main(void)
     RUN_TEST(test_panel_create_has_square_translucent_dark_bevel);
     RUN_TEST(test_panel_bevel_adds_no_child_objects);
     RUN_TEST(test_panel_bevel_renders_light_frieze_inside_dark_border);
+    RUN_TEST(test_button_create_is_bevel_panel_with_single_unclickable_label);
+    RUN_TEST(test_button_set_selected_never_touches_the_bevel_frame);
+    RUN_TEST(test_buttonmatrix_keys_get_square_translucent_bevel_with_frieze);
     RUN_TEST(test_row_create_text_col_is_not_clickable);
     RUN_TEST(test_background_decode_across_two_screens_does_not_exhaust_heap);
     return UNITY_END();

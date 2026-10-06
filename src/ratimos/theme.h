@@ -76,6 +76,38 @@ lv_obj_t * ratimos_panel_create(lv_obj_t * parent);
 void ratimos_bevel_apply(lv_obj_t * obj);
 
 /*
+ * Botao clicavel padrao do RatimOS (plano 02.1-13): painel bevel 003-C
+ * (ratimos_panel_create) + clickable + nao-scrollable + UM label centralizado
+ * nao-clicavel -- arvore painel -> 1 label, a mesma dos make_pill() locais
+ * que substitui (leitores estruturais por indice continuam valendo:
+ * lv_obj_get_child(btn, 0) e' o label). `cb` (opcional, pode ser NULL)
+ * e' registrado em LV_EVENT_CLICKED com user_data NULL. Dimensao fixa ->
+ * pad 0 nesse eixo; LV_SIZE_CONTENT -> pad 8 nesse eixo, pra o texto nao
+ * encostar na moldura. Estado LV_STATE_PRESSED troca so' o fundo para
+ * RATIMOS_COLOR_PANEL_ACTIVE -- moldura e friso intactos.
+ */
+lv_obj_t * ratimos_button_create(lv_obj_t * parent, const char * text, lv_event_cb_t cb,
+                                 lv_coord_t width, lv_coord_t height);
+
+/*
+ * Estado selecionado de um botao criado por ratimos_button_create (pills de
+ * modo/dificuldade): selecionado = fundo PANEL_ACTIVE + texto ACCENT; nao
+ * selecionado = fundo PANEL + texto TEXT_MUTED. NUNCA mexe em borda, raio
+ * ou friso -- a moldura bevel e' constante em qualquer estado.
+ */
+void ratimos_button_set_selected(lv_obj_t * btn, bool selected);
+
+/*
+ * Aplica o bevel 003-C as teclas (LV_PART_ITEMS) de um lv_buttonmatrix:
+ * container transparente sem borda; teclas radius 0, fundo PANEL a OPA_70,
+ * borda 2px BEVEL_DARK, pressed/checked com fundo PANEL_ACTIVE; friso
+ * interno de cada tecla desenhado via LV_OBJ_FLAG_SEND_DRAW_TASK_EVENTS +
+ * LV_EVENT_DRAW_TASK_ADDED, por cima do fill -- a cor de fundo da tecla
+ * continua vindo do estilo/jogo (cores semanticas preservadas).
+ */
+void ratimos_bevel_style_buttonmatrix(lv_obj_t * m);
+
+/*
  * Cria o icone solto usado pelos launchers/linhas de lista -- SEM nenhum
  * container/badge por baixo (a bola vermelha circular foi removida, G-02.1-1/
  * G-02.1-2: ela era um lv_obj_create() clicavel por padrao que interceptava o

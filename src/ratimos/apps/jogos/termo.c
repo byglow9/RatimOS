@@ -57,6 +57,14 @@ static const char * const TERMO_KEYBOARD_MAP[] = {
     "a", "s", "d", "f", "g", "h", "j", "k", "l", "\n",
     "enter", "z", "x", "c", "v", "b", "n", "m", "apagar", NULL
 };
+/* 3a linha (plano 02.1-13): "enter" e "apagar" com 3 unidades cada -- em
+ * largura igual o texto deles estourava a tecla, e com 2 unidades ainda
+ * encostava na moldura bevel. */
+static const lv_buttonmatrix_ctrl_t TERMO_KEYBOARD_CTRL[] = {
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1,
+    3, 1, 1, 1, 1, 1, 1, 1, 3
+};
 
 /* ------------------------------------------------------------------------
  * Tela (LVGL) -- cache-once, igual a sudoku.c/conexo.c. Todos os 4 boards x
@@ -70,7 +78,6 @@ static lv_obj_t * s_section_title_label = NULL;
 static lv_obj_t * s_error_label = NULL;
 static lv_obj_t * s_pill_row = NULL;
 static lv_obj_t * s_pills[RATIMOS_TERMO_MODE_COUNT];
-static lv_obj_t * s_pill_labels[RATIMOS_TERMO_MODE_COUNT];
 static lv_obj_t * s_status_label = NULL;
 static lv_obj_t * s_boards_wrap = NULL;
 static lv_obj_t * s_board_panel[RATIMOS_TERMO_MAX_BOARDS];
@@ -218,14 +225,12 @@ static void mode_pill_clicked_cb(lv_event_t * e)
     switch_to_mode(target);
 }
 
+/* Selecao so' troca fundo + cor do texto (ratimos_button_set_selected) --
+ * a moldura bevel 003-C fica intacta em qualquer estado (plano 02.1-13). */
 static void render_pills(void)
 {
     for (int m = 0; m < RATIMOS_TERMO_MODE_COUNT; m++) {
-        bool selected = ((int) s_state.mode == m);
-        lv_obj_set_style_bg_color(s_pills[m], selected ? RATIMOS_COLOR_PANEL_ACTIVE : RATIMOS_COLOR_PANEL, 0);
-        lv_obj_set_style_border_color(s_pills[m], RATIMOS_COLOR_ACCENT, 0);
-        lv_obj_set_style_border_width(s_pills[m], selected ? 2 : 0, 0);
-        lv_obj_set_style_text_color(s_pill_labels[m], selected ? RATIMOS_COLOR_ACCENT : RATIMOS_COLOR_TEXT_MUTED, 0);
+        ratimos_button_set_selected(s_pills[m], (int) s_state.mode == m);
     }
 }
 
@@ -472,24 +477,6 @@ static void keyboard_value_changed_cb(lv_event_t * e)
     }
 }
 
-static lv_obj_t * make_pill_w(lv_obj_t * parent, const char * text, lv_color_t bg, lv_event_cb_t cb, lv_coord_t width)
-{
-    lv_obj_t * pill = ratimos_panel_create(parent);
-    lv_obj_set_size(pill, width, LV_SIZE_CONTENT);
-    lv_obj_set_style_pad_all(pill, 8, 0);
-    lv_obj_set_style_bg_color(pill, bg, 0);
-    lv_obj_clear_flag(pill, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(pill, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(pill, cb, LV_EVENT_CLICKED, NULL);
-
-    lv_obj_t * label = lv_label_create(pill);
-    lv_label_set_text(label, text);
-    lv_obj_set_style_text_color(label, RATIMOS_COLOR_TEXT, 0);
-    lv_obj_center(label);
-
-    return pill;
-}
-
 static lv_obj_t * build_termo_screen(void)
 {
     bool show_load_error = load_or_start_state();
@@ -531,19 +518,14 @@ static lv_obj_t * build_termo_screen(void)
     lv_obj_clear_flag(s_pill_row, LV_OBJ_FLAG_SCROLLABLE);
 
     for (int m = 0; m < RATIMOS_TERMO_MODE_COUNT; m++) {
-        lv_obj_t * pill = ratimos_panel_create(s_pill_row);
-        lv_obj_set_style_pad_all(pill, 0, 0);
-        lv_obj_set_height(pill, TERMO_PILL_H);
+        /* Bevel 003-C compartilhado (plano 02.1-13); largura vem do
+         * flex_grow, entao sem pad horizontal. cb registrado aqui pra
+         * carregar o indice do modo como user_data. */
+        lv_obj_t * pill = ratimos_button_create(s_pill_row, TERMO_MODE_LABELS[m], NULL, LV_SIZE_CONTENT, TERMO_PILL_H);
+        lv_obj_set_style_pad_hor(pill, 0, 0);
         lv_obj_set_flex_grow(pill, 1);
-        lv_obj_clear_flag(pill, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_add_flag(pill, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_event_cb(pill, mode_pill_clicked_cb, LV_EVENT_CLICKED, (void *) (uintptr_t) m);
         s_pills[m] = pill;
-
-        lv_obj_t * label = lv_label_create(pill);
-        lv_label_set_text(label, TERMO_MODE_LABELS[m]);
-        lv_obj_center(label);
-        s_pill_labels[m] = label;
     }
 
     /* Status "tentativa X de Y". */
@@ -587,7 +569,7 @@ static lv_obj_t * build_termo_screen(void)
                 lv_obj_set_style_bg_opa(cell, LV_OPA_COVER, 0);
                 lv_obj_set_style_border_width(cell, 1, 0);
                 lv_obj_set_style_border_color(cell, RATIMOS_COLOR_PANEL_ACTIVE, 0);
-                lv_obj_set_style_radius(cell, 2, 0);
+                lv_obj_set_style_radius(cell, 0, 0);
                 lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
                 s_tile[b][r][c] = cell;
 
@@ -608,16 +590,12 @@ static lv_obj_t * build_termo_screen(void)
      * verificacao de hardware da Fase 3. */
     s_keyboard = lv_buttonmatrix_create(shell.content);
     lv_buttonmatrix_set_map(s_keyboard, TERMO_KEYBOARD_MAP);
+    lv_buttonmatrix_set_ctrl_map(s_keyboard, TERMO_KEYBOARD_CTRL);
     lv_obj_set_width(s_keyboard, lv_pct(100));
     lv_obj_set_height(s_keyboard, TERMO_KEYBOARD_H);
     lv_obj_set_style_pad_column(s_keyboard, 2, 0);
     lv_obj_set_style_pad_row(s_keyboard, 2, 0);
-    lv_obj_set_style_bg_opa(s_keyboard, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(s_keyboard, 0, 0);
-    lv_obj_set_style_bg_color(s_keyboard, RATIMOS_COLOR_PANEL, LV_PART_ITEMS);
-    lv_obj_set_style_bg_opa(s_keyboard, LV_OPA_COVER, LV_PART_ITEMS);
-    lv_obj_set_style_text_color(s_keyboard, RATIMOS_COLOR_TEXT, LV_PART_ITEMS);
-    lv_obj_set_style_radius(s_keyboard, 4, LV_PART_ITEMS);
+    ratimos_bevel_style_buttonmatrix(s_keyboard);
     lv_obj_add_event_cb(s_keyboard, keyboard_value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
     /* Banner de vitoria/derrota (Display-tier, UI-SPEC). */
@@ -676,8 +654,9 @@ static lv_obj_t * build_termo_screen(void)
     lv_obj_set_style_pad_column(confirm_actions, 8, 0);
     lv_obj_clear_flag(confirm_actions, LV_OBJ_FLAG_SCROLLABLE);
 
-    make_pill_w(confirm_actions, "cancelar", RATIMOS_COLOR_PANEL, confirm_cancel_cb, 100);
-    make_pill_w(confirm_actions, "recomecar", RATIMOS_COLOR_ACCENT, confirm_restart_cb, 100);
+    ratimos_button_create(confirm_actions, "cancelar", confirm_cancel_cb, 100, LV_SIZE_CONTENT);
+    lv_obj_t * restart_btn = ratimos_button_create(confirm_actions, "recomecar", confirm_restart_cb, 100, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_color(restart_btn, RATIMOS_COLOR_ACCENT, 0);
 
     render_all();
 

@@ -162,6 +162,112 @@ lv_obj_t * ratimos_panel_create(lv_obj_t * parent)
 }
 
 /*
+ * Botao bevel compartilhado -- substitui os make_pill()/make_pill_w() locais
+ * de conexo/sudoku/termo/cruzadinha/paciencia (que usavam radius de pilula
+ * e trocavam a borda pra vermelho/0 ao selecionar, fora da variante 003-C).
+ */
+lv_obj_t * ratimos_button_create(lv_obj_t * parent, const char * text, lv_event_cb_t cb,
+                                 lv_coord_t width, lv_coord_t height)
+{
+    lv_obj_t * btn = ratimos_panel_create(parent);
+    lv_obj_set_size(btn, width, height);
+    lv_obj_set_style_pad_all(btn, 0, 0);
+    if (width == LV_SIZE_CONTENT) {
+        lv_obj_set_style_pad_hor(btn, 8, 0);
+    }
+    if (height == LV_SIZE_CONTENT) {
+        lv_obj_set_style_pad_ver(btn, 8, 0);
+    }
+    lv_obj_clear_flag(btn, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(btn, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_style_bg_color(btn, RATIMOS_COLOR_PANEL_ACTIVE, LV_STATE_PRESSED);
+    if (cb) {
+        lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, NULL);
+    }
+
+    /* Licao do 02.1-09 (hitbox): nenhum filho clicavel por cima do botao --
+     * lv_label_create ja nasce sem CLICKABLE, mas o clear e' explicito pra
+     * nao depender do default do construtor. */
+    lv_obj_t * label = lv_label_create(btn);
+    lv_label_set_text(label, text ? text : "");
+    lv_obj_set_style_text_color(label, RATIMOS_COLOR_TEXT, 0);
+    lv_obj_clear_flag(label, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_center(label);
+
+    return btn;
+}
+
+void ratimos_button_set_selected(lv_obj_t * btn, bool selected)
+{
+    if (btn == NULL) {
+        return;
+    }
+    lv_obj_set_style_bg_color(btn, selected ? RATIMOS_COLOR_PANEL_ACTIVE : RATIMOS_COLOR_PANEL, 0);
+    lv_obj_t * label = lv_obj_get_child(btn, 0);
+    if (label) {
+        lv_obj_set_style_text_color(label, selected ? RATIMOS_COLOR_ACCENT : RATIMOS_COLOR_TEXT_MUTED, 0);
+    }
+}
+
+/*
+ * LV_EVENT_DRAW_TASK_ADDED do buttonmatrix: para cada tarefa de FILL de uma
+ * tecla (LV_PART_ITEMS) acrescenta o friso 003-C dentro da area da tecla.
+ * Teclas com radius 0 nao tem o fill encolhido pelo lv_draw_rect, entao a
+ * area da tarefa e' exatamente a area externa da tecla. Novas tarefas
+ * criadas aqui nao disparam DRAW_TASK_ADDED de novo (lv_draw.c guarda
+ * task_running), sem recursao.
+ */
+static void bevel_buttonmatrix_draw_task_cb(lv_event_t * e)
+{
+    lv_draw_task_t * t = lv_event_get_draw_task(e);
+    if (t == NULL || lv_draw_task_get_type(t) != LV_DRAW_TASK_TYPE_FILL) {
+        return;
+    }
+    lv_draw_dsc_base_t * base = lv_draw_task_get_draw_dsc(t);
+    if (base == NULL || base->part != LV_PART_ITEMS) {
+        return;
+    }
+    lv_obj_t * obj = lv_event_get_target(e);
+    int32_t border_w = lv_obj_get_style_border_width(obj, LV_PART_ITEMS);
+    if (border_w <= 0) {
+        return;
+    }
+    lv_area_t area;
+    lv_draw_task_get_area(t, &area);
+    bevel_draw_frieze(base->layer, &area, border_w);
+}
+
+void ratimos_bevel_style_buttonmatrix(lv_obj_t * m)
+{
+    lv_obj_set_style_bg_opa(m, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(m, 0, 0);
+    lv_obj_set_style_shadow_width(m, 0, 0);
+    lv_obj_set_style_radius(m, 0, 0);
+    /* Sem padding externo: o tema default do LVGL poe ~10px em volta da
+     * matriz, o que achatava as teclas (pad_row/pad_column do chamador nao
+     * sao tocados por pad_all). */
+    lv_obj_set_style_pad_all(m, 0, 0);
+
+    lv_obj_set_style_radius(m, 0, LV_PART_ITEMS);
+    lv_obj_set_style_bg_color(m, RATIMOS_COLOR_PANEL, LV_PART_ITEMS);
+    lv_obj_set_style_bg_opa(m, LV_OPA_70, LV_PART_ITEMS);
+    lv_obj_set_style_border_color(m, RATIMOS_COLOR_BEVEL_DARK, LV_PART_ITEMS);
+    lv_obj_set_style_border_width(m, 2, LV_PART_ITEMS);
+    /* Borda externa opaca (LV_OPA_100 == LV_OPA_COVER); o FUNDO da tecla e'
+     * que nunca e' opaco -- fica no LV_OPA_70 acima. */
+    lv_obj_set_style_border_opa(m, LV_OPA_100, LV_PART_ITEMS);
+    lv_obj_set_style_shadow_width(m, 0, LV_PART_ITEMS);
+    lv_obj_set_style_text_color(m, RATIMOS_COLOR_TEXT, LV_PART_ITEMS);
+    lv_obj_set_style_bg_color(m, RATIMOS_COLOR_PANEL_ACTIVE, LV_PART_ITEMS | LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(m, RATIMOS_COLOR_PANEL_ACTIVE, LV_PART_ITEMS | LV_STATE_CHECKED);
+
+    lv_obj_add_flag(m, LV_OBJ_FLAG_SEND_DRAW_TASK_EVENTS);
+    if (!obj_has_event_cb(m, bevel_buttonmatrix_draw_task_cb)) {
+        lv_obj_add_event_cb(m, bevel_buttonmatrix_draw_task_cb, LV_EVENT_DRAW_TASK_ADDED, NULL);
+    }
+}
+
+/*
  * Icone solto usado pelos launchers/linhas de lista (row_list.c,
  * home_screen.c) -- SEM nenhum container/badge por baixo (G-02.1-1/
  * G-02.1-2: a bola vermelha circular era um lv_obj_create() clicavel por

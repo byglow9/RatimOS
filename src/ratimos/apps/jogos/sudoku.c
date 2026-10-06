@@ -25,7 +25,7 @@
 #define SUDOKU_CELL_PX   32
 #define SUDOKU_BOARD_PX  (SUDOKU_CELL_PX * 9)
 #define SUDOKU_PILL_H    28
-#define SUDOKU_KEYPAD_H  36
+#define SUDOKU_KEYPAD_H  72 /* 2 linhas de 34px + 4px de gap */
 #define SUDOKU_NO_SELECTION 0xFFu
 
 /* ------------------------------------------------------------------------
@@ -42,7 +42,6 @@ static lv_obj_t * s_sudoku_screen = NULL;
 static lv_obj_t * s_error_label = NULL;
 static lv_obj_t * s_pill_row = NULL;
 static lv_obj_t * s_pills[RATIMOS_SUDOKU_MODE_COUNT];
-static lv_obj_t * s_pill_labels[RATIMOS_SUDOKU_MODE_COUNT];
 static lv_obj_t * s_board_wrap = NULL;
 static lv_obj_t * s_board = NULL;
 static lv_obj_t * s_cells[9][9];
@@ -77,8 +76,17 @@ static const int32_t SUDOKU_GRID_DSC[10] = {
     SUDOKU_CELL_PX, SUDOKU_CELL_PX, SUDOKU_CELL_PX, SUDOKU_CELL_PX, LV_GRID_TEMPLATE_LAST
 };
 
+/* Duas linhas de 5 (plano 02.1-13, deferred-items #5): numa linha unica de
+ * 10 teclas "apagar" ficava com ~30px e o texto grudava no "9"
+ * ("9apagar"). Ids de tecla continuam 0..9 na mesma ordem (o "\n" nao
+ * conta como tecla); "apagar" ocupa 2 unidades de largura na 2a linha. */
 static const char * const SUDOKU_KEYPAD_MAP[] = {
-    "1", "2", "3", "4", "5", "6", "7", "8", "9", "apagar", NULL
+    "1", "2", "3", "4", "5", "\n",
+    "6", "7", "8", "9", "apagar", NULL
+};
+static const lv_buttonmatrix_ctrl_t SUDOKU_KEYPAD_CTRL[] = {
+    1, 1, 1, 1, 1,
+    1, 1, 1, 1, 2
 };
 
 static void render_board(void);
@@ -200,14 +208,12 @@ static bool load_or_start_state(void)
     return status == RATIMOS_GAME_STATE_INVALID;
 }
 
+/* Selecao so' troca fundo + cor do texto (ratimos_button_set_selected) --
+ * a moldura bevel 003-C fica intacta em qualquer estado (plano 02.1-13). */
 static void render_pills(void)
 {
     for (int m = 0; m < RATIMOS_SUDOKU_MODE_COUNT; m++) {
-        bool selected = ((int) s_state.mode == m);
-        lv_obj_set_style_bg_color(s_pills[m], selected ? RATIMOS_COLOR_PANEL_ACTIVE : RATIMOS_COLOR_PANEL, 0);
-        lv_obj_set_style_border_color(s_pills[m], RATIMOS_COLOR_ACCENT, 0);
-        lv_obj_set_style_border_width(s_pills[m], selected ? 2 : 0, 0);
-        lv_obj_set_style_text_color(s_pill_labels[m], selected ? RATIMOS_COLOR_ACCENT : RATIMOS_COLOR_TEXT_MUTED, 0);
+        ratimos_button_set_selected(s_pills[m], (int) s_state.mode == m);
     }
 }
 
@@ -417,24 +423,6 @@ static void novo_jogo_clicked_cb(lv_event_t * e)
     lv_obj_clear_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
 }
 
-static lv_obj_t * make_pill_w(lv_obj_t * parent, const char * text, lv_color_t bg, lv_event_cb_t cb, lv_coord_t width)
-{
-    lv_obj_t * pill = ratimos_panel_create(parent);
-    lv_obj_set_size(pill, width, LV_SIZE_CONTENT);
-    lv_obj_set_style_pad_all(pill, 8, 0);
-    lv_obj_set_style_bg_color(pill, bg, 0);
-    lv_obj_clear_flag(pill, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(pill, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(pill, cb, LV_EVENT_CLICKED, NULL);
-
-    lv_obj_t * label = lv_label_create(pill);
-    lv_label_set_text(label, text);
-    lv_obj_set_style_text_color(label, RATIMOS_COLOR_TEXT, 0);
-    lv_obj_center(label);
-
-    return pill;
-}
-
 static lv_obj_t * build_sudoku_screen(void)
 {
     ratimos_app_shell_t shell = ratimos_app_shell_create("./home/jogos/sudoku", "numeros 1-9");
@@ -464,19 +452,14 @@ static lv_obj_t * build_sudoku_screen(void)
     lv_obj_clear_flag(s_pill_row, LV_OBJ_FLAG_SCROLLABLE);
 
     for (int m = 0; m < RATIMOS_SUDOKU_MODE_COUNT; m++) {
-        lv_obj_t * pill = ratimos_panel_create(s_pill_row);
-        lv_obj_set_style_pad_all(pill, 0, 0);
-        lv_obj_set_height(pill, SUDOKU_PILL_H);
+        /* Bevel 003-C compartilhado (plano 02.1-13); largura vem do
+         * flex_grow, entao sem pad horizontal. cb registrado aqui pra
+         * carregar o indice do modo como user_data. */
+        lv_obj_t * pill = ratimos_button_create(s_pill_row, SUDOKU_MODE_LABELS[m], NULL, LV_SIZE_CONTENT, SUDOKU_PILL_H);
+        lv_obj_set_style_pad_hor(pill, 0, 0);
         lv_obj_set_flex_grow(pill, 1);
-        lv_obj_clear_flag(pill, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_add_flag(pill, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_event_cb(pill, mode_pill_clicked_cb, LV_EVENT_CLICKED, (void *) (uintptr_t) m);
         s_pills[m] = pill;
-
-        lv_obj_t * label = lv_label_create(pill);
-        lv_label_set_text(label, SUDOKU_MODE_LABELS[m]);
-        lv_obj_center(label);
-        s_pill_labels[m] = label;
     }
 
     /* Tabuleiro 9x9 (Grid do LVGL) -- envolto num wrapper de largura total
@@ -528,16 +511,12 @@ static lv_obj_t * build_sudoku_screen(void)
      * nao revela problema de alvo de toque pequeno. */
     s_keypad = lv_buttonmatrix_create(shell.content);
     lv_buttonmatrix_set_map(s_keypad, SUDOKU_KEYPAD_MAP);
+    lv_buttonmatrix_set_ctrl_map(s_keypad, SUDOKU_KEYPAD_CTRL);
     lv_obj_set_width(s_keypad, lv_pct(100));
     lv_obj_set_height(s_keypad, SUDOKU_KEYPAD_H);
     lv_obj_set_style_pad_column(s_keypad, 4, 0);
     lv_obj_set_style_pad_row(s_keypad, 4, 0);
-    lv_obj_set_style_bg_opa(s_keypad, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(s_keypad, 0, 0);
-    lv_obj_set_style_bg_color(s_keypad, RATIMOS_COLOR_PANEL, LV_PART_ITEMS);
-    lv_obj_set_style_bg_opa(s_keypad, LV_OPA_COVER, LV_PART_ITEMS);
-    lv_obj_set_style_text_color(s_keypad, RATIMOS_COLOR_TEXT, LV_PART_ITEMS);
-    lv_obj_set_style_radius(s_keypad, 4, LV_PART_ITEMS);
+    ratimos_bevel_style_buttonmatrix(s_keypad);
     lv_obj_add_event_cb(s_keypad, keypad_value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
     /* Banner de vitoria (Display-tier, UI-SPEC): "resolvido!" sempre que
@@ -567,7 +546,7 @@ static lv_obj_t * build_sudoku_screen(void)
     lv_obj_set_flex_flow(novo_jogo_row, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(novo_jogo_row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_clear_flag(novo_jogo_row, LV_OBJ_FLAG_SCROLLABLE);
-    make_pill_w(novo_jogo_row, "novo jogo", RATIMOS_COLOR_PANEL, novo_jogo_clicked_cb, 140);
+    ratimos_button_create(novo_jogo_row, "novo jogo", novo_jogo_clicked_cb, 140, LV_SIZE_CONTENT);
 
     /* Falha de geracao (UI-SPEC, estado de erro): nenhum tabuleiro, so a
      * copia de erro + pilula de retry. Escondido ate render_board() decidir
@@ -588,7 +567,8 @@ static lv_obj_t * build_sudoku_screen(void)
     lv_obj_set_style_text_align(fail_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(fail_label, RATIMOS_COLOR_TEXT_MUTED, 0);
 
-    make_pill_w(s_gen_fail_container, "tentar novamente", RATIMOS_COLOR_ACCENT, retry_clicked_cb, 160);
+    lv_obj_t * retry_btn = ratimos_button_create(s_gen_fail_container, "tentar novamente", retry_clicked_cb, 160, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_color(retry_btn, RATIMOS_COLOR_ACCENT, 0);
 
     /* Dialogo de confirmacao destrutiva (Copywriting Contract): montado uma
      * unica vez, escondido ate uma troca de modo com progresso em curso ser
@@ -621,8 +601,9 @@ static lv_obj_t * build_sudoku_screen(void)
     lv_obj_set_style_pad_column(confirm_actions, 8, 0);
     lv_obj_clear_flag(confirm_actions, LV_OBJ_FLAG_SCROLLABLE);
 
-    make_pill_w(confirm_actions, "cancelar", RATIMOS_COLOR_PANEL, confirm_cancel_cb, 100);
-    make_pill_w(confirm_actions, "recomecar", RATIMOS_COLOR_ACCENT, confirm_restart_cb, 100);
+    ratimos_button_create(confirm_actions, "cancelar", confirm_cancel_cb, 100, LV_SIZE_CONTENT);
+    lv_obj_t * restart_btn = ratimos_button_create(confirm_actions, "recomecar", confirm_restart_cb, 100, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_color(restart_btn, RATIMOS_COLOR_ACCENT, 0);
 
     render_board();
 

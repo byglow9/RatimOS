@@ -39,6 +39,13 @@ static const char * const CRUZ_KEYBOARD_MAP[] = {
     "a", "s", "d", "f", "g", "h", "j", "k", "l", "\n",
     "z", "x", "c", "v", "b", "n", "m", "apagar", NULL
 };
+/* "apagar" com 2 unidades de largura (plano 02.1-13): em largura igual o
+ * texto estourava a tecla. */
+static const lv_buttonmatrix_ctrl_t CRUZ_KEYBOARD_CTRL[] = {
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 2
+};
 
 /* ------------------------------------------------------------------------
  * Tela (LVGL) -- cache-once.
@@ -540,24 +547,6 @@ static void novo_jogo_clicked_cb(lv_event_t * e)
  * Construcao.
  * ------------------------------------------------------------------------ */
 
-static lv_obj_t * make_pill_w(lv_obj_t * parent, const char * text, lv_color_t bg, lv_event_cb_t cb, lv_coord_t width)
-{
-    lv_obj_t * pill = ratimos_panel_create(parent);
-    lv_obj_set_size(pill, width, LV_SIZE_CONTENT);
-    lv_obj_set_style_pad_all(pill, 6, 0);
-    lv_obj_set_style_bg_color(pill, bg, 0);
-    lv_obj_clear_flag(pill, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(pill, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(pill, cb, LV_EVENT_CLICKED, NULL);
-
-    lv_obj_t * label = lv_label_create(pill);
-    lv_label_set_text(label, text);
-    lv_obj_set_style_text_color(label, RATIMOS_COLOR_TEXT, 0);
-    lv_obj_center(label);
-
-    return pill;
-}
-
 static lv_obj_t * build_clue_list_row(lv_obj_t * parent, lv_obj_t ** out_label)
 {
     lv_obj_t * row = ratimos_panel_create(parent);
@@ -623,7 +612,10 @@ static lv_obj_t * build_cruzadinha_screen(void)
     lv_obj_set_style_text_color(s_clue_strip_label, RATIMOS_COLOR_TEXT, 0);
     lv_label_set_text(s_clue_strip_label, "");
 
-    s_next_word_btn = make_pill_w(s_clue_strip, "proxima palavra", RATIMOS_COLOR_PANEL, next_word_clicked_cb, 90);
+    /* Largura pelo conteudo (plano 02.1-13, deferred-items #5): com 90px
+     * fixos o texto aparecia cortado ("oxima palav"). */
+    s_next_word_btn = ratimos_button_create(s_clue_strip, "proxima palavra", next_word_clicked_cb,
+                                            LV_SIZE_CONTENT, LV_SIZE_CONTENT);
 
     /* Grid -- construido UMA vez no tamanho maximo (11x11); render_grid()
      * decide quantas celulas ficam visiveis e o tamanho de cada uma por
@@ -660,7 +652,7 @@ static lv_obj_t * build_cruzadinha_screen(void)
     }
 
     /* Pilula "ver todas as dicas" (UI-SPEC affordance secundaria). */
-    make_pill_w(shell.content, "ver todas as dicas", RATIMOS_COLOR_PANEL, ver_todas_clicked_cb, lv_pct(100));
+    ratimos_button_create(shell.content, "ver todas as dicas", ver_todas_clicked_cb, lv_pct(100), LV_SIZE_CONTENT);
 
     /* Teclado A-Z compartilhado + apagar -- risco flagueado (UI-SPEC/
      * RESEARCH): celulas de ~30px ficam abaixo do alvo de toque ideal de
@@ -669,16 +661,12 @@ static lv_obj_t * build_cruzadinha_screen(void)
      * pra verificacao de hardware da Fase 3. */
     s_keyboard = lv_buttonmatrix_create(shell.content);
     lv_buttonmatrix_set_map(s_keyboard, CRUZ_KEYBOARD_MAP);
+    lv_buttonmatrix_set_ctrl_map(s_keyboard, CRUZ_KEYBOARD_CTRL);
     lv_obj_set_width(s_keyboard, lv_pct(100));
     lv_obj_set_height(s_keyboard, 110);
     lv_obj_set_style_pad_column(s_keyboard, 2, 0);
     lv_obj_set_style_pad_row(s_keyboard, 2, 0);
-    lv_obj_set_style_bg_opa(s_keyboard, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(s_keyboard, 0, 0);
-    lv_obj_set_style_bg_color(s_keyboard, RATIMOS_COLOR_PANEL, LV_PART_ITEMS);
-    lv_obj_set_style_bg_opa(s_keyboard, LV_OPA_COVER, LV_PART_ITEMS);
-    lv_obj_set_style_text_color(s_keyboard, RATIMOS_COLOR_TEXT, LV_PART_ITEMS);
-    lv_obj_set_style_radius(s_keyboard, 4, LV_PART_ITEMS);
+    ratimos_bevel_style_buttonmatrix(s_keyboard);
     lv_obj_add_event_cb(s_keyboard, keyboard_value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
     /* Banner de vitoria (Display-tier, UI-SPEC). */
@@ -698,7 +686,7 @@ static lv_obj_t * build_cruzadinha_screen(void)
     lv_obj_set_style_text_color(s_castle_label, RATIMOS_COLOR_TEXT_MUTED, 0);
     lv_obj_add_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
 
-    make_pill_w(shell.content, "novo jogo", RATIMOS_COLOR_PANEL, novo_jogo_clicked_cb, lv_pct(100));
+    ratimos_button_create(shell.content, "novo jogo", novo_jogo_clicked_cb, lv_pct(100), LV_SIZE_CONTENT);
 
     /* Overlay: lista completa de dicas (JOGOS-04's requisito literal de
      * dica numerada para quem quer navegar). Filho de shell.screen (nao
@@ -711,7 +699,8 @@ static lv_obj_t * build_cruzadinha_screen(void)
     lv_obj_set_style_pad_row(s_clue_list_overlay, 6, 0);
     lv_obj_add_flag(s_clue_list_overlay, LV_OBJ_FLAG_HIDDEN);
 
-    make_pill_w(s_clue_list_overlay, "fechar", RATIMOS_COLOR_ACCENT, clue_list_close_clicked_cb, lv_pct(100));
+    lv_obj_t * close_btn = ratimos_button_create(s_clue_list_overlay, "fechar", clue_list_close_clicked_cb, lv_pct(100), LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_color(close_btn, RATIMOS_COLOR_ACCENT, 0);
 
     s_clue_list_across_header = lv_label_create(s_clue_list_overlay);
     lv_label_set_text(s_clue_list_across_header, "horizontais");
@@ -758,8 +747,9 @@ static lv_obj_t * build_cruzadinha_screen(void)
     lv_obj_set_style_pad_column(confirm_actions, 8, 0);
     lv_obj_clear_flag(confirm_actions, LV_OBJ_FLAG_SCROLLABLE);
 
-    make_pill_w(confirm_actions, "cancelar", RATIMOS_COLOR_PANEL, confirm_cancel_cb, 100);
-    make_pill_w(confirm_actions, "recomecar", RATIMOS_COLOR_ACCENT, confirm_restart_cb, 100);
+    ratimos_button_create(confirm_actions, "cancelar", confirm_cancel_cb, 100, LV_SIZE_CONTENT);
+    lv_obj_t * restart_btn = ratimos_button_create(confirm_actions, "recomecar", confirm_restart_cb, 100, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_color(restart_btn, RATIMOS_COLOR_ACCENT, 0);
 
     render_all();
 

@@ -419,28 +419,16 @@ static void novo_jogo_clicked_cb(lv_event_t * e)
     lv_obj_clear_flag(s_confirm_overlay, LV_OBJ_FLAG_HIDDEN);
 }
 
-static lv_obj_t * make_pill_w(lv_obj_t * parent, const char * text, lv_color_t bg, lv_event_cb_t cb, lv_coord_t width)
+/* Botao de acao do conexo: bevel 003-C compartilhado (ratimos_button_create,
+ * plano 02.1-13) -- cantos retos, nunca mais o radius de pilula PILL_H/2.
+ * CTA ("enviar"/"recomecar") mantem o fundo ACCENT com a mesma moldura. */
+static lv_obj_t * action_button(lv_obj_t * parent, const char * text, bool cta, lv_event_cb_t cb, lv_coord_t width)
 {
-    lv_obj_t * pill = ratimos_panel_create(parent);
-    lv_obj_set_size(pill, width, PILL_H);
-    lv_obj_set_style_pad_all(pill, 0, 0);
-    lv_obj_set_style_bg_color(pill, bg, 0);
-    lv_obj_set_style_radius(pill, PILL_H / 2, 0);
-    lv_obj_clear_flag(pill, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(pill, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(pill, cb, LV_EVENT_CLICKED, NULL);
-
-    lv_obj_t * label = lv_label_create(pill);
-    lv_label_set_text(label, text);
-    lv_obj_set_style_text_color(label, RATIMOS_COLOR_TEXT, 0);
-    lv_obj_center(label);
-
-    return pill;
-}
-
-static lv_obj_t * make_pill(lv_obj_t * parent, const char * text, lv_color_t bg, lv_event_cb_t cb)
-{
-    return make_pill_w(parent, text, bg, cb, PILL_W);
+    lv_obj_t * btn = ratimos_button_create(parent, text, cb, width, PILL_H);
+    if (cta) {
+        lv_obj_set_style_bg_color(btn, RATIMOS_COLOR_ACCENT, 0);
+    }
+    return btn;
 }
 
 /* Decide o estado inicial: restaura um save valido, comeca limpo quando nao
@@ -566,9 +554,9 @@ static lv_obj_t * build_conexo_screen(void)
     lv_obj_set_style_pad_column(actions, 8, 0);
     lv_obj_clear_flag(actions, LV_OBJ_FLAG_SCROLLABLE);
 
-    make_pill(actions, "embaralhar", RATIMOS_COLOR_PANEL, shuffle_clicked_cb);
-    make_pill(actions, "enviar", RATIMOS_COLOR_ACCENT, submit_clicked_cb);
-    make_pill(actions, "novo jogo", RATIMOS_COLOR_PANEL, novo_jogo_clicked_cb);
+    action_button(actions, "embaralhar", false, shuffle_clicked_cb, PILL_W);
+    action_button(actions, "enviar", true, submit_clicked_cb, PILL_W);
+    action_button(actions, "novo jogo", false, novo_jogo_clicked_cb, PILL_W);
 
     /* Dialogo de confirmacao destrutiva (Copywriting Contract): montado uma
      * unica vez, escondido ate "novo jogo" ser tocado. Filho de shell.screen
@@ -600,8 +588,8 @@ static lv_obj_t * build_conexo_screen(void)
     lv_obj_set_style_pad_column(confirm_actions, 8, 0);
     lv_obj_clear_flag(confirm_actions, LV_OBJ_FLAG_SCROLLABLE);
 
-    make_pill_w(confirm_actions, "cancelar", RATIMOS_COLOR_PANEL, confirm_cancel_cb, 100);
-    make_pill_w(confirm_actions, "recomecar", RATIMOS_COLOR_ACCENT, confirm_restart_cb, 100);
+    action_button(confirm_actions, "cancelar", false, confirm_cancel_cb, 100);
+    action_button(confirm_actions, "recomecar", true, confirm_restart_cb, 100);
 
     render_board();
 
