@@ -45,15 +45,6 @@
 
 static uint8_t s_disp_buf[RATIMOS_SCREEN_W * RATIMOS_SCREEN_H * 2]; /* LV_COLOR_DEPTH 16 */
 
-/*
- * Pool EXTRA de heap LVGL so' pra este processo de teste. As 5 telas de
- * jogo ficam em cache pra sempre (sem delete-on-navigate -- deferred-items
- * #1, escopo do plano 02.1-15) e juntas usam ~445KB dos 512KB do
- * LV_MEM_SIZE: sem folga, a suite estourava o heap. O simulador NAO ganha
- * este pool -- o vazamento real continua visivel la' ate o 02.1-15.
- */
-static uint8_t s_extra_lv_pool[512 * 1024] __attribute__((aligned(8)));
-
 static void headless_flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * px_map)
 {
     (void) area;
@@ -618,7 +609,6 @@ int main(void)
     }
 
     lv_init();
-    lv_mem_add_pool(s_extra_lv_pool, sizeof(s_extra_lv_pool));
     lv_display_t * disp = lv_display_create(RATIMOS_SCREEN_W, RATIMOS_SCREEN_H);
     lv_display_set_buffers(disp, s_disp_buf, NULL, sizeof(s_disp_buf), LV_DISPLAY_RENDER_MODE_FULL);
     lv_display_set_flush_cb(disp, headless_flush_cb);
@@ -631,10 +621,9 @@ int main(void)
     UNITY_BEGIN();
     RUN_TEST(test_termo_keyboard_reflects_letter_states_and_resets);
     RUN_TEST(test_termo_quarteto_boards_start_at_top_and_follow_active_row);
-    /* Ordem importa: cada tela de jogo e' construida uma vez e fica em
-     * cache pra sempre (sem delete-on-navigate -- deferred-items #1, plano
-     * 02.1-15), e as 5 juntas usam ~445KB dos 512KB do heap LVGL. Os testes
-     * que mexem muito no termo rodam ANTES das outras 4 telas existirem. */
+    /* Sem pool extra de heap: desde o plano 02.1-15 cada tela de jogo e'
+     * deletada ao navegar pra outra (ratimos_screen_load), entao o heap
+     * normal de 512KB basta em qualquer ordem. */
     RUN_TEST(test_termo_enter_submits_and_rejections_are_visible);
     RUN_TEST(test_termo_all_modes_fit_and_keys_are_even);
     RUN_TEST(test_sectionbar_is_compact_and_content_moves_up);

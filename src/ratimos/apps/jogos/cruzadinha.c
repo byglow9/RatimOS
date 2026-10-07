@@ -8,10 +8,7 @@
  * API (D-10).
  *
  * Grid de tamanho variavel (9x9 na maioria dos quebra-cabecas, 11x11 quando
- * a lista de palavras genuinamente precisa): as celulas sao construidas UMA
- * vez no tamanho maximo (RATIMOS_CRUZADINHA_MAX_DIM x MAX_DIM) e cada visita
- * so mostra/esconde/redimensiona -- nunca reconstroi (mesma disciplina de
- * cache-once de todo screen deste projeto).
+ * a lista de palavras genuinamente precisa).
  */
 #include <ctype.h>
 #include <stdbool.h>
@@ -56,7 +53,14 @@ static const lv_buttonmatrix_ctrl_t CRUZ_KEYBOARD_CTRL[] = {
 };
 
 /* ------------------------------------------------------------------------
- * Tela (LVGL) -- cache-once.
+ * Tela (LVGL) -- construida a cada visita, deletada ao sair.
+ *
+ * ratimos_cruzadinha_show() constroi a tela a partir do save e
+ * ratimos_screen_load() (app_shell.h) a deleta quando a jogadora navega pra
+ * outra tela (plano 02.1-15, deferred-items #1: as telas em cache pra
+ * sempre esgotavam o heap do LVGL). Enquanto a tela existe, cada
+ * jogada so re-renderiza via render_all().
+ * cruzadinha_screen_deleted_cb() zera os ponteiros de widget no LV_EVENT_DELETE.
  * ------------------------------------------------------------------------ */
 
 static lv_obj_t * s_cruzadinha_screen = NULL;
@@ -86,6 +90,36 @@ static ratimos_cruzadinha_state_t s_state;
 static ratimos_cruzadinha_puzzle_t s_puzzle;
 static ratimos_cruzadinha_grid_t s_grid;
 static bool s_puzzle_ready = false;
+
+/* Tela deletada ao sair (ratimos_screen_load, plano 02.1-15): zera todo
+ * ponteiro de widget pro proximo ratimos_cruzadinha_show() reconstruir a partir
+ * do save -- nenhum callback pode achar um handle de uma tela que ja sumiu. */
+static void cruzadinha_screen_deleted_cb(lv_event_t * e)
+{
+    (void) e;
+    s_cruzadinha_screen = NULL;
+    s_unavailable_label = NULL;
+    s_error_label = NULL;
+    s_board = NULL;
+    memset(s_cell, 0, sizeof(s_cell));
+    memset(s_cell_letter_label, 0, sizeof(s_cell_letter_label));
+    memset(s_cell_number_label, 0, sizeof(s_cell_number_label));
+    s_clue_strip = NULL;
+    s_clue_strip_label = NULL;
+    s_next_word_btn = NULL;
+    s_keyboard = NULL;
+    s_banner_label = NULL;
+    s_castle_label = NULL;
+    s_confirm_overlay = NULL;
+    s_clue_list_overlay = NULL;
+    s_clue_list_across_header = NULL;
+    s_clue_list_down_header = NULL;
+    memset(s_clue_list_across_row, 0, sizeof(s_clue_list_across_row));
+    memset(s_clue_list_down_row, 0, sizeof(s_clue_list_down_row));
+    memset(s_clue_list_across_label, 0, sizeof(s_clue_list_across_label));
+    memset(s_clue_list_down_label, 0, sizeof(s_clue_list_down_label));
+    s_puzzle_ready = false;
+}
 
 static void render_all(void);
 static void persist_state(void);
@@ -781,6 +815,7 @@ void ratimos_cruzadinha_show(lv_event_t * e)
     (void) e;
     if (!s_cruzadinha_screen) {
         s_cruzadinha_screen = build_cruzadinha_screen();
+        lv_obj_add_event_cb(s_cruzadinha_screen, cruzadinha_screen_deleted_cb, LV_EVENT_DELETE, NULL);
     }
-    lv_screen_load(s_cruzadinha_screen);
+    ratimos_screen_load(s_cruzadinha_screen);
 }

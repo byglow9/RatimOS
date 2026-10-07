@@ -3,6 +3,25 @@
 #include "status_bar.h"
 #include "home_screen.h"
 
+/* LV_OBJ_FLAG_USER_1 = "tela persistente" (nenhum outro uso de flags de
+ * usuario no projeto). */
+#define RATIMOS_SCREEN_FLAG_PERSISTENT LV_OBJ_FLAG_USER_1
+
+void ratimos_screen_set_persistent(lv_obj_t * scr)
+{
+    lv_obj_add_flag(scr, RATIMOS_SCREEN_FLAG_PERSISTENT);
+}
+
+void ratimos_screen_load(lv_obj_t * scr)
+{
+    lv_obj_t * old = lv_screen_active();
+    if (old == scr) {
+        return;
+    }
+    bool delete_old = old != NULL && !lv_obj_has_flag(old, RATIMOS_SCREEN_FLAG_PERSISTENT);
+    lv_screen_load_anim(scr, LV_SCREEN_LOAD_ANIM_NONE, 0, 0, delete_old);
+}
+
 ratimos_app_shell_t ratimos_app_shell_create(const char * section_label,
                                               const char * bottom_right_hint)
 {

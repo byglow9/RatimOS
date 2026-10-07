@@ -44,12 +44,14 @@
 #define PACIENCIA_TABLEAU_SLOT_IDX 0xFFu
 
 /* ------------------------------------------------------------------------
- * Tela (LVGL) -- cache-once, igual a sudoku.c/conexo.c.
+ * Tela (LVGL) -- construida a cada visita, deletada ao sair.
  *
- * A tela e construida UMA vez e guardada em s_paciencia_screen; toda
- * jogada apenas re-renderiza os containers de cada pilha via render_all(),
- * nunca reconstroi a tela inteira -- reconstruir a cada visita e o
- * vazamento de heap do LVGL que a Fase 1 ja corrigiu.
+ * ratimos_paciencia_show() constroi a tela a partir do save e
+ * ratimos_screen_load() (app_shell.h) a deleta quando a jogadora navega pra
+ * outra tela (plano 02.1-15, deferred-items #1: as telas em cache pra
+ * sempre esgotavam o heap do LVGL). Enquanto a tela existe, toda jogada
+ * so re-renderiza os containers de cada pilha via render_all().
+ * paciencia_screen_deleted_cb() zera os ponteiros de widget no LV_EVENT_DELETE.
  * ------------------------------------------------------------------------ */
 
 static lv_obj_t * s_paciencia_screen = NULL;
@@ -85,6 +87,30 @@ static bool s_flash_active = false;
 static paciencia_selection_kind_t s_flash_kind = PACIENCIA_SEL_NONE;
 static uint8_t s_flash_index = 0;
 static lv_timer_t * s_flash_timer = NULL;
+
+/* Tela deletada ao sair (ratimos_screen_load, plano 02.1-15): zera todo
+ * ponteiro de widget pro proximo ratimos_paciencia_show() reconstruir a partir
+ * do save -- nenhum callback pode achar um handle de uma tela que ja sumiu. */
+static void paciencia_screen_deleted_cb(lv_event_t * e)
+{
+    (void) e;
+    s_paciencia_screen = NULL;
+    s_error_label = NULL;
+    s_stock_slot = NULL;
+    s_waste_slot = NULL;
+    memset(s_foundation_slots, 0, sizeof(s_foundation_slots));
+    memset(s_tableau_cols, 0, sizeof(s_tableau_cols));
+    s_banner_label = NULL;
+    s_castle_label = NULL;
+    s_confirm_overlay = NULL;
+    /* O timer do flash chama render_all(), que mexe nos widgets acima --
+     * nao pode disparar depois da tela sumir. */
+    if (s_flash_timer) {
+        lv_timer_delete(s_flash_timer);
+        s_flash_timer = NULL;
+    }
+    s_flash_active = false;
+}
 
 static void render_all(void);
 static void persist_state(void);
@@ -776,6 +802,7 @@ void ratimos_paciencia_show(lv_event_t * e)
     (void) e;
     if (!s_paciencia_screen) {
         s_paciencia_screen = build_paciencia_screen();
+        lv_obj_add_event_cb(s_paciencia_screen, paciencia_screen_deleted_cb, LV_EVENT_DELETE, NULL);
     }
-    lv_screen_load(s_paciencia_screen);
+    ratimos_screen_load(s_paciencia_screen);
 }

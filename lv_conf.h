@@ -14,18 +14,20 @@
 
 /*
  * LVGL's builtin allocator default (LV_MEM_SIZE, when not overridden here)
- * is 64KB — sized for tiny embedded demos, not a retained multi-screen app.
- * This project's app/screen files (src/ratimos/apps/*.c) build a brand-new
- * lv_obj_t screen on every visit with no delete-on-navigate-away, so heap
- * usage grows unboundedly across a session; confirmed via reproduction that
- * 64KB is exhausted (`lv_realloc: couldn't reallocate memory`) after only
- * ~3-4 repeated visits to a single app screen. native_sim runs on a PC with
- * abundant RAM, so a generous bump here costs nothing and buys headroom for
- * the remaining Phase 1 plans (more storage domains, more rendered rows).
+ * is 64KB — sized for tiny embedded demos, not a multi-screen app.
+ *
+ * Screen retention (plan 02.1-15, deferred-items #1 — FIXED): app/game
+ * screens used to be built once and cached forever, and together they
+ * exhausted this 512KB heap in one "visit every game" session. Now only the
+ * home screen stays cached; every other screen is deleted when the user
+ * navigates away (ratimos_screen_load(), src/ratimos/app_shell.h) and rebuilt
+ * from storage on the next visit. Peak use is now home + the jogos list +
+ * the heaviest single screen (see test/test_navigation_memory, which
+ * measures it with ratimos_heap_used(), src/ratimos/heap_probe.h).
+ *
  * NOTE: this value is native_sim-only — Phase 3's esp32s3 environment must
- * define its own hardware-measured LV_MEM_SIZE (and the screen-retention
- * leak itself should get a proper fix, e.g. cache-or-delete-on-navigate,
- * before shipping to real hardware with real RAM limits).
+ * define its own hardware-measured LV_MEM_SIZE, sized against the peak that
+ * test_navigation_memory prints ("session peak").
  */
 #define LV_USE_STDLIB_MALLOC LV_STDLIB_BUILTIN
 #define LV_MEM_SIZE (512 * 1024U)

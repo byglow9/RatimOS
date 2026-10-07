@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include "home_screen.h"
+#include "app_shell.h"
 #include "theme.h"
 #include "status_bar.h"
 #include "progression.h"
@@ -157,6 +158,10 @@ void ratimos_home_screen_show(lv_event_t * e)
     (void) e;
     if (!s_home_screen) {
         s_home_screen = build_home_screen();
+        /* A home e' a UNICA tela em cache (02.1-15): toda navegacao volta
+         * por ela, e ela custa pouco. Todas as outras sao deletadas ao
+         * sair (ratimos_screen_load). */
+        ratimos_screen_set_persistent(s_home_screen);
     }
     /* Reler o status a cada visita (nao so na primeira construcao) -- ao
      * voltar de um jogo recem-vencido, o dia atualizado deve aparecer sem
@@ -164,5 +169,5 @@ void ratimos_home_screen_show(lv_event_t * e)
     if (s_castelo_status_label) {
         set_castelo_status_text(s_castelo_status_label);
     }
-    lv_screen_load(s_home_screen);
+    ratimos_screen_load(s_home_screen);
 }

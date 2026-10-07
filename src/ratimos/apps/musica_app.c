@@ -5,11 +5,17 @@
 #include "../../storage/content_api.h"
 
 /*
- * Cache-once (same rationale as jogos_app.c / cartas_app.c / 01-01) -- avoids
- * rebuilding a new lv_obj_t screen on every visit, which exhausts LVGL's
- * builtin heap after a handful of visits.
+ * Construida a cada visita e deletada ao sair (ratimos_screen_load, plano
+ * 02.1-15): o ponteiro so' vale enquanto a tela existe -- o LV_EVENT_DELETE
+ * zera ele pro proximo ratimos_musica_show() reconstruir.
  */
 static lv_obj_t * s_musica_screen = NULL;
+
+static void musica_screen_deleted_cb(lv_event_t * e)
+{
+    (void) e;
+    s_musica_screen = NULL;
+}
 
 static lv_obj_t * build_musica_screen(void)
 {
@@ -43,6 +49,7 @@ void ratimos_musica_show(lv_event_t * e)
     (void) e;
     if (!s_musica_screen) {
         s_musica_screen = build_musica_screen();
+        lv_obj_add_event_cb(s_musica_screen, musica_screen_deleted_cb, LV_EVENT_DELETE, NULL);
     }
-    lv_screen_load(s_musica_screen);
+    ratimos_screen_load(s_musica_screen);
 }

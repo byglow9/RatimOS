@@ -5,11 +5,17 @@
 #include "../../storage/content_api.h"
 
 /*
- * Cache-once (same rationale as jogos_app.c / musica_app.c / cartas_app.c /
- * 01-01) -- avoids rebuilding a new lv_obj_t screen on every visit, which
- * exhausts LVGL's builtin heap after a handful of visits.
+ * Construida a cada visita e deletada ao sair (ratimos_screen_load, plano
+ * 02.1-15): o ponteiro so' vale enquanto a tela existe -- o LV_EVENT_DELETE
+ * zera ele pro proximo ratimos_album_show() reconstruir.
  */
 static lv_obj_t * s_album_screen = NULL;
+
+static void album_screen_deleted_cb(lv_event_t * e)
+{
+    (void) e;
+    s_album_screen = NULL;
+}
 
 static lv_obj_t * photo_tile_create(lv_obj_t * parent, const char * title)
 {
@@ -52,6 +58,7 @@ void ratimos_album_show(lv_event_t * e)
     (void) e;
     if (!s_album_screen) {
         s_album_screen = build_album_screen();
+        lv_obj_add_event_cb(s_album_screen, album_screen_deleted_cb, LV_EVENT_DELETE, NULL);
     }
-    lv_screen_load(s_album_screen);
+    ratimos_screen_load(s_album_screen);
 }

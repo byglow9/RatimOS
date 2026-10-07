@@ -1,12 +1,10 @@
 /*
  * Castelo (PROGRESSAO-01) -- tela dedicada da progressao castelo/jardim.
  *
- * Cache-once igual a jogos_app.c/conexo.c: a tela e construida UMA vez e
- * guardada em s_castelo_screen. Como a cena muda conforme o contador
- * cresce, toda visita chama refresh_castelo_screen() para ATUALIZAR os
- * objetos ja existentes (imagem de estagio, legenda, faixa de conquistas)
- * em vez de reconstruir a tela -- reconstruir a cada visita e exatamente o
- * vazamento de heap do LVGL que a Fase 1 ja corrigiu, nao pode voltar.
+ * Construida a cada visita e deletada ao sair (ratimos_screen_load, plano
+ * 02.1-15); chamar ratimos_castelo_show() com a tela ja ativa so' roda
+ * refresh_castelo_screen() nos objetos existentes. O LV_EVENT_DELETE zera
+ * o ponteiro da tela e os handles de widget.
  *
  * So le progressao atraves de ratimos_storage_get_progression() -- nunca
  * abre arquivo diretamente (mesma disciplina de todo src/ratimos/apps/).
@@ -27,6 +25,17 @@ static lv_obj_t * s_castelo_screen = NULL;
 static lv_obj_t * s_stage_image = NULL;
 static lv_obj_t * s_caption_label = NULL;
 static lv_obj_t * s_unlock_icons[RATIMOS_GAME_COUNT];
+
+static void castelo_screen_deleted_cb(lv_event_t * e)
+{
+    (void) e;
+    s_castelo_screen = NULL;
+    s_stage_image = NULL;
+    s_caption_label = NULL;
+    for (size_t i = 0; i < RATIMOS_GAME_COUNT; i++) {
+        s_unlock_icons[i] = NULL;
+    }
+}
 
 /*
  * Copia de status por estagio (UI-SPEC "Progression System UI" +
@@ -135,8 +144,9 @@ void ratimos_castelo_show(lv_event_t * e)
     (void) e;
     if (!s_castelo_screen) {
         s_castelo_screen = build_castelo_screen();
+        lv_obj_add_event_cb(s_castelo_screen, castelo_screen_deleted_cb, LV_EVENT_DELETE, NULL);
     } else {
         refresh_castelo_screen();
     }
-    lv_screen_load(s_castelo_screen);
+    ratimos_screen_load(s_castelo_screen);
 }

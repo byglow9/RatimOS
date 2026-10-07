@@ -4,18 +4,17 @@
 #include "../../storage/content_api.h"
 
 /*
- * Cache-once, like ratimos_home_screen_show() (home_screen.c): the letters
- * domain is only ever indexed once, synchronously, during the splash's
- * staged init (D-10 — no live/async content updates in Phase 1), so building
- * this screen's row list once and reusing it forever is both correct (data
- * never changes mid-session) and required — without caching, every visit to
- * "cartas" builds a brand-new, never-freed lv_obj_t screen (no delete-on-
- * navigate-away exists anywhere in this codebase yet), which exhausts
- * LVGL's small builtin heap after only ~3-4 visits (`lv_realloc: couldn't
- * reallocate memory` / `lv_array_resize` assert — reproduced and confirmed
- * during this task's checkpoint review).
+ * Construida a cada visita e deletada ao sair (ratimos_screen_load, plano
+ * 02.1-15): o ponteiro so' vale enquanto a tela existe -- o LV_EVENT_DELETE
+ * zera ele pro proximo ratimos_cartas_show() reconstruir.
  */
 static lv_obj_t * s_cartas_screen = NULL;
+
+static void cartas_screen_deleted_cb(lv_event_t * e)
+{
+    (void) e;
+    s_cartas_screen = NULL;
+}
 
 static lv_obj_t * build_cartas_screen(void)
 {
@@ -41,6 +40,7 @@ void ratimos_cartas_show(lv_event_t * e)
     (void) e;
     if (!s_cartas_screen) {
         s_cartas_screen = build_cartas_screen();
+        lv_obj_add_event_cb(s_cartas_screen, cartas_screen_deleted_cb, LV_EVENT_DELETE, NULL);
     }
-    lv_screen_load(s_cartas_screen);
+    ratimos_screen_load(s_cartas_screen);
 }
