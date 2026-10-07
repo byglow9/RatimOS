@@ -168,22 +168,23 @@ function sunsetScene(c, anim, layout) {
     px(c, x, top, 1, 480 - top, lit ? '#5a1650' : '#3a0c40');   // serra desce até o pé da tela
     if (lit) px(c, x, top, 1, 2, '#9a2a50');                  // aresta iluminada
   }
-  // castelo
+  // castelo: 20% maior, e todas as paredes descem até o pé da tela, então
+  // não existe "chão" do castelo para aparecer flutuando entre os picos da
+  // serra da frente (que esconde a base).
   const S = '#140513', S2 = '#1f0a1c', ROOF = '#8a0a18', ROOF_LIT = '#d01e24';
-  const gy = H - 4;                                           // base do castelo (fica escondida atrás da serra da frente)
-  const crenel = (x, y, w) => { for (let k = 0; k < w; k += 6) px(c, x + k, y - 4, 4, 4, S); };
-  const roof = (cx, y, w, h) => { for (let r = 0; r < h; r++) { const half = Math.ceil((r + 1) * (w / 2) / h); px(c, cx - half, y + r, half, 1, ROOF); px(c, cx, y + r, half, 1, ROOF_LIT); } px(c, cx, y - 8, 1, 8, '#d9d0e6'); px(c, cx + 1, y - 8, 5, 3, '#e6010f'); };
-  const win = (x, y, i) => { const on = anim ? (Math.floor(now / 800) + i) % 5 !== 0 : true; px(c, x, y, 3, 5, on ? '#ffc04a' : '#7a4a10'); px(c, x, y, 3, 1, S2); };
-  // muralha + ameias
-  px(c, ox + 44, gy - 26, 100, 26, S); crenel(ox + 44, gy - 26, 100);
-  // portão em arco
-  px(c, ox + 86, gy - 14, 16, 14, '#0a0208'); px(c, ox + 88, gy - 16, 12, 2, '#0a0208'); px(c, ox + 90, gy - 17, 8, 1, '#0a0208');
+  const K = 1.2, AX = ox + 84, gy = H + 2;                    // âncora: centro da torre de menagem, na base
+  const X = n => AX + Math.round((n - 94) * K), Y = d => gy - Math.round(d * K), L = n => Math.round(n * K);
+  const crenel = (x, y, w) => { for (let k = 0; k < w; k += L(6)) px(c, x + k, y - L(4), L(4), L(4), S); };
+  const roof = (cx, y, w, h) => { for (let r = 0; r < h; r++) { const half = Math.ceil((r + 1) * (w / 2) / h); px(c, cx - half, y + r, half, 1, ROOF); px(c, cx, y + r, half, 1, ROOF_LIT); } px(c, cx, y - L(8), 1, L(8), '#d9d0e6'); px(c, cx + 1, y - L(8), L(5), L(3), '#e6010f'); };
+  const win = (x, y, i) => { const on = anim ? (Math.floor(now / 800) + i) % 5 !== 0 : true; px(c, x, y, L(3), L(5), on ? '#ffc04a' : '#7a4a10'); px(c, x, y, L(3), 1, S2); };
+  // muralha + ameias (até o pé da tela)
+  px(c, X(44), Y(26), L(100), 480 - Y(26), S); crenel(X(44), Y(26), L(100));
   // torre de menagem (central, mais alta)
-  px(c, ox + 80, gy - 62, 28, 36, S2); crenel(ox + 80, gy - 62, 28);
-  roof(ox + 94, gy - 86, 30, 20);
-  win(ox + 85, gy - 52, 0); win(ox + 99, gy - 52, 1); win(ox + 92, gy - 40, 2);
+  px(c, X(80), Y(62), L(28), 480 - Y(62), S2); crenel(X(80), Y(62), L(28));
+  roof(X(94), Y(86), L(30), L(20));
+  win(X(85), Y(52), 0); win(X(99), Y(52), 1); win(X(92), Y(40), 2);
   // torres laterais
-  [[36, 46, 3], [138, 40, 6]].forEach(([tx, th, wi]) => { px(c, ox + tx, gy - th, 14, th, S2); roof(ox + tx + 7, gy - th - 16, 18, 14); win(ox + tx + 5, gy - th + 10, wi); });
+  [[36, 46, 3], [138, 40, 6]].forEach(([tx, th, wi]) => { px(c, X(tx), Y(th), L(14), 480 - Y(th), S2); roof(X(tx) + L(7), Y(th + 16), L(18), L(14)); win(X(tx) + L(5), Y(th - 10), wi); });
   // serra da frente: picos baixos que passam na frente da base do castelo
   // e descem até o pé da tela (castelo fica "atrás das montanhas")
   const near = [[-20, 30], [36, 44], [96, 26], [ox + 20, 40], [ox + 70, 30], [ox + 128, 42], [350, 34]];
