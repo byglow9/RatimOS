@@ -151,7 +151,7 @@ function sunsetScene(c, anim, layout) {
   // não existe "chão" do castelo para aparecer flutuando entre os picos da
   // serra da frente (que esconde a base).
   const S = '#140513', S2 = '#1f0a1c', ROOF = '#8a0a18', ROOF_LIT = '#d01e24';
-  const K = 1.2, AX = ox + 84, gy = H + 2;                    // âncora: centro da torre de menagem, na base
+  const K = 1.2, AX = ox + 84, gy = H - 8;                    // âncora: centro da torre de menagem, na base
   const X = n => AX + Math.round((n - 94) * K), Y = d => gy - Math.round(d * K), L = n => Math.round(n * K);
   const crenel = (x, y, w) => { for (let k = 0; k < w; k += L(6)) px(c, x + k, y - L(4), L(4), L(4), S); };
   const roof = (cx, y, w, h) => { for (let r = 0; r < h; r++) { const half = Math.ceil((r + 1) * (w / 2) / h); px(c, cx - half, y + r, half, 1, ROOF); px(c, cx, y + r, half, 1, ROOF_LIT); } px(c, cx, y - L(8), 1, L(8), '#d9d0e6'); px(c, cx + 1, y - L(8), L(5), L(3), '#e6010f'); };
