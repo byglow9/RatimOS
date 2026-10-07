@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>008 — Barra de boot casada com a marca</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { background: #0a0a0f; padding: 64px 16px 40px; margin: 0; color: var(--ratimos-text); font-family: var(--font-mono); }
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0a0a0f; border-bottom: 1px solid #2a2a3a; padding: 8px 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .variant-tab { background: #1c1c28; color: #cfcfe0; border: 1px solid #35354a; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-family: var(--font-mono); font-size: 12px; transition: all .15s ease; }
+  .variant-tab:hover { border-color: #6a6a8a; }
+  .variant-tab.active { background: var(--ratimos-accent); color: #fff; border-color: var(--ratimos-accent); }
+  .controls { display: flex; gap: 8px; justify-content: center; margin: 0 0 24px; flex-wrap: wrap; }
+  .controls button { background: #1c1c28; color: #cfcfe0; border: 1px solid #35354a; padding: 6px 12px; cursor: pointer; font-family: var(--font-mono); font-size: 12px; transition: all .15s ease; }
+  .controls button:hover { background: #2a2a3c; }
+  .controls button.on { border-color: var(--ratimos-accent); color: #fff; }
+  .grid { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .cell h3 { font-size: 13px; margin: 0; color: #dcdce8; font-weight: 500; }
+  .cell p { max-width: 320px; font-size: 11.5px; color: #9a9ab0; line-height: 1.5; margin: 0; text-align: center; }
+  .cell.ref h3 { color: #8a8aa0; }
+  canvas.screen { width: 320px; height: 480px; image-rendering: pixelated; background: #000; display: block; }
+  body.zoom canvas.screen { width: 640px; height: 960px; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showVariant('all', this)">Todas lado a lado</button>
+  <button class="variant-tab" onclick="showVariant('a', this)">A: Ameias do castelo</button>
+  <button class="variant-tab" onclick="showVariant('b', this)">B: Hastear a bandeira ★ padrão</button>
+  <button class="variant-tab" onclick="showVariant('c', this)">C: Letreiro que acende</button>
+  <button class="variant-tab" onclick="showVariant('d', this)">D: Fileira de torres</button>
+  <button class="variant-tab" onclick="showVariant('ref', this)">Atual (referência)</button>
+</div>
+
+<div class="controls">
+  <button onclick="restart()">▶ recomeçar boot</button>
+  <button id="sp-n" class="on" onclick="setSpeed(1, this)">velocidade normal</button>
+  <button id="sp-s" onclick="setSpeed(3, this)">câmera lenta</button>
+  <button id="stall" onclick="toggleStall(this)">simular passo lento: off</button>
+  <button id="zoom" onclick="toggleZoom(this)">zoom 2×: off</button>
+</div>
+
+<div class="grid">
+  <div class="cell variant" data-v="a">
+    <h3>A: Ameias do castelo</h3>
+    <canvas class="screen" id="cv-a" width="320" height="480"></canvas>
+    <p>A barra vira o topo de uma muralha com ameias, da largura exata do letreiro, preenchida tijolo a tijolo com o <b>mesmo degradê vertical do "RatimOS"</b> (roxo em cima, laranja embaixo). No fim, a bandeira do logo é fincada na última ameia. Também conversa com o app do castelo.</p>
+  </div>
+
+  <div class="cell variant" data-v="b">
+    <h3>B: Hastear a bandeira</h3>
+    <canvas class="screen" id="cv-b" width="320" height="480"></canvas>
+    <p>Sem barra nenhuma: o mastro da torre fica mais alto e <b>a própria bandeira do logo</b> sobe por ele, 2 px por vez, tremulando. A bandeira chegar no topo é o "pronto". É a variante mais limpa e a que mais usa o símbolo.</p>
+  </div>
+
+  <div class="cell variant" data-v="c">
+    <h3>C: Letreiro que acende</h3>
+    <canvas class="screen" id="cv-c" width="320" height="480"></canvas>
+    <p>O logo começa apagado e o letreiro "RatimOS" acende da esquerda pra direita, com um friso de brilho na borda (como o brilho do logo do Game Boy). A torre acende por último e a bandeira tremula. O progresso é o próprio logo.</p>
+  </div>
+
+  <div class="cell variant" data-v="d">
+    <h3>D: Fileira de torres</h3>
+    <canvas class="screen" id="cv-d" width="320" height="480"></canvas>
+    <p>No estilo dos corações do Zelda: 6 torrinhas do ícone do sistema enchem de baixo pra cima, uma depois da outra, tingidas do roxo ao laranja do letreiro. Cada uma dá um pulinho de 2 px quando completa.</p>
+  </div>
+
+  <div class="cell variant ref" data-v="ref">
+    <h3>Atual (referência, aproximada)</h3>
+    <canvas class="screen" id="cv-ref" width="320" height="480"></canvas>
+    <p>O que está no firmware hoje (splash.c): 25 blocos de 7×14 dentro do bevel 003-C, com degradê horizontal de 4 paradas. Fica aqui só pra comparar.</p>
+  </div>
+</div>
+
+<div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
+  sketch 008 · canvas 1:1 com a tela 320×480 · <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+/* ---------- modelo de progresso: mesmo do firmware (D-02/D-03) ----------
+ * O alvo vem dos passos reais do boot; o mostrado anda 1 unidade por tick
+ * e nunca passa do alvo. Cada variante quantiza em sua própria unidade. */
+const STEPS = [
+  ["montando cartão sd", 500], ["lendo configurações", 300], ["carregando fontes", 700],
+  ["carregando ícones", 600], ["verificando cartas novas", 900], ["preparando jogos", 500],
+  ["abrindo o castelo", 400],
+];
+const UNITS = 240;
+let speed = 1, stall = false, target = 0, shown = 0, stepIdx = 0, timers = [], doneAt = 0;
+
+/* ---------- geometria do logo_256.png (medida em pixel) ---------- */
+const LOGO_X = 32, LOGO_Y = 110;            // logo 256x171 centrado na tela
+const WM_X0 = 34, WM_X1 = 226;              // letreiro: colunas 34..226
+const WM_Y0 = 95, WM_Y1 = 136;              // letreiro: linhas 95..136
+const ROOK_Y1 = 98;                         // torre: linhas 0..98
+const MAST = { x: 125, w: 3, sliceY: 40 };  // mastro: colunas 125..127
+const FLAG = { x: 129, y: 31, w: 29, h: 16 };// bandeira (sem o mastro)
+/* degradê vertical do letreiro, amostrado linha a linha do PNG */
+const WM_GRAD = ['#460196','#460196','#470196','#490299','#5b0197','#75046b','#8d0355','#9a0249',
+                 '#bc0127','#b40239','#d60321','#e90116','#ed0e13','#f81711','#fb230c','#fb3307',
+                 '#fc360b','#fb5302','#f95d06'];
+const gradAt = t => WM_GRAD[Math.min(WM_GRAD.length - 1, Math.max(0, Math.floor(t * WM_GRAD.length)))];
+const H_STOPS = [[0x46,0x01,0x96],[0x9a,0x02,0x49],[0xe9,0x01,0x16],[0xf9,0x5d,0x06]];
+function hgrad(t) { // horizontal, mesmas cores do letreiro
+  const s = Math.min(2.999, t * 3), i = Math.floor(s), f = s - i, a = H_STOPS[i], b = H_STOPS[i + 1];
+  return `rgb(${a.map((v, k) => Math.round(v + (b[k] - v) * f)).join(',')})`;
+}
+
+const logo = new Image(); logo.src = 'logo_256.png';
+const rook = new Image(); rook.src = '../../../assets/icons/system_rook.png'  // 14x20, o mesmo do firmware;
+
+/* ---------- helpers ---------- */
+const frac = () => shown / UNITS;
+const pad3 = n => String(n).padStart(3, '0');
+const pct = () => Math.round(frac() * 100);
+const isDone = () => shown >= UNITS;
+const stepText = () => stepIdx < STEPS.length ? STEPS[stepIdx][0] + '...' : 'pronto!';
+let frame = 0;
+function ctxOf(id) { const c = document.getElementById(id).getContext('2d'); c.imageSmoothingEnabled = false; return c; }
+function clear(c) { c.fillStyle = '#000'; c.fillRect(0, 0, 320, 480); }
+function px(c, x, y, w, h, col) { c.fillStyle = col; c.fillRect(x, y, w, h); }
+function textC(c, s, y, col, size = 8, font = "'Press Start 2P'") {
+  c.font = `${size}px ${font}`; c.fillStyle = col; c.textAlign = 'center'; c.textBaseline = 'top'; c.fillText(s, 160, y);
+}
+function off(w, h) { const o = document.createElement('canvas'); o.width = w; o.height = h; const g = o.getContext('2d'); g.imageSmoothingEnabled = false; return [o, g]; }
+/* bandeira do logo com onda de pixel: cada linha desloca 0/1 px */
+function drawFlag(c, dx, dy, waving = true) {
+  for (let r = 0; r < FLAG.h; r++) {
+    const off1 = waving ? ((Math.floor(r / 3) + frame) % 2) : 0;
+    c.drawImage(logo, FLAG.x, FLAG.y + r, FLAG.w, 1, dx + off1, dy + r, FLAG.w, 1);
+  }
+}
+function drawLogoNoFlag(c, x, y) {
+  c.drawImage(logo, x, y);
+  px(c, x + FLAG.x, y + FLAG.y, FLAG.w + 1, FLAG.h, '#000');
+}
+
+/* ---------- A: ameias ---------- */
+function drawA() {
+  const c = ctxOf('cv-a'); clear(c);
+  c.drawImage(logo, LOGO_X, LOGO_Y);
+  const x0 = LOGO_X + WM_X0, W = WM_X1 - WM_X0 + 1;  // 193 -> usa 192
+  const y0 = LOGO_Y + 171 + 22, MER = 6, BODY = 14, MW = 8, H = MER + BODY;
+  const COLS = 24, CW = 8;                             // 24 tijolos de 8 px
+  const lit = Math.floor(frac() * COLS);
+  // silhueta: ameias + corpo
+  const inShape = (x, y) => y >= MER || (Math.floor(x / MW) % 2 === 0);
+  for (let y = 0; y < H; y++) for (let x = 0; x < COLS * CW; x++) {
+    if (!inShape(x, y)) continue;
+    const on = Math.floor(x / CW) < lit;
+    let col;
+    if (on) {
+      col = gradAt(y / (H - 1));
+      const row = y < MER ? -1 : Math.floor((y - MER) / 5);
+      const jointX = (x + (row % 2 ? 4 : 0)) % CW === CW - 1;
+      if (y === 0 || (y === MER && !(Math.floor(x / MW) % 2 === 0))) col = '#ffb3a0';      // brilho do topo
+      else if (y >= MER && ((y - MER) % 5 === 4 || jointX)) col = '#2a0612';             // argamassa
+    } else {
+      col = (y === 0 || (y === MER && Math.floor(x / MW) % 2)) ? '#33204a' : '#1a0d29';
+    }
+    px(c, x0 + x, y0 + y, 1, 1, col);
+  }
+  // contorno de 1 px
+  c.fillStyle = '#3a2252';
+  for (let y = -1; y <= H; y++) for (let x = -1; x <= COLS * CW; x++) {
+    const inside = x >= 0 && x < COLS * CW && y >= 0 && y < H && inShape(x, y);
+    if (inside) continue;
+    const n = [[1,0],[-1,0],[0,1],[0,-1]].some(([dx, dy]) => { const X = x + dx, Y = y + dy; return X >= 0 && X < COLS * CW && Y >= 0 && Y < H && inShape(X, Y); });
+    if (n) c.fillRect(x0 + x, y0 + y, 1, 1);
+  }
+  if (isDone()) drawFlag(c, x0 + COLS * CW - MW - 2, y0 - FLAG.h - 2);
+  if (isDone()) { px(c, x0 + COLS * CW - MW, y0 - FLAG.h - 2, 2, FLAG.h + 2, '#d9d0e6'); }
+  textC(c, isDone() ? 'pronto!' : 'construindo ' + pad3(Math.round(lit / COLS * 100)) + '%', y0 + H + 16, '#a997ba');
+  textC(c, stepText(), y0 + H + 32, '#5e4d72', 10, "'JetBrains Mono'");
+}
+
+/* ---------- B: hastear a bandeira ---------- */
+function drawB() {
+  const c = ctxOf('cv-b'); clear(c);
+  const EXT = 64, top = LOGO_Y - 24;
+  // Mastro remontado sem emendas: ponta (linhas 0..30) + sombra sob a ponta
+  // (linhas 31..32, só as colunas do mastro) + 1 linha do mastro esticada até
+  // o telhado + resto do logo a partir da linha 47 (onde o mastro entra na torre).
+  const BASE = 47;
+  c.drawImage(logo, 0, 0, 256, FLAG.y, LOGO_X, top, 256, FLAG.y);
+  c.drawImage(logo, MAST.x, FLAG.y, MAST.w, 2, LOGO_X + MAST.x, top + FLAG.y, MAST.w, 2);
+  c.drawImage(logo, MAST.x, MAST.sliceY, MAST.w, 1, LOGO_X + MAST.x, top + FLAG.y + 2, MAST.w, BASE - FLAG.y - 2 + EXT);
+  c.drawImage(logo, 0, BASE, 256, 171 - BASE, LOGO_X, top + BASE + EXT, 256, 171 - BASE);
+  // bandeira sobe de 2 em 2 px
+  const travel = EXT, stepPx = 2;
+  const rise = Math.floor(frac() * travel / stepPx) * stepPx;
+  drawFlag(c, LOGO_X + FLAG.x, top + FLAG.y + EXT - rise, true);
+  const ty = top + 171 + EXT + 18;
+  textC(c, isDone() ? 'pronto!' : pad3(pct()) + '%', ty, '#a997ba');
+  textC(c, stepText(), ty + 16, '#5e4d72', 10, "'JetBrains Mono'");
+}
+
+/* ---------- C: letreiro que acende ---------- */
+const [cOff, cG] = off(256, 171);
+function drawC() {
+  const c = ctxOf('cv-c'); clear(c);
+  const done = isDone();
+  // base apagada
+  // o PNG é opaco (fundo preto), então "apagar" = desenhar com alpha baixo sobre preto
+  cG.fillStyle = '#000'; cG.fillRect(0, 0, 256, 171);
+  cG.globalAlpha = 0.17; done ? cG.drawImage(logo, 0, 0) : drawLogoNoFlag(cG, 0, 0); cG.globalAlpha = 1;
+  const STEP = 4, W = WM_X1 - WM_X0 + 1;
+  const edge = WM_X0 + Math.floor(frac() * W / STEP) * STEP;
+  // parte acesa do letreiro = pixels reais do logo
+  cG.drawImage(logo, WM_X0, WM_Y0, edge - WM_X0, WM_Y1 - WM_Y0 + 1, WM_X0, WM_Y0, edge - WM_X0, WM_Y1 - WM_Y0 + 1);
+  if (done) { cG.drawImage(logo, 0, 0); }
+  c.drawImage(cOff, LOGO_X, LOGO_Y);
+  // friso de brilho de 2 px só onde há letra
+  if (!done && edge < WM_X1) {
+    // brilho: preto continua preto, letra vira quase branca
+    c.filter = 'brightness(3.2) saturate(0.4)';
+    c.drawImage(logo, edge, WM_Y0, 2, WM_Y1 - WM_Y0 + 1, LOGO_X + edge, LOGO_Y + WM_Y0, 2, WM_Y1 - WM_Y0 + 1);
+    c.filter = 'none';
+  }
+  if (done) { px(c, LOGO_X + FLAG.x, LOGO_Y + FLAG.y, FLAG.w + 1, FLAG.h, '#000'); drawFlag(c, LOGO_X + FLAG.x, LOGO_Y + FLAG.y); }
+  const ty = LOGO_Y + 171 + 22;
+  textC(c, done ? 'pronto!' : 'carregando ' + pad3(pct()) + '%', ty, '#a997ba');
+  textC(c, stepText(), ty + 16, '#5e4d72', 10, "'JetBrains Mono'");
+}
+
+/* ---------- D: fileira de torres ---------- */
+const N_ROOKS = 6, RW = 14, RH = 20, SC = 2, GAP = 7;
+const ROOK_TINT = Array.from({ length: N_ROOKS }, (_, i) => hgrad(i / (N_ROOKS - 1)));
+const hopAt = new Array(N_ROOKS).fill(-1);
+let lastFull = 0;
+function rookSprite(fill, tint) {           // fill: linhas acesas (0..RH) de baixo pra cima
+  const [o, g] = off(RW, RH);
+  g.drawImage(rook, 0, 0);
+  g.globalCompositeOperation = 'source-atop';
+  g.fillStyle = '#2e1a46'; g.fillRect(0, 0, RW, RH - fill);
+  g.fillStyle = tint; g.globalAlpha = 0.6; g.fillRect(0, RH - fill, RW, fill); g.globalAlpha = 1;
+  if (fill > 0 && fill < RH) { g.fillStyle = 'rgba(255,255,255,0.7)'; g.fillRect(0, RH - fill, RW, 1); }
+  return o;
+}
+function drawD() {
+  const c = ctxOf('cv-d'); clear(c);
+  c.drawImage(logo, LOGO_X, LOGO_Y);
+  const rows = Math.floor(frac() * N_ROOKS * RH);
+  const full = Math.floor(rows / RH);
+  for (let i = lastFull; i < full; i++) hopAt[i] = performance.now();
+  lastFull = full;
+  const totalW = N_ROOKS * RW * SC + (N_ROOKS - 1) * GAP, x0 = 160 - totalW / 2, y0 = LOGO_Y + 171 + 18;
+  for (let i = 0; i < N_ROOKS; i++) {
+    const f = Math.max(0, Math.min(RH, rows - i * RH));
+    const hop = hopAt[i] > 0 && performance.now() - hopAt[i] < 140 * speed ? 2 : 0;
+    c.drawImage(rookSprite(f, ROOK_TINT[i]), x0 + i * (RW * SC + GAP), y0 - hop, RW * SC, RH * SC);
+  }
+  const ty = y0 + RH * SC + 14;
+  textC(c, isDone() ? 'pronto!' : 'carregando ' + pad3(pct()) + '%', ty, '#a997ba');
+  textC(c, stepText(), ty + 16, '#5e4d72', 10, "'JetBrains Mono'");
+}
+
+/* ---------- referência: barra atual ---------- */
+function drawRef() {
+  const c = ctxOf('cv-ref'); clear(c);
+  c.drawImage(logo, LOGO_X, LOGO_Y);
+  const N = 25, BW = 7, BH = 14, G = 1, IN = 5;
+  const W = N * BW + (N - 1) * G + 2 * IN, H = BH + 2 * IN, x0 = 160 - Math.floor(W / 2), y0 = LOGO_Y + 171 + 18;
+  px(c, x0, y0, W, H, '#0d0515'); px(c, x0 + 2, y0 + 2, W - 4, H - 4, 'rgba(255,255,255,0.18)');
+  px(c, x0 + 3, y0 + 3, W - 6, H - 6, '#2a123f');
+  const lit = Math.floor(frac() * N);
+  for (let i = 0; i < N; i++) {
+    const bx = x0 + IN + i * (BW + G), by = y0 + IN;
+    if (i < lit) { px(c, bx, by, BW, BH, hgrad(i / (N - 1))); px(c, bx, by, BW, 1, 'rgba(255,255,255,0.4)'); px(c, bx, by + BH - 1, BW, 1, 'rgba(0,0,0,0.5)'); }
+    else { px(c, bx, by, BW, BH, '#1a0b29'); px(c, bx, by, BW, 1, '#0d0515'); }
+  }
+  textC(c, 'carregando ' + pad3(Math.round(lit / N * 100)) + '%', y0 + H + 12, '#a997ba', 13, "'JetBrains Mono'");
+}
+
+/* ---------- laço ---------- */
+function restart() {
+  timers.forEach(clearTimeout); timers = [];
+  target = 0; shown = 0; stepIdx = 0; doneAt = 0; lastFull = 0; hopAt.fill(-1);
+  runStep();
+}
+function runStep() {
+  if (stepIdx >= STEPS.length) return;
+  let [, dur] = STEPS[stepIdx];
+  if (stall && stepIdx === 4) dur *= 5;
+  timers.push(setTimeout(() => { stepIdx++; target = stepIdx / STEPS.length; runStep(); }, dur * speed));
+}
+let lastTick = 0, lastWave = 0;
+function loop(t) {
+  if (t - lastTick > 12 * speed) {
+    shown = Math.min(Math.floor(target * UNITS), shown + Math.max(1, Math.floor((t - lastTick) / (12 * speed))));
+    lastTick = t;
+    if (isDone() && !doneAt) doneAt = t;
+    if (doneAt && t - doneAt > 2600 * speed) restart();
+  }
+  if (t - lastWave > 260) { lastWave = t; frame ^= 1; }
+  if (logo.complete && rook.complete) { drawA(); drawB(); drawC(); drawD(); drawRef(); }
+  requestAnimationFrame(loop);
+}
+function setSpeed(s, el) { speed = s; document.querySelectorAll('#sp-n,#sp-s').forEach(b => b.classList.remove('on')); el.classList.add('on'); restart(); }
+function toggleStall(el) { stall = !stall; el.textContent = 'simular passo lento: ' + (stall ? 'on' : 'off'); el.classList.toggle('on', stall); restart(); }
+function toggleZoom(el) { const z = document.body.classList.toggle('zoom'); el.textContent = 'zoom 2×: ' + (z ? 'on' : 'off'); el.classList.toggle('on', z); }
+function showVariant(v, el) {
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.variant').forEach(c => c.style.display = (v === 'all' || c.dataset.v === v) ? '' : 'none');
+}
+Promise.all([document.fonts.load("8px 'Press Start 2P'"), document.fonts.load("10px 'JetBrains Mono'")]).finally(() => { restart(); requestAnimationFrame(loop); });
+</script>
+</body>
+</html>

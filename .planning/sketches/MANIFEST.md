@@ -33,6 +33,7 @@ essa é a causa provável de "tive que clicar umas 10 vezes" (G-02.1-1). Fix: `l
 | 002 | icon-no-badge | Ícone solto (sem badge vermelho) fica legível na lista e na home? | **B** — solto + sombra pixel (sem blur) | icon |
 | 003 | card-layers (v2) | Card sem cantos arredondados, levemente transparente — qual das 5? | **C** — moldura bevel retrô | card, typography |
 | 004 | header-breadcrumb | Header tipo explorador (./home/jogos/conexo) + relógio, fonte melhor | **A** — refinado: logo peão-torre, bateria pixel, sem emoji, sem piscar | header, navigation |
+| 008 | boot-loading-marca | Qual barra de boot conversa com o símbolo (torre + bandeira + letreiro em degradê)? | **B** (hastear a bandeira) é a padrão; A, C e D viram opções em Configurações | boot, splash, loading, brand |
 
 ## Locked — direção final (2026-09-11)
 
