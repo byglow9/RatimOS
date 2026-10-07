@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>009 — Fundo da tela de boot</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { background: #0a0a0f; padding: 64px 16px 40px; margin: 0; color: var(--ratimos-text); font-family: var(--font-mono); }
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0a0a0f; border-bottom: 1px solid #2a2a3a; padding: 8px 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .variant-tab { background: #1c1c28; color: #cfcfe0; border: 1px solid #35354a; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-family: var(--font-mono); font-size: 12px; transition: all .15s ease; }
+  .variant-tab:hover { border-color: #6a6a8a; }
+  .variant-tab.active { background: var(--ratimos-accent); color: #fff; border-color: var(--ratimos-accent); }
+  .controls { display: flex; gap: 8px; justify-content: center; margin: 0 0 24px; flex-wrap: wrap; }
+  .controls button { background: #1c1c28; color: #cfcfe0; border: 1px solid #35354a; padding: 6px 12px; cursor: pointer; font-family: var(--font-mono); font-size: 12px; transition: all .15s ease; }
+  .controls button:hover { background: #2a2a3c; }
+  .controls button.on { border-color: var(--ratimos-accent); color: #fff; }
+  .grid { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .cell h3 { font-size: 13px; margin: 0; color: #dcdce8; font-weight: 500; }
+  .cell p { max-width: 320px; font-size: 11.5px; color: #9a9ab0; line-height: 1.5; margin: 0; text-align: center; }
+  .cell.ref h3 { color: #8a8aa0; }
+  canvas.screen { width: 320px; height: 480px; image-rendering: pixelated; background: #000; display: block; }
+  body.zoom canvas.screen { width: 640px; height: 960px; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showVariant('all', this)">Todas lado a lado</button>
+  <button class="variant-tab" onclick="showVariant('a', this)">A: Céu estrelado</button>
+  <button class="variant-tab" onclick="showVariant('b', this)">B: Degradê do sistema</button>
+  <button class="variant-tab" onclick="showVariant('c', this)">C: Pôr do sol no castelo</button>
+  <button class="variant-tab" onclick="showVariant('d', this)">D: Tabuleiro de xadrez</button>
+  <button class="variant-tab" onclick="showVariant('ref', this)">Preto (atual)</button>
+</div>
+
+<div class="controls">
+  <button onclick="restart()">▶ recomeçar boot</button>
+  <button id="sp-n" class="on" onclick="setSpeed(1, this)">velocidade normal</button>
+  <button id="sp-s" onclick="setSpeed(3, this)">câmera lenta</button>
+  <button id="zoom" onclick="toggleZoom(this)">zoom 2×: off</button>
+</div>
+
+<div class="grid">
+  <div class="cell variant" data-v="a">
+    <h3>A: Céu estrelado</h3>
+    <canvas class="screen" id="cv-a" width="320" height="480"></canvas>
+    <p>Céu noturno roxo bem escuro com estrelinhas de 1 px piscando em tempos diferentes, umas poucas em cruz de 3 px e uma lua pixel. A bandeira sobe "à noite". É o que menos briga com o logo.</p>
+  </div>
+  <div class="cell variant" data-v="b">
+    <h3>B: Degradê do sistema</h3>
+    <canvas class="screen" id="cv-b" width="320" height="480"></canvas>
+    <p>O mesmo fundo com dither e scanlines da home (<code>bg_dither.png</code>), escurecido 55% para o logo ainda saltar. O boot já entra "dentro" do sistema, e a passagem para a home fica sem corte.</p>
+  </div>
+  <div class="cell variant" data-v="c">
+    <h3>C: Pôr do sol no castelo</h3>
+    <canvas class="screen" id="cv-c" width="320" height="480"></canvas>
+    <p>Céu em faixas (roxo → magenta → laranja, as cores do letreiro), um sol pixel e, embaixo, a silhueta de uma muralha com torres e colinas. A torre do logo vira a torre mais alta do castelo.</p>
+  </div>
+  <div class="cell variant" data-v="d">
+    <h3>D: Tabuleiro de xadrez</h3>
+    <canvas class="screen" id="cv-d" width="320" height="480"></canvas>
+    <p>A torre é uma peça de xadrez: um tabuleiro roxo bem escuro, em perspectiva, que some no horizonte e desliza devagar. Lembra os fundos "synthwave" e os menus de jogos de 16 bits.</p>
+  </div>
+  <div class="cell variant ref" data-v="ref">
+    <h3>Preto (atual)</h3>
+    <canvas class="screen" id="cv-ref" width="320" height="480"></canvas>
+    <p>A variante B do sketch 008, como está decidida, com fundo preto puro, para comparar.</p>
+  </div>
+</div>
+
+<div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
+  sketch 009 · canvas 1:1 com a tela 320×480 · <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+/* Boot B do sketch 008 (hastear a bandeira) idêntico; só o fundo muda.
+ * logo_256_alpha.png = logo_256.png com o preto (max(r,g,b) < 14) transparente:
+ * o logo do firmware hoje tem fundo preto opaco, então qualquer fundo exige
+ * esse recorte (ou um logo com alfa). */
+const STEPS = [
+  ["montando cartão sd", 500], ["lendo configurações", 300], ["carregando fontes", 700],
+  ["carregando ícones", 600], ["verificando cartas novas", 900], ["preparando jogos", 500],
+  ["abrindo o castelo", 400],
+];
+const UNITS = 240;
+let speed = 1, target = 0, shown = 0, stepIdx = 0, timers = [], doneAt = 0, frame = 0, now = 0;
+const LOGO_X = 32, LOGO_Y = 110;
+const MAST = { x: 125, w: 3, sliceY: 40 }, FLAG = { x: 129, y: 31, w: 29, h: 16 };
+
+const logo = new Image(); logo.src = 'logo_256_alpha.png';
+const sysBg = new Image(); sysBg.src = '../../../assets/backgrounds/bg_dither.png';
+
+const frac = () => shown / UNITS, isDone = () => shown >= UNITS;
+const pad3 = n => String(n).padStart(3, '0');
+const stepText = () => stepIdx < STEPS.length ? STEPS[stepIdx][0] + '...' : 'pronto!';
+function px(c, x, y, w, h, col) { c.fillStyle = col; c.fillRect(x, y, w, h); }
+function textC(c, s, y, col, size, font) {
+  c.font = `${size}px ${font}`; c.textAlign = 'center'; c.textBaseline = 'top';
+  c.fillStyle = 'rgba(0,0,0,0.75)'; c.fillText(s, 161, y + 1);   // sombra dura de 1 px p/ ler sobre fundo
+  c.fillStyle = col; c.fillText(s, 160, y);
+}
+/* hash determinístico p/ estrelas */
+function rnd(i) { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+
+/* ---------- boot B (sketch 008) ---------- */
+function drawFlag(c, dx, dy) {
+  for (let r = 0; r < FLAG.h; r++) {
+    const o = (Math.floor(r / 3) + frame) % 2;
+    c.drawImage(logo, FLAG.x, FLAG.y + r, FLAG.w, 1, dx + o, dy + r, FLAG.w, 1);
+  }
+}
+function drawBoot(c, textCol = '#a997ba', subCol = '#6e5c84') {
+  const EXT = 64, top = LOGO_Y - 24, BASE = 47;
+  c.drawImage(logo, 0, 0, 256, FLAG.y, LOGO_X, top, 256, FLAG.y);
+  c.drawImage(logo, MAST.x, FLAG.y, MAST.w, 2, LOGO_X + MAST.x, top + FLAG.y, MAST.w, 2);
+  c.drawImage(logo, MAST.x, MAST.sliceY, MAST.w, 1, LOGO_X + MAST.x, top + FLAG.y + 2, MAST.w, BASE - FLAG.y - 2 + EXT);
+  c.drawImage(logo, 0, BASE, 256, 171 - BASE, LOGO_X, top + BASE + EXT, 256, 171 - BASE);
+  const rise = Math.floor(frac() * EXT / 2) * 2;
+  drawFlag(c, LOGO_X + FLAG.x, top + FLAG.y + EXT - rise);
+  const ty = top + 171 + EXT + 18;
+  textC(c, isDone() ? 'pronto!' : pad3(Math.round(frac() * 100)) + '%', ty, textCol, 8, "'Press Start 2P'");
+  textC(c, stepText(), ty + 16, subCol, 10, "'JetBrains Mono'");
+}
+
+/* ---------- fundos ---------- */
+function bgStars(c) {
+  // céu: 3 faixas duras de roxo bem escuro
+  px(c, 0, 0, 320, 480, '#07030f'); px(c, 0, 160, 320, 160, '#0b0518'); px(c, 0, 320, 320, 160, '#110822');
+  for (let i = 0; i < 70; i++) {
+    const x = Math.floor(rnd(i) * 320), y = Math.floor(rnd(i + 99) * 480);
+    const ph = Math.floor(now / (500 + rnd(i + 7) * 900) + i) % 4;     // pisca em tempos diferentes
+    if (ph === 0) continue;
+    const big = rnd(i + 3) > 0.9, col = ph === 3 ? '#f5f2f8' : (rnd(i + 5) > .5 ? '#a997ba' : '#6a4f8e');
+    px(c, x, y, 1, 1, col);
+    if (big && ph >= 2) { px(c, x - 1, y, 1, 1, '#6a4f8e'); px(c, x + 1, y, 1, 1, '#6a4f8e'); px(c, x, y - 1, 1, 1, '#6a4f8e'); px(c, x, y + 1, 1, 1, '#6a4f8e'); }
+  }
+  // lua pixel (círculo por linhas) com crateras
+  const mx = 262, my = 56, r = 13;
+  for (let y = -r; y <= r; y++) { const w = Math.floor(Math.sqrt(r * r - y * y)); px(c, mx - w, my + y, 2 * w + 1, 1, '#d9cfe6'); }
+  for (let y = -r; y <= r; y++) { const w = Math.floor(Math.sqrt(r * r - y * y)); px(c, mx + w - 3, my + y, 3, 1, '#a997ba'); }
+  px(c, mx - 5, my - 4, 3, 3, '#b8abc9'); px(c, mx + 2, my + 4, 4, 3, '#b8abc9'); px(c, mx - 3, my + 6, 2, 2, '#b8abc9');
+}
+function bgSystem(c) {
+  c.drawImage(sysBg, 0, 0);
+  px(c, 0, 0, 320, 480, 'rgba(0,0,0,0.55)');
+}
+function bgSunset(c) {
+  // faixas escuras atrás do letreiro, quentes só perto do horizonte (contraste)
+  const bands = ['#0c0420', '#12062a', '#1c0a3d', '#26093f', '#2e0c4a', '#4a0f55', '#7a1560', '#c81f4c', '#e8630f'];
+  const bh = 44;
+  bands.forEach((col, i) => px(c, 0, i * bh, 320, bh, col));
+  // dither de 2 linhas entre faixas
+  for (let i = 1; i < bands.length; i++) for (let x = 0; x < 320; x += 2) { px(c, x, i * bh - 1, 1, 1, bands[i]); px(c, x + 1, i * bh, 1, 1, bands[i - 1]); }
+  // sol pixel cortado pelo horizonte
+  const sx = 70, sy = 400, r = 22;
+  for (let y = -r; y <= 0; y++) { const w = Math.floor(Math.sqrt(r * r - y * y)); if ((y & 3) !== 3 || y > -6) px(c, sx - w, sy + y, 2 * w + 1, 1, '#ffb347'); }
+  // colinas
+  for (let x = 0; x < 320; x++) { const h = 398 + Math.round(8 * Math.sin(x / 37) + 5 * Math.sin(x / 13 + 1)); px(c, x, h, 1, 480 - h, '#2a0c33'); }
+  // muralha com ameias + torres (silhueta)
+  const wy = 446;
+  px(c, 0, wy, 320, 120, '#14061c');
+  for (let x = 0; x < 320; x += 12) px(c, x, wy - 6, 6, 6, '#14061c');
+  [[18, 26], [104, 34], [212, 30], [290, 22]].forEach(([tx, th]) => {
+    px(c, tx, wy - th, 22, th, '#14061c');
+    for (let k = 0; k < 4; k++) px(c, tx + k * 6, wy - th - 5, 4, 5, '#14061c');
+    px(c, tx + 9, wy - th + 12, 4, 7, (Math.floor(now / 700) + tx) % 3 ? '#e8a020' : '#a06010');  // janelinha acesa
+  });
+  // escurece só a área do texto/logo p/ contraste
+  px(c, 0, 0, 320, 480, 'rgba(0,0,0,0.2)');
+}
+function bgChess(c) {
+  px(c, 0, 0, 320, 480, '#06020c');
+  const hy = 120, scroll = (now / 40) % 1;           // horizonte
+  // céu levemente roxo acima do horizonte
+  for (let y = 0; y < hy; y++) if (y > hy - 30) px(c, 0, y, 320, 1, `rgba(78,34,119,${((y - hy + 30) / 30) * 0.35})`);
+  // linhas do tabuleiro em perspectiva
+  for (let y = hy; y < 480; y++) {
+    const z = 4000 / (y - hy + 8);                   // profundidade
+    const row = Math.floor(z / 40 - scroll);
+    const fade = Math.min(1, (y - hy) / 160);
+    const half = 1 + (y - hy) / 26;                  // largura da casa na tela
+    const off = 160 % (2 * half);
+    for (let x = -half * 2; x < 320; x += half) {
+      const col = Math.floor((x - 160) / half);
+      if ((col + row) & 1) px(c, Math.round(x + off - half), y, Math.ceil(half), 1, `rgba(78,34,119,${0.55 * fade})`);
+    }
+  }
+  px(c, 0, hy, 320, 1, '#4e2277');
+  px(c, 0, 0, 320, 480, 'rgba(0,0,0,0.25)');
+}
+
+const VARIANTS = [
+  ['cv-a', bgStars], ['cv-b', bgSystem], ['cv-c', bgSunset], ['cv-d', bgChess], ['cv-ref', c => px(c, 0, 0, 320, 480, '#000')],
+];
+function drawAll() {
+  for (const [id, bg] of VARIANTS) {
+    const c = document.getElementById(id).getContext('2d'); c.imageSmoothingEnabled = false;
+    bg(c); drawBoot(c, id === 'cv-ref' ? '#a997ba' : '#d8cce6', id === 'cv-ref' ? '#5e4d72' : '#a997ba');
+  }
+}
+
+/* ---------- laço (mesmo modelo de progresso do 008) ---------- */
+function restart() {
+  timers.forEach(clearTimeout); timers = []; target = 0; shown = 0; stepIdx = 0; doneAt = 0; runStep();
+}
+function runStep() {
+  if (stepIdx >= STEPS.length) return;
+  timers.push(setTimeout(() => { stepIdx++; target = stepIdx / STEPS.length; runStep(); }, STEPS[stepIdx][1] * speed));
+}
+let lastTick = 0, lastWave = 0;
+function loop(t) {
+  now = t;
+  if (t - lastTick > 12 * speed) {
+    shown = Math.min(Math.floor(target * UNITS), shown + Math.max(1, Math.floor((t - lastTick) / (12 * speed))));
+    lastTick = t;
+    if (isDone() && !doneAt) doneAt = t;
+    if (doneAt && t - doneAt > 2600 * speed) restart();
+  }
+  if (t - lastWave > 260) { lastWave = t; frame ^= 1; }
+  if (logo.complete && sysBg.complete) drawAll();
+  requestAnimationFrame(loop);
+}
+function setSpeed(s, el) { speed = s; document.querySelectorAll('#sp-n,#sp-s').forEach(b => b.classList.remove('on')); el.classList.add('on'); restart(); }
+function toggleZoom(el) { const z = document.body.classList.toggle('zoom'); el.textContent = 'zoom 2×: ' + (z ? 'on' : 'off'); el.classList.toggle('on', z); }
+function showVariant(v, el) {
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.variant').forEach(c => c.style.display = (v === 'all' || c.dataset.v === v) ? '' : 'none');
+}
+Promise.all([document.fonts.load("8px 'Press Start 2P'"), document.fonts.load("10px 'JetBrains Mono'")]).finally(() => { restart(); requestAnimationFrame(loop); });
+</script>
+</body>
+</html>

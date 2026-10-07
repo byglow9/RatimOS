@@ -34,6 +34,8 @@ essa é a causa provável de "tive que clicar umas 10 vezes" (G-02.1-1). Fix: `l
 | 003 | card-layers (v2) | Card sem cantos arredondados, levemente transparente — qual das 5? | **C** — moldura bevel retrô | card, typography |
 | 004 | header-breadcrumb | Header tipo explorador (./home/jogos/conexo) + relógio, fonte melhor | **A** — refinado: logo peão-torre, bateria pixel, sem emoji, sem piscar | header, navigation |
 | 008 | boot-loading-marca | Qual barra de boot conversa com o símbolo (torre + bandeira + letreiro em degradê)? | **B** (hastear a bandeira) é a padrão; A, C e D viram opções em Configurações | boot, splash, loading, brand |
+| 009 | boot-fundo | O que vai atrás do logo no boot 008-B sem tirar o destaque da marca? | incorporado ao 010 (temas) | boot, splash, background |
+| 010 | temas | Tema (fundo do boot + fundo da home) e carregamento (animação do 008) escolhidos à parte em config | **4 temas** (Clássico padrão, Noite, Castelo, Xadrez) × 4 carregamentos, escolhidos à parte | theme, boot, background, settings |
 
 ## Locked — direção final (2026-09-11)
 
