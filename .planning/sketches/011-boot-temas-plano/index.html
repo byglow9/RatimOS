@@ -281,10 +281,12 @@ const BOOTS = {
   letreiro: { nome: 'letreiro que acende', draw(c, b) {
     const L = IMG.logo, done = b.done();
     c.globalAlpha = done ? 1 : 0.17; c.drawImage(L, LOGO_X, LOGO_Y); c.globalAlpha = 1;
-    const STEP = 4, W = WM_X1 - WM_X0 + 1, edge = WM_X0 + Math.floor(b.frac() * W / STEP) * STEP, h = WM_Y1 - WM_Y0 + 1;
+    // a varredura acende a coluna INTEIRA do logo (letreiro + torre + bandeira),
+    // não só as linhas do letreiro
+    const STEP = 4, W = WM_X1 - WM_X0 + 1, edge = WM_X0 + Math.floor(b.frac() * W / STEP) * STEP, h = 171;
     if (!done) {
-      if (edge > WM_X0) c.drawImage(L, WM_X0, WM_Y0, edge - WM_X0, h, LOGO_X + WM_X0, LOGO_Y + WM_Y0, edge - WM_X0, h);
-      if (edge < WM_X1) { c.filter = 'brightness(3.2) saturate(0.4)'; c.drawImage(L, edge, WM_Y0, 2, h, LOGO_X + edge, LOGO_Y + WM_Y0, 2, h); c.filter = 'none'; }
+      if (edge > WM_X0) c.drawImage(L, 0, 0, edge, h, LOGO_X, LOGO_Y, edge, h);
+      if (edge < WM_X1) { c.filter = 'brightness(3.2) saturate(0.4)'; c.drawImage(L, edge, 0, 2, h, LOGO_X + edge, LOGO_Y, 2, h); c.filter = 'none'; }
     }
     statusText(c, b, LOGO_Y + 171 + 22, 'carregando ');
   }},
