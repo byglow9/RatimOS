@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: "02.1"
 current_phase_name: Visual Identity & Games (Simulator-Buildable Scope)
 status: executing
-stopped_at: Completed 02.1-13-PLAN.md
-last_updated: "2026-10-06T13:45:16.083Z"
+stopped_at: Completed 02.1-14-PLAN.md
+last_updated: "2026-10-07T14:30:15.988Z"
 last_activity: 2026-10-06
 last_activity_desc: Phase 02.1 execution resumed (wave continue)
-state_head: ed7a16e3738a986ecb99be3c0ebdd3f1e9c9c765
+state_head: b0f60f5779b694c7cf3d4dfb4cbd00f44dbf5a60
 progress:
   total_phases: 10
   completed_phases: 2
-  total_plans: 22
-  completed_plans: 20
+  total_plans: 23
+  completed_plans: 21
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-26)
 ## Current Position
 
 Phase: 02.1 (Visual Identity & Games (Simulator-Buildable Scope)) — EXECUTING
-Plan: 2 of 12
+Plan: 3 of 12
 Status: Ready to execute
 Last activity: 2026-10-06 — Phase 02.1 execution resumed (wave continue)
 
@@ -73,6 +73,7 @@ Progress: [████████░░] 84%
 | Phase 02.1 P04 | ~40min | 3 tasks | 6 files |
 | Phase 02.1 P10 | 45min | 3 tasks | 8 files |
 | Phase 02.1 P13 | 89min | 4 tasks | 9 files |
+| Phase 02.1 P14 | ~70min + checkpoint iterations | 5 tasks | 61 files |
 
 ## Accumulated Context
 
@@ -117,6 +118,11 @@ Recent decisions affecting current work:
 - [Phase ?]: 02.1-10: battery charge-fill uses RATIMOS_COLOR_TEXT (not a game-semantic color) -- theme.h forbids using gameplay-feedback colors as chrome
 - [Phase 02.1]: 02.1-13: 003-C bevel frieze drawn in LV_EVENT_DRAW_POST / DRAW_TASK_ADDED callbacks, never as a child lv_obj
 - [Phase 02.1]: 02.1-13: all clickable chrome goes through ratimos_button_create(); selection via ratimos_button_set_selected() never touches the bevel frame
+- [Phase 02.1]: 02.1-14: JetBrains Mono 10/11/12 + Press Start 2P 8 are the type scale; LV_FONT_DEFAULT = mono_12 with Montserrat 14 as .fallback for LV_SYMBOL_*
+- [Phase 02.1]: 02.1-14: Sketch 001-C background is a 320x480 RGB565 const drawn 1:1 (no stretch, heap unchanged); splash is opaque black
+- [Phase 02.1]: 02.1-14: Layout budgets are theme.h constants (home tile 80/gap 10, list row 48/gap 14, content inner 386px); test_game_screens enforces every game fits without scrolling
+- [Phase 02.1]: 02.1-14: Overlays/confirm dialogs use the shared ratimos_modal_*; games use ratimos_app_shell_create_with_back to return to ./home/jogos
+- [Phase 02.1]: 02.1-14: Splash progress bar and 'RATIMOS' topbar brand are superseded by 02.1-16 (sketches 008-011: themed boot, configurable loading, brand 'RatimOS')
 
 ### Pending Todos
 
@@ -141,6 +147,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-06T13:45:15.997Z
-Stopped at: Completed 02.1-13-PLAN.md
+Last session: 2026-10-07T14:30:15.904Z
+Stopped at: Completed 02.1-14-PLAN.md
 Resume file: None
