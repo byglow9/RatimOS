@@ -55,8 +55,8 @@ static const char * const s_game_descriptions[RATIMOS_GAME_COUNT] = {
     "agrupe 16 palavras em 4 categorias",
 };
 
-/* "continuar · " + a maior descricao, com folga. */
-#define RATIMOS_JOGOS_SUBTITLE_LEN 96
+/* Titulo + " #recolor > continuar#", com folga. */
+#define RATIMOS_JOGOS_TITLE_LEN 64
 
 static const lv_event_cb_t s_game_callbacks[RATIMOS_GAME_COUNT] = {
     ratimos_sudoku_show,
@@ -75,7 +75,8 @@ static const lv_event_cb_t s_game_callbacks[RATIMOS_GAME_COUNT] = {
  * chamador -- mesmo padrao ja usado por termo.c pro titulo da sectionbar.
  * Ficam NULL quando a tela cai no estado vazio defensivo (n == 0).
  */
-static lv_obj_t * s_game_subtitle_labels[RATIMOS_GAME_COUNT] = { NULL };
+static lv_obj_t * s_game_title_labels[RATIMOS_GAME_COUNT] = { NULL };
+static char s_game_titles[RATIMOS_GAME_COUNT][RATIMOS_JOGOS_TITLE_LEN];
 
 static lv_obj_t * build_jogos_screen(void)
 {
@@ -102,7 +103,9 @@ static lv_obj_t * build_jogos_screen(void)
 
             if (i < RATIMOS_GAME_COUNT) {
                 lv_obj_t * text_col = lv_obj_get_child(row, 1);
-                s_game_subtitle_labels[i] = lv_obj_get_child(text_col, 1);
+                s_game_title_labels[i] = lv_obj_get_child(text_col, 0);
+                lv_label_set_recolor(s_game_title_labels[i], true);
+                snprintf(s_game_titles[i], sizeof(s_game_titles[i]), "%s", games[i].title);
             }
         }
     }
@@ -121,17 +124,20 @@ static lv_obj_t * build_jogos_screen(void)
  */
 static void refresh_jogos_rows(void)
 {
+    /* "continuar" vai na linha do titulo (fonte pixel, esmaecido), nao na
+     * descricao: com o prefixo "continuar · " a descricao passava das ~40
+     * colunas da linha e era cortada com "..." (checkpoint 02.1-14). Assim
+     * a descricao fica sozinha na 2a linha e cabe inteira. */
     for (size_t i = 0; i < RATIMOS_GAME_COUNT; i++) {
-        if (!s_game_subtitle_labels[i]) {
+        if (!s_game_title_labels[i]) {
             continue;
         }
-        bool has_progress = ratimos_storage_has_game_state((ratimos_game_kind_t) i);
-        if (has_progress) {
-            char buf[RATIMOS_JOGOS_SUBTITLE_LEN];
-            snprintf(buf, sizeof(buf), "continuar · %s", s_game_descriptions[i]);
-            lv_label_set_text(s_game_subtitle_labels[i], buf);
+        if (ratimos_storage_has_game_state((ratimos_game_kind_t) i)) {
+            char buf[RATIMOS_JOGOS_TITLE_LEN + 32];
+            snprintf(buf, sizeof(buf), "%s #a997ba > continuar#", s_game_titles[i]);
+            lv_label_set_text(s_game_title_labels[i], buf);
         } else {
-            lv_label_set_text(s_game_subtitle_labels[i], s_game_descriptions[i]);
+            lv_label_set_text(s_game_title_labels[i], s_game_titles[i]);
         }
     }
 }

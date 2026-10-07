@@ -584,6 +584,32 @@ void test_home_tiles_and_list_rows_follow_one_vertical_rhythm(void)
     lv_obj_delete(list);
 }
 
+/* Checkpoint 02.1-14: nenhuma descricao da lista de jogos pode ser cortada
+ * com "..." -- o "continuar" saiu da descricao e foi pra linha do titulo. */
+void test_jogos_descriptions_fit_on_one_line(void)
+{
+    /* Mesmas descricoes de s_game_descriptions (jogos_app.c), numa lista da
+     * largura real do content (tela - 2 * RATIMOS_CONTENT_PAD). */
+    static const char * const descs[] = {
+        "grade 9x9 · fácil, médio, difícil", "clássico de baralho, 7 colunas",
+        "adivinhe a palavra em 6 tentativas", "palavras cruzadas temáticas",
+        "agrupe 16 palavras em 4 categorias",
+    };
+    lv_obj_t * list = lv_obj_create(NULL);
+    lv_obj_set_size(list, RATIMOS_SCREEN_W - 2 * RATIMOS_CONTENT_PAD, LV_SIZE_CONTENT);
+    lv_obj_set_style_pad_all(list, 0, 0);
+    lv_obj_set_flex_flow(list, LV_FLEX_FLOW_COLUMN);
+    for (size_t i = 0; i < sizeof(descs) / sizeof(descs[0]); i++) {
+        lv_obj_t * row = ratimos_row_create(list, "game_sudoku", "paciencia #a997ba > continuar#", descs[i], NULL);
+        lv_obj_update_layout(list);
+        lv_obj_t * sub = lv_obj_get_child(lv_obj_get_child(row, 1), 1);
+        lv_point_t sz;
+        lv_text_get_size(&sz, descs[i], lv_obj_get_style_text_font(sub, 0), 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+        TEST_ASSERT_TRUE_MESSAGE(sz.x <= lv_obj_get_content_width(sub), descs[i]);
+    }
+    lv_obj_delete(list);
+}
+
 int main(void)
 {
     char tmpl[] = "/tmp/ratimos_game_screens_XXXXXX";
@@ -616,5 +642,6 @@ int main(void)
     RUN_TEST(test_every_game_fits_without_scrolling);
     RUN_TEST(test_back_from_a_game_goes_to_jogos_and_from_an_app_goes_home);
     RUN_TEST(test_home_tiles_and_list_rows_follow_one_vertical_rhythm);
+    RUN_TEST(test_jogos_descriptions_fit_on_one_line);
     return UNITY_END();
 }
