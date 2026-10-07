@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>011 — Boot e temas: o plano 02.1-16</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { background: #0a0a0f; padding: 64px 16px 40px; margin: 0; color: var(--ratimos-text); font-family: var(--font-mono); }
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0a0a0f; border-bottom: 1px solid #2a2a3a; padding: 8px 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .variant-tab { background: #1c1c28; color: #cfcfe0; border: 1px solid #35354a; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-family: var(--font-mono); font-size: 12px; transition: all .15s ease; }
+  .variant-tab:hover { border-color: #6a6a8a; }
+  .variant-tab.active { background: var(--ratimos-accent); color: #fff; border-color: var(--ratimos-accent); }
+  .page { display: none; }
+  .page.on { display: block; }
+  .theme-row { display: flex; gap: 22px; justify-content: center; align-items: flex-start; flex-wrap: wrap; margin: 0 auto 44px; max-width: 1100px; }
+  .theme-info { width: 260px; padding-top: 8px; }
+  .theme-info h2 { font-family: var(--font-display); font-size: 12px; line-height: 1.6; margin: 0 0 10px; color: #fff; }
+  .theme-info .tag { display: inline-block; font-size: 10px; padding: 2px 6px; border: 1px solid #4e2277; color: #cbbfdb; margin: 0 4px 6px 0; }
+  .theme-info .tag.def { border-color: var(--ratimos-accent); color: #fff; }
+  .theme-info p { font-size: 11.5px; color: #9a9ab0; line-height: 1.55; margin: 8px 0 0; }
+  .screen-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .screen-wrap span { font-size: 11px; color: #7a7a90; }
+  canvas.screen { width: 320px; height: 480px; image-rendering: pixelated; background: #000; display: block; }
+  body.zoom canvas.screen { width: 640px; height: 960px; }
+  #flow { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; }
+  #flow canvas { cursor: pointer; }
+  .flow-notes { max-width: 340px; font-size: 12px; color: #9a9ab0; line-height: 1.6; }
+  .flow-notes b { color: #e6e0f0; }
+  .controls { display: flex; gap: 8px; justify-content: center; margin: 0 0 24px; flex-wrap: wrap; }
+  .controls button { background: #1c1c28; color: #cfcfe0; border: 1px solid #35354a; padding: 6px 12px; cursor: pointer; font-family: var(--font-mono); font-size: 12px; transition: all .15s ease; }
+  .controls button:hover { background: #2a2a3c; }
+  .controls button.on { border-color: var(--ratimos-accent); color: #fff; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showPage('power', this)">Ligar o aparelho</button>
+  <button class="variant-tab" onclick="showPage('matrix', this)">Matriz 4 temas × 4 carregamentos</button>
+  <button class="variant-tab" onclick="showPage('all', this)">Os 4 temas (boot + home)</button>
+  <button class="variant-tab" onclick="showPage('flow', this)">Configurações: tema + carregamento (interativo)</button>
+</div>
+
+<div class="controls">
+  <button onclick="restartAll()">▶ recomeçar boots</button>
+  <button id="zoom" onclick="toggleZoom(this)">zoom 2×: off</button>
+</div>
+
+<div class="page on" id="page-power">
+  <div id="flow">
+    <canvas class="screen" id="cv-power" width="320" height="480"></canvas>
+    <div class="flow-notes">
+      <p style="margin-top:0"><b>tema</b><br><select id="sel-tema"></select></p>
+      <p><b>carregamento</b><br><select id="sel-boot"></select></p>
+      <div class="controls" style="justify-content:flex-start"><button id="btn-power">⏻ ligar</button></div>
+      <p>A sequência que o plano 02.1-16 implementa, do jeito que vai rodar no aparelho:</p>
+      <p>1. tela preta (o hardware subindo)<br>2. fundo do boot do <b>tema</b> + logo entrando em ~400 ms<br>3. animação do <b>carregamento</b> seguindo os passos reais do boot<br>4. <b>"pronto!"</b> uma vez só<br>5. home com o fundo do sistema do tema e "RatimOS" na barra de cima</p>
+      <p>Tema e carregamento são independentes e ficam salvos na memória interna (nunca no SD). Valor estragado volta para o padrão: Clássico + hastear a bandeira.</p>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-matrix">
+  <p style="text-align:center;font-size:12px;color:#9a9ab0;margin:0 0 16px">Linhas = temas, colunas = carregamentos. As 16 combinações que os testes do plano cobrem (sem travar e sem crescer a memória do LVGL). Exibidas em 50%.</p>
+  <div id="matrix" style="display:grid;grid-template-columns:120px repeat(4,164px);gap:10px;justify-content:center;align-items:center"></div>
+</div>
+
+<div class="page" id="page-all"></div>
+
+<div class="page" id="page-flow">
+  <div id="flow">
+    <canvas class="screen" id="cv-flow" width="320" height="480"></canvas>
+    <div class="flow-notes">
+      <p><b>./home/config</b> ganha duas linhas que dá para tocar: <b>tema</b> e <b>carregamento</b>. Cada uma abre sua própria lista, e qualquer tema combina com qualquer carregamento.</p>
+      <p><b>tema</b>: miniatura da home com aquele fundo. <b>carregamento</b>: miniatura do boot já com o fundo do tema em uso.</p>
+      <p><b>prévia</b> toca o boot e mostra a home sem salvar. <b>aplicar</b> salva (memória interna, não o SD) e marca "em uso". <b>voltar</b> (barra de baixo) volta para config.</p>
+      <p>No aparelho, o fundo da home troca na hora. O carregamento novo só aparece quando o aparelho liga de novo, por isso a prévia toca o boot.</p>
+    </div>
+  </div>
+</div>
+
+<div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
+  sketch 010 · canvas 1:1 com a tela 320×480 · <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+/* =====================================================================
+ * Tema = { animação de boot (sketch 008) + fundo do boot + fundo da home (sketch 009) }
+ * ===================================================================== */
+const LOGO_X = 32, LOGO_Y = 110;
+const WM_X0 = 34, WM_X1 = 226, WM_Y0 = 95, WM_Y1 = 136;
+const MAST = { x: 125, w: 3, sliceY: 40 }, FLAG = { x: 129, y: 31, w: 29, h: 16 };
+const WM_GRAD = ['#460196','#460196','#470196','#490299','#5b0197','#75046b','#8d0355','#9a0249',
+                 '#bc0127','#b40239','#d60321','#e90116','#ed0e13','#f81711','#fb230c','#fb3307',
+                 '#fc360b','#fb5302','#f95d06'];
+const gradAt = t => WM_GRAD[Math.min(WM_GRAD.length - 1, Math.max(0, Math.floor(t * WM_GRAD.length)))];
+const H_STOPS = [[0x46,0x01,0x96],[0x9a,0x02,0x49],[0xe9,0x01,0x16],[0xf9,0x5d,0x06]];
+function hgrad(t) { const s = Math.min(2.999, t * 3), i = Math.floor(s), f = s - i, a = H_STOPS[i], b = H_STOPS[i + 1];
+  return `rgb(${a.map((v, k) => Math.round(v + (b[k] - v) * f)).join(',')})`; }
+
+const IMG = {};
+function load(k, src) { IMG[k] = new Image(); IMG[k].src = src; }
+load('logo', '../009-boot-fundo/logo_256_alpha.png');
+load('sysbg', '../../../assets/backgrounds/bg_dither.png');
+load('rook14', '../../../assets/icons/system_rook.png');
+load('rook32', '../assets/icons/system_rook_32.png');
+['jogos','musica','album','cartas','config','castelo'].forEach(n => load(n, `../assets/icons/home_${n}.png`));
+
+let now = 0, frame = 0;
+function px(c, x, y, w, h, col) { c.fillStyle = col; c.fillRect(x, y, w, h); }
+function text(c, s, x, y, col, size, font, align = 'left', shadow = true) {
+  c.font = `${size}px ${font}`; c.textAlign = align; c.textBaseline = 'top';
+  if (shadow) { c.fillStyle = 'rgba(0,0,0,0.75)'; c.fillText(s, x + 1, y + 1); }
+  c.fillStyle = col; c.fillText(s, x, y);
+}
+const PX = "'Press Start 2P'", MONO = "'JetBrains Mono'";
+function rnd(i) { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+function off(w, h) { const o = document.createElement('canvas'); o.width = w; o.height = h; const g = o.getContext('2d'); g.imageSmoothingEnabled = false; return [o, g]; }
+
+/* ------------------------------ fundos ------------------------------ */
+/* `anim` = false na home: fundo estático (no ESP32 é uma imagem só, sem redesenho). */
+function bgStars(c, anim) {
+  px(c, 0, 0, 320, 480, '#07030f'); px(c, 0, 160, 320, 160, '#0b0518'); px(c, 0, 320, 320, 160, '#110822');
+  for (let i = 0; i < 70; i++) {
+    const x = Math.floor(rnd(i) * 320), y = Math.floor(rnd(i + 99) * 480);
+    const ph = anim ? Math.floor(now / (500 + rnd(i + 7) * 900) + i) % 4 : 1 + (i % 3);
+    if (ph === 0) continue;
+    const big = rnd(i + 3) > 0.9, col = ph === 3 ? '#f5f2f8' : (rnd(i + 5) > .5 ? '#a997ba' : '#6a4f8e');
+    px(c, x, y, 1, 1, col);
+    if (big && ph >= 2) [[-1,0],[1,0],[0,-1],[0,1]].forEach(([a, b]) => px(c, x + a, y + b, 1, 1, '#6a4f8e'));
+  }
+  const mx = 262, my = 56, r = 13;
+  for (let y = -r; y <= r; y++) { const w = Math.floor(Math.sqrt(r * r - y * y)); px(c, mx - w, my + y, 2 * w + 1, 1, '#d9cfe6'); }
+  for (let y = -r; y <= r; y++) { const w = Math.floor(Math.sqrt(r * r - y * y)); px(c, mx + w - 3, my + y, 3, 1, '#a997ba'); }
+  px(c, mx - 5, my - 4, 3, 3, '#b8abc9'); px(c, mx + 2, my + 4, 4, 3, '#b8abc9'); px(c, mx - 3, my + 6, 2, 2, '#b8abc9');
+}
+function bgSystem(c) { c.drawImage(IMG.sysbg, 0, 0); }
+/* ---- Castelo ao entardecer ----
+ * Camadas: céu em faixas com dither -> sol listrado com halo -> serra distante
+ * (aresta iluminada do lado do sol) -> colina -> castelo (torres com telhado
+ * cônico vermelho como a torre do logo, bandeirinhas, janelas acesas) -> chão.
+ * `layout` = 'boot' (castelo baixo, céu livre p/ logo) | 'home' (sol e castelo
+ * subidos p/ aparecer entre os cards e acima da barra inferior). */
+function sunsetScene(c, anim, layout) {
+  const H = layout === 'home' ? 450 : 466;
+  const ox = 150;                                       // castelo à direita, sol à esquerda (texto do boot fica livre)            // horizonte (base da serra)
+  const bands = ['#0c0420', '#12062a', '#1c0a3d', '#26093f', '#36104c', '#4a0f55', '#7a1560', '#a8193f', '#d8381f', '#ee6a12'];
+  const bh = Math.ceil(H / bands.length);
+  bands.forEach((col, i) => px(c, 0, i * bh, 320, bh, col));
+  for (let i = 1; i < bands.length; i++) for (let x = 0; x < 320; x += 2) { px(c, x, i * bh - 1, 1, 1, bands[i]); px(c, x + 1, i * bh, 1, 1, bands[i - 1]); }
+  // sol: halo em 2 anéis com dither + disco com listras retrô na metade de baixo
+  const sx = 74, sy = H - 30, R = 30;
+  const disk = (r, col, dither) => { for (let y = -r; y <= r; y++) { const w = Math.floor(Math.sqrt(r * r - y * y)); for (let x = -w; x <= w; x++) if (!dither || ((x + y) & 1) === 0) px(c, sx + x, sy + y, 1, 1, col); } };
+  disk(R + 10, '#f08a30', true); disk(R + 5, '#f6a040', true);
+  for (let y = -R; y <= R; y++) {
+    const w = Math.floor(Math.sqrt(R * R - y * y));
+    if (y > 4 && (y % 6 === 0 || y % 6 === 1) && y < R) continue;   // listras
+    px(c, sx - w, sy + y, 2 * w + 1, 1, y < -R / 2 ? '#ffe08a' : y < 0 ? '#ffc861' : '#ffa94a');
+  }
+  // serra distante: picos com degraus de pixel; lado voltado ao sol mais claro
+  const peaks = [[-10, 46], [40, 62], [88, 40], [140, 70], [196, 44], [250, 58], [300, 50], [340, 40]];
+  for (let x = 0; x < 320; x++) {
+    let top = H;
+    peaks.forEach(([px0, ph]) => { const d = Math.abs(x - px0); const t = H - ph + Math.floor(d * 1.15); if (t < top) top = t; });
+    top = top - (top % 2);
+    const nearest = peaks.reduce((a, p) => Math.abs(x - p[0]) < Math.abs(x - a[0]) ? p : a);
+    const lit = x < nearest[0];                               // sol à esquerda
+    px(c, x, top, 1, H - top + 2, lit ? '#5a1650' : '#3a0c40');
+    if (lit) px(c, x, top, 1, 2, '#9a2a50');                  // aresta iluminada
+  }
+  // colina do castelo (esquerda) e ondulação do chão
+  for (let x = 0; x < 320; x++) {
+    const hill = H + 6 - Math.round(34 * Math.exp(-((x - (ox + 92)) ** 2) / 2600)) + Math.round(3 * Math.sin(x / 9));
+    px(c, x, hill, 1, 480 - hill, '#24081f');
+    px(c, x, hill, 1, 1, '#4a1430');
+  }
+  // castelo
+  const S = '#140513', S2 = '#1f0a1c', ROOF = '#8a0a18', ROOF_LIT = '#d01e24';
+  const gy = H - 24;                                          // linha do chão do castelo
+  const crenel = (x, y, w) => { for (let k = 0; k < w; k += 6) px(c, x + k, y - 4, 4, 4, S); };
+  const roof = (cx, y, w, h) => { for (let r = 0; r < h; r++) { const half = Math.ceil((r + 1) * (w / 2) / h); px(c, cx - half, y + r, half, 1, ROOF); px(c, cx, y + r, half, 1, ROOF_LIT); } px(c, cx, y - 8, 1, 8, '#d9d0e6'); px(c, cx + 1, y - 8, 5, 3, '#e6010f'); };
+  const win = (x, y, i) => { const on = anim ? (Math.floor(now / 800) + i) % 5 !== 0 : true; px(c, x, y, 3, 5, on ? '#ffc04a' : '#7a4a10'); px(c, x, y, 3, 1, S2); };
+  // muralha + ameias
+  px(c, ox + 44, gy - 26, 100, 26, S); crenel(ox + 44, gy - 26, 100);
+  // portão em arco
+  px(c, ox + 86, gy - 14, 16, 14, '#0a0208'); px(c, ox + 88, gy - 16, 12, 2, '#0a0208'); px(c, ox + 90, gy - 17, 8, 1, '#0a0208');
+  // torre de menagem (central, mais alta)
+  px(c, ox + 80, gy - 62, 28, 36, S2); crenel(ox + 80, gy - 62, 28);
+  roof(ox + 94, gy - 86, 30, 20);
+  win(ox + 85, gy - 52, 0); win(ox + 99, gy - 52, 1); win(ox + 92, gy - 40, 2);
+  // torres laterais
+  [[36, 46, 3], [138, 40, 6]].forEach(([tx, th, wi]) => { px(c, ox + tx, gy - th, 14, th, S2); roof(ox + tx + 7, gy - th - 16, 18, 14); win(ox + tx + 5, gy - th + 10, wi); });
+  // chão da frente
+  px(c, 0, 470, 320, 10, '#12040f');
+  for (let x = 3; x < 320; x += 11) px(c, x, 468 - (x % 3), 1, 2, '#2a0c24');
+}
+function bgSunset(c, anim) { sunsetScene(c, anim, 'boot'); }
+function bgSunsetHome(c) { sunsetScene(c, false, 'home'); }
+
+/* ---- Xadrez ----
+ * Renderizado por pixel (ImageData), com perspectiva verdadeira. O pisca-pisca
+ * da v1 vinha do moiré perto do horizonte (casas menores que 1 px trocando a
+ * cada frame). Correção: névoa que leva as casas distantes à cor média antes
+ * de ficarem menores que ~3 px, e rolagem lenta e contínua. */
+const [chessOff, chessG] = off(320, 480);
+const chessImg = chessG.createImageData(320, 480);
+function chessRender(scroll, hy, dim) {
+  const d = chessImg.data, A = [44, 14, 70], B = [12, 4, 22], M = [28, 9, 46], SKY0 = [6, 2, 12], SKY1 = [40, 14, 64];
+  for (let y = 0; y < 480; y++) for (let x = 0; x < 320; x++) {
+    const i = (y * 320 + x) * 4; let col;
+    if (y < hy) { const t = Math.max(0, (y - (hy - 60)) / 60); col = SKY0.map((v, k) => v + (SKY1[k] - v) * t * t); }
+    else {
+      const dy = y - hy + 0.5, z = 65000 / dy, u = (x - 160) * z / 160, v = z + scroll;
+      const chk = ((Math.floor(u / 24) + Math.floor(v / 24)) & 1) ? A : B;
+      const fog = Math.min(1, Math.max(0, (dy - 4) / 70));         // 0 no horizonte -> 1 perto
+      col = M.map((m, k) => m + (chk[k] - m) * fog);
+    }
+    d[i] = col[0] * dim; d[i + 1] = col[1] * dim; d[i + 2] = col[2] * dim; d[i + 3] = 255;
+  }
+  chessG.putImageData(chessImg, 0, 0);
+  return chessOff;
+}
+let chessCacheHome = null;
+function bgChess(c, anim) {
+  c.drawImage(chessRender(anim ? (now / 1000) * 10 : 0, 140, 1), 0, 0);
+  px(c, 0, 140, 320, 1, '#4e2277');
+}
+function bgChessHome(c) {
+  if (!chessCacheHome) { const [o, g] = off(320, 480); g.drawImage(chessRender(0, 70, 0.85), 0, 0); chessCacheHome = o; }
+  c.drawImage(chessCacheHome, 0, 0);
+}
+
+/* ------------------------- animações de boot ------------------------- */
+function drawFlag(c, dx, dy) {
+  for (let r = 0; r < FLAG.h; r++) {
+    const o = (Math.floor(r / 3) + frame) % 2;
+    c.drawImage(IMG.logo, FLAG.x, FLAG.y + r, FLAG.w, 1, dx + o, dy + r, FLAG.w, 1);
+  }
+}
+function statusText(c, b, y, label) {
+  text(c, b.done() ? 'pronto!' : label + b.pad3(b.pct()) + '%', 160, y, '#d8cce6', 8, PX, 'center');
+  if (!b.done()) text(c, b.stepText(), 160, y + 16, '#a997ba', 10, MONO, 'center');   // "pronto!" aparece uma vez só
+}
+const BOOTS = {
+  bandeira: { nome: 'hastear a bandeira', draw(c, b) {
+    const L = IMG.logo, EXT = 64, top = LOGO_Y - 24, BASE = 47;
+    c.drawImage(L, 0, 0, 256, FLAG.y, LOGO_X, top, 256, FLAG.y);
+    c.drawImage(L, MAST.x, FLAG.y, MAST.w, 2, LOGO_X + MAST.x, top + FLAG.y, MAST.w, 2);
+    c.drawImage(L, MAST.x, MAST.sliceY, MAST.w, 1, LOGO_X + MAST.x, top + FLAG.y + 2, MAST.w, BASE - FLAG.y - 2 + EXT);
+    c.drawImage(L, 0, BASE, 256, 171 - BASE, LOGO_X, top + BASE + EXT, 256, 171 - BASE);
+    drawFlag(c, LOGO_X + FLAG.x, top + FLAG.y + EXT - Math.floor(b.frac() * EXT / 2) * 2);
+    statusText(c, b, top + 171 + EXT + 18, '');
+  }},
+  ameias: { nome: 'ameias do castelo', draw(c, b) {
+    c.drawImage(IMG.logo, LOGO_X, LOGO_Y);
+    const x0 = LOGO_X + WM_X0, y0 = LOGO_Y + 171 + 22, MER = 6, BODY = 14, MW = 8, H = MER + BODY, COLS = 24, CW = 8;
+    const lit = Math.floor(b.frac() * COLS), W = COLS * CW;
+    const inShape = (x, y) => y >= MER || (Math.floor(x / MW) % 2 === 0);
+    for (let y = -1; y <= H; y++) for (let x = -1; x <= W; x++) {
+      const inside = x >= 0 && x < W && y >= 0 && y < H && inShape(x, y);
+      if (!inside) {
+        const n = [[1,0],[-1,0],[0,1],[0,-1]].some(([dx, dy]) => { const X = x + dx, Y = y + dy; return X >= 0 && X < W && Y >= 0 && Y < H && inShape(X, Y); });
+        if (n) px(c, x0 + x, y0 + y, 1, 1, '#0d0515');
+        continue;
+      }
+      let col;
+      if (Math.floor(x / CW) < lit) {
+        col = gradAt(y / (H - 1));
+        const row = y < MER ? -1 : Math.floor((y - MER) / 5), jointX = (x + (row % 2 ? 4 : 0)) % CW === CW - 1;
+        if (y === 0 || (y === MER && Math.floor(x / MW) % 2)) col = '#ffb3a0';
+        else if (y >= MER && ((y - MER) % 5 === 4 || jointX)) col = '#2a0612';
+      } else col = (y === 0 || (y === MER && Math.floor(x / MW) % 2)) ? '#33204a' : '#1a0d29';
+      px(c, x0 + x, y0 + y, 1, 1, col);
+    }
+    if (b.done()) { px(c, x0 + W - MW, y0 - FLAG.h - 2, 2, FLAG.h + 2, '#d9d0e6'); drawFlag(c, x0 + W - MW + 2, y0 - FLAG.h - 2); }
+    statusText(c, b, y0 + H + 16, 'construindo ');
+  }},
+  letreiro: { nome: 'letreiro que acende', draw(c, b) {
+    const L = IMG.logo, done = b.done();
+    c.globalAlpha = done ? 1 : 0.17; c.drawImage(L, LOGO_X, LOGO_Y); c.globalAlpha = 1;
+    const STEP = 4, W = WM_X1 - WM_X0 + 1, edge = WM_X0 + Math.floor(b.frac() * W / STEP) * STEP, h = WM_Y1 - WM_Y0 + 1;
+    if (!done) {
+      if (edge > WM_X0) c.drawImage(L, WM_X0, WM_Y0, edge - WM_X0, h, LOGO_X + WM_X0, LOGO_Y + WM_Y0, edge - WM_X0, h);
+      if (edge < WM_X1) { c.filter = 'brightness(3.2) saturate(0.4)'; c.drawImage(L, edge, WM_Y0, 2, h, LOGO_X + edge, LOGO_Y + WM_Y0, 2, h); c.filter = 'none'; }
+    }
+    statusText(c, b, LOGO_Y + 171 + 22, 'carregando ');
+  }},
+  torres: { nome: 'fileira de torres', draw(c, b) {
+    c.drawImage(IMG.logo, LOGO_X, LOGO_Y);
+    const N = 6, RW = 14, RH = 20, SC = 2, GAP = 7, rows = Math.floor(b.frac() * N * RH);
+    const x0 = 160 - (N * RW * SC + (N - 1) * GAP) / 2, y0 = LOGO_Y + 171 + 18;
+    for (let i = 0; i < N; i++) {
+      const f = Math.max(0, Math.min(RH, rows - i * RH));
+      const [o, g] = off(RW, RH);
+      g.drawImage(IMG.rook14, 0, 0); g.globalCompositeOperation = 'source-atop';
+      g.fillStyle = '#2e1a46'; g.fillRect(0, 0, RW, RH - f);
+      g.globalAlpha = 0.6; g.fillStyle = hgrad(i / (N - 1)); g.fillRect(0, RH - f, RW, f); g.globalAlpha = 1;
+      if (f > 0 && f < RH) { g.fillStyle = 'rgba(255,255,255,0.7)'; g.fillRect(0, RH - f, RW, 1); }
+      const hop = f === RH && rows - (i + 1) * RH < 4 && rows < N * RH ? 2 : 0;
+      c.drawImage(o, x0 + i * (RW * SC + GAP), y0 - hop, RW * SC, RH * SC);
+    }
+    statusText(c, b, y0 + RH * SC + 14, 'carregando ');
+  }},
+};
+
+/* ------------------------------ temas ------------------------------ *
+ * Tema = fundo do boot + fundo da home. O carregamento (animação do boot)
+ * é escolhido à parte: qualquer tema funciona com qualquer carregamento. */
+const THEMES = [
+  { id: 'classico', nome: 'Clássico', bgBoot: bgSystem, bgHome: bgSystem, bootDim: 0.55, homeDim: 0, padrao: true,
+    desc: 'O visual que o sistema já tem: degradê com dither roxo→laranja. No boot ele fica escurecido, então a passagem para a home não tem corte.' },
+  { id: 'noite', nome: 'Noite estrelada', bgBoot: bgStars, bgHome: c => bgStars(c, false), bootDim: 0, homeDim: 0,
+    desc: 'Céu noturno com lua. No boot as estrelas piscam em tempos diferentes; na home elas ficam paradas (imagem estática) e os cards ganham bastante contraste.' },
+  { id: 'castelo', nome: 'Castelo ao entardecer', bgBoot: bgSunset, bgHome: bgSunsetHome, bootDim: 0.15, homeDim: 0.2,
+    desc: 'Sol listrado com halo se pondo atrás da serra (à esquerda); o castelo, à direita na colina tem telhados cônicos vermelhos como a torre do logo, bandeirinhas e janelas acesas (piscando no boot). No boot a cena fica bem embaixo, deixando o céu livre para o logo.' },
+  { id: 'xadrez', nome: 'Xadrez', bgBoot: bgChess, bgHome: bgChessHome, bootDim: 0.1, homeDim: 0,
+    desc: 'A torre é uma peça de xadrez. Tabuleiro em perspectiva verdadeira, com névoa no horizonte (sem pisca-pisca) e rolando devagar no boot. Na home o horizonte sobe e o tabuleiro fica parado.' },
+];
+const BOOT_KEYS = ['bandeira', 'ameias', 'letreiro', 'torres'];
+
+/* ---------------------- modelo de progresso ---------------------- */
+const STEPS = [["montando cartão sd", 500], ["lendo configurações", 300], ["carregando fontes", 700],
+  ["carregando ícones", 600], ["verificando cartas novas", 900], ["preparando jogos", 500], ["abrindo o castelo", 400]];
+const UNITS = 240;
+function makeBoot(onDone) {
+  const b = { target: 0, shown: 0, step: 0, timers: [], last: 0, doneAt: 0, onDone };
+  b.frac = () => b.shown / UNITS; b.done = () => b.shown >= UNITS; b.pct = () => Math.round(b.frac() * 100);
+  b.pad3 = n => String(n).padStart(3, '0');
+  b.stepText = () => b.step < STEPS.length ? STEPS[b.step][0] + '...' : 'pronto!';
+  b.start = () => {
+    b.timers.forEach(clearTimeout); b.timers = []; b.startT = performance.now(); b.target = 0; b.shown = 0; b.step = 0; b.doneAt = 0;
+    const run = () => { if (b.step >= STEPS.length) return; b.timers.push(setTimeout(() => { b.step++; b.target = b.step / STEPS.length; run(); }, STEPS[b.step][1])); };
+    run();
+  };
+  b.tick = t => {
+    if (t - b.last > 12) { b.shown = Math.min(Math.floor(b.target * UNITS), b.shown + Math.max(1, Math.floor((t - b.last) / 12))); b.last = t; }
+    if (b.done() && !b.doneAt) b.doneAt = t;
+    if (b.doneAt && t - b.doneAt > 1800 && b.onDone) { const f = b.onDone; b.onDone = null; f(); }
+  };
+  return b;
+}
+
+/* ------------------------------ home ------------------------------ */
+function bevel(c, x, y, w, h, fill = 'rgba(42,18,63,0.68)') {
+  px(c, x, y, w, h, '#0d0515');
+  px(c, x + 2, y + 2, w - 4, h - 4, fill);
+  c.strokeStyle = 'rgba(255,255,255,0.15)'; c.lineWidth = 1; c.strokeRect(x + 2.5, y + 2.5, w - 5, h - 5);
+  c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = 2; c.strokeRect(x + 4, y + 4, w - 8, h - 8);
+}
+function drawTopbars(c, crumb, right = 'sem wifi/audio', left = 'local') {
+  px(c, 0, 0, 320, 26, 'rgba(0,0,0,0.55)');
+  c.drawImage(IMG.rook32, 0, 0, 32, 44, 8, 4, 13, 18);
+  text(c, 'RatimOS', 26, 9, '#f5f2f8', 8, PX);
+  text(c, '14:32', 248, 7, '#f5f2f8', 12, MONO);
+  px(c, 290, 9, 20, 9, '#f5f2f8'); px(c, 291, 10, 18, 7, '#000'); px(c, 292, 11, 12, 5, '#3fd06b'); px(c, 310, 11, 2, 5, '#f5f2f8');
+  text(c, crumb, 10, 30, '#cbbfdb', 11, MONO);
+  px(c, 0, 452, 320, 28, 'rgba(0,0,0,0.55)');
+  text(c, left, 10, 459, '#cbbfdb', 11, MONO); text(c, right, 310, 459, '#7d6b92', 11, MONO, 'right');
+}
+function drawHome(c, theme) {
+  theme.bgHome(c);
+  if (theme.homeDim) px(c, 0, 0, 320, 480, `rgba(0,0,0,${theme.homeDim})`);
+  drawTopbars(c, './home');
+  const pad = 10, gap = 10, th = 80, fw = 300, tw = (fw - gap) / 2;
+  let y = 46 + pad;
+  const tile = (x, y, w, icon, label) => {
+    bevel(c, x, y, w, th);
+    c.drawImage(IMG[icon], x + w / 2 - 16 + 2, y + 16 + 2, 32, 32);  // sombra pixel dura (002-B)
+    c.globalCompositeOperation = 'source-over';
+    c.drawImage(IMG[icon], x + w / 2 - 16, y + 16, 32, 32);
+    text(c, label, x + w / 2, y + 54, '#f5f2f8', 12, MONO, 'center');
+  };
+  tile(pad + 5, y, fw, 'jogos', 'jogos'); y += th + gap;
+  tile(pad + 5, y, tw, 'musica', 'musica'); tile(pad + 5 + tw + gap, y, tw, 'album', 'album'); y += th + gap;
+  tile(pad + 5, y, tw, 'cartas', 'cartas'); tile(pad + 5 + tw + gap, y, tw, 'config', 'config'); y += th + gap;
+  bevel(c, pad + 5, y, fw, th);
+  c.drawImage(IMG.castelo, pad + 22, y + 24, 32, 32);
+  text(c, 'castelo', pad + 66, y + 24, '#f5f2f8', 12, MONO);
+  text(c, 'dia 3 de 30', pad + 66, y + 42, '#a997ba', 11, MONO);
+}
+function drawBootScreen(c, theme, bootKey, b) {
+  theme.bgBoot(c, true);
+  if (theme.bootDim) px(c, 0, 0, 320, 480, `rgba(0,0,0,${theme.bootDim})`);
+  // entrada do logo: ~400 ms (decisão da usuária no plano 02.1-16)
+  c.globalAlpha = b.startT ? Math.min(1, (performance.now() - b.startT) / 400) : 1;
+  BOOTS[bootKey].draw(c, b);
+  c.globalAlpha = 1;
+}
+
+/* ------------------------ página 1: os 4 temas ------------------------ */
+let allBootKey = 'bandeira';
+const allBoots = [];
+const pageAll = document.getElementById('page-all');
+const bar = document.createElement('div'); bar.className = 'controls';
+bar.innerHTML = '<span style="align-self:center;font-size:12px;color:#9a9ab0">carregamento nos 4 temas:</span>' +
+  BOOT_KEYS.map(k => `<button data-k="${k}" class="${k === allBootKey ? 'on' : ''}">${BOOTS[k].nome}</button>`).join('');
+bar.addEventListener('click', e => { const k = e.target.dataset.k; if (!k) return; allBootKey = k;
+  bar.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); allBoots.forEach(([, b]) => b.start()); });
+pageAll.appendChild(bar);
+THEMES.forEach((t, i) => {
+  const row = document.createElement('div'); row.className = 'theme-row';
+  row.innerHTML = `
+    <div class="theme-info">
+      <h2>${i + 1}. ${t.nome}</h2>
+      ${t.padrao ? '<span class="tag def">padrão</span>' : ''}
+      <p>${t.desc}</p>
+    </div>
+    <div class="screen-wrap"><canvas class="screen" id="boot-${t.id}" width="320" height="480"></canvas><span>tela de carregamento</span></div>
+    <div class="screen-wrap"><canvas class="screen" id="home-${t.id}" width="320" height="480"></canvas><span>fundo do sistema (home)</span></div>`;
+  pageAll.appendChild(row);
+  allBoots.push([t, makeBoot(null)]);
+});
+function restartAll() { allBoots.forEach(([, b]) => b.start()); flowGo('config'); }
+
+/* --------------- página 2: config -> tema / carregamento --------------- */
+const applied = { tema: 0, boot: 0 }, sel = { tema: 0, boot: 0 };
+let flowMode = 'config', flowBoot = null, toast = 0, previewOf = null;
+const ROW_Y0 = 66, ROW_H = 72, ROW_GAP = 10;
+const BTN = { prev: [16, 404, 136, 36], apply: [168, 404, 136, 36] };
+const CFG_ROWS = [
+  { label: 'brilho', val: () => '80%' }, { label: 'volume', val: () => '60%' },
+  { label: 'tema', val: () => THEMES[applied.tema].nome, go: 'pick-tema' },
+  { label: 'carregamento', val: () => BOOTS[BOOT_KEYS[applied.boot]].nome, go: 'pick-boot' },
+  { label: 'firmware', val: () => 'v0.2.1' },
+];
+const CFG_Y0 = 60, CFG_H = 48, CFG_GAP = 14;
+function flowBg(c) { const t = THEMES[applied.tema]; t.bgHome(c); px(c, 0, 0, 320, 480, `rgba(0,0,0,${0.25 + (t.homeDim || 0)})`); }
+function arrow(c, x, y) { for (let k = 0; k < 5; k++) px(c, x - k, y - k, 1, 2 * k + 1, '#f5f2f8'); }
+function drawConfig(c) {
+  flowBg(c); drawTopbars(c, './home/config', '', 'voltar');
+  CFG_ROWS.forEach((r, i) => {
+    const y = CFG_Y0 + i * (CFG_H + CFG_GAP);
+    bevel(c, 15, y, 290, CFG_H, r.go ? 'rgba(54,24,80,0.85)' : 'rgba(42,18,63,0.75)');
+    text(c, r.label, 28, y + 17, '#f5f2f8', 12, MONO);
+    text(c, r.val(), r.go ? 278 : 292, y + 17, r.go ? '#e6d8f5' : '#a997ba', 11, MONO, 'right');
+    if (r.go) arrow(c, 292, y + CFG_H / 2);
+  });
+}
+const thumbCache = {};
+function thumb(kind, i) {
+  const key = kind + i + (kind === 'boot' ? applied.tema : '');
+  if (thumbCache[key]) return thumbCache[key];
+  const [o, g] = off(320, 480);
+  if (kind === 'tema') { THEMES[i].bgHome(g); if (THEMES[i].homeDim) { g.fillStyle = `rgba(0,0,0,${THEMES[i].homeDim})`; g.fillRect(0, 0, 320, 480); } }
+  else { const fake = makeBoot(null); fake.shown = UNITS * 0.6; fake.step = 4; drawBootScreen(g, THEMES[applied.tema], BOOT_KEYS[i], fake); }
+  return (thumbCache[key] = o);
+}
+function drawPicker(c, kind) {
+  flowBg(c); drawTopbars(c, kind === 'tema' ? './home/config/tema' : './home/config/carregamento', '', 'voltar');
+  const items = kind === 'tema' ? THEMES.map(t => [t.nome, t.padrao ? 'padrão' : '']) : BOOT_KEYS.map((k, i) => [BOOTS[k].nome, i === 0 ? 'padrão' : '']);
+  items.forEach(([nome, sub], i) => {
+    const y = ROW_Y0 + i * (ROW_H + ROW_GAP), on = i === sel[kind];
+    bevel(c, 15, y, 290, ROW_H, on ? 'rgba(78,34,119,0.9)' : 'rgba(42,18,63,0.75)');
+    px(c, 23, y + 6, 42, 62, '#0d0515'); c.imageSmoothingEnabled = true; c.drawImage(thumb(kind, i), 24, y + 7, 40, 60); c.imageSmoothingEnabled = false;
+    text(c, nome, 76, y + 16, '#f5f2f8', 12, MONO);
+    if (sub) text(c, sub, 76, y + 36, '#a997ba', 10, MONO);
+    if (i === applied[kind]) text(c, 'em uso', 76, y + 52, '#3fd06b', 10, MONO);
+    if (on) arrow(c, 292, y + ROW_H / 2);
+  });
+  const btn = ([x, y, w, h], label, hot) => { bevel(c, x, y, w, h, hot ? 'rgba(200,16,30,0.85)' : 'rgba(42,18,63,0.85)'); text(c, label, x + w / 2, y + 13, '#fff', 8, PX, 'center'); };
+  btn(BTN.prev, 'prévia', false); btn(BTN.apply, 'aplicar', sel[kind] !== applied[kind]);
+  if (toast && now - toast < 1600) { bevel(c, 40, 360, 240, 32, 'rgba(13,5,21,0.95)'); text(c, 'aplicado!', 160, 372, '#3fd06b', 8, PX, 'center'); }
+}
+function flowGo(m) { flowMode = m; flowBoot = null; }
+function startPreview(kind, save) {
+  previewOf = kind;
+  const back = 'pick-' + kind;
+  flowMode = 'boot';
+  flowBoot = makeBoot(() => { flowMode = 'home'; setTimeout(() => { if (save) { applied[kind] = sel[kind]; toast = performance.now(); } flowGo(back); }, save ? 1500 : 2600); });
+  flowBoot.start();
+}
+function previewTheme() { const k = previewOf; return { tema: k === 'tema' ? sel.tema : applied.tema, boot: k === 'boot' ? sel.boot : applied.boot }; }
+document.getElementById('cv-flow').addEventListener('click', e => {
+  const r = e.target.getBoundingClientRect(), x = (e.clientX - r.left) * 320 / r.width, y = (e.clientY - r.top) * 480 / r.height;
+  const hit = ([bx, by, bw, bh]) => x >= bx && x < bx + bw && y >= by && y < by + bh;
+  if (flowMode === 'config') {
+    CFG_ROWS.forEach((row, i) => { const ry = CFG_Y0 + i * (CFG_H + CFG_GAP); if (row.go && y >= ry && y < ry + CFG_H) { const k = row.go.slice(5); sel[k] = applied[k]; flowGo(row.go); } });
+    return;
+  }
+  if (!flowMode.startsWith('pick-')) return;
+  const kind = flowMode.slice(5);
+  if (y >= 452 && x < 100) return flowGo('config');
+  if (hit(BTN.prev)) return startPreview(kind, false);
+  if (hit(BTN.apply)) return startPreview(kind, true);
+  for (let i = 0; i < 4; i++) { const ry = ROW_Y0 + i * (ROW_H + ROW_GAP); if (y >= ry && y < ry + ROW_H && x >= 15 && x < 305) sel[kind] = i; }
+});
+
+
+/* ------------------- página: ligar o aparelho ------------------- */
+const selT = document.getElementById('sel-tema'), selB = document.getElementById('sel-boot');
+THEMES.forEach((t, i) => selT.add(new Option(t.nome + (t.padrao ? ' (padrão)' : ''), i)));
+BOOT_KEYS.forEach((k, i) => selB.add(new Option(BOOTS[k].nome + (i === 0 ? ' (padrão)' : ''), i)));
+let power = { mode: 'off', t0: 0, boot: null };
+function powerOn() {
+  power = { mode: 'black', t0: performance.now(), boot: null };
+  setTimeout(() => { power.mode = 'boot'; power.boot = makeBoot(() => { power.mode = 'home'; }); power.boot.start(); }, 500);
+}
+document.getElementById('btn-power').onclick = powerOn;
+selT.onchange = selB.onchange = powerOn;
+function drawPower(c, t) {
+  const th = THEMES[+selT.value], bk = BOOT_KEYS[+selB.value];
+  if (power.mode === 'off') { px(c, 0, 0, 320, 480, '#000'); text(c, 'clique em ⏻ ligar', 160, 232, '#3a2a50', 10, MONO, 'center', false); }
+  else if (power.mode === 'black') px(c, 0, 0, 320, 480, '#000');
+  else if (power.mode === 'boot') { power.boot.tick(t); drawBootScreen(c, th, bk, power.boot); }
+  else drawHome(c, th);
+}
+
+/* ------------------- página: matriz 4 x 4 ------------------- */
+const matrix = document.getElementById('matrix'), cells = [];
+matrix.appendChild(document.createElement('div'));
+BOOT_KEYS.forEach(k => { const h = document.createElement('div'); h.textContent = BOOTS[k].nome; h.style.cssText = 'font-size:11px;color:#cbbfdb;text-align:center'; matrix.appendChild(h); });
+THEMES.forEach((th, i) => {
+  const h = document.createElement('div'); h.textContent = th.nome; h.style.cssText = 'font-size:12px;color:#e6e0f0;text-align:right'; matrix.appendChild(h);
+  BOOT_KEYS.forEach((k, j) => {
+    const cv = document.createElement('canvas'); cv.width = 320; cv.height = 480; cv.style.cssText = 'width:160px;height:240px;image-rendering:pixelated;display:block';
+    matrix.appendChild(cv);
+    const b = makeBoot(null); b.start(); cells.push([th, k, b, cv]);
+  });
+});
+
+/* ------------------------------ laço ------------------------------ */
+let lastWave = 0;
+function loop(t) {
+  now = t;
+  if (t - lastWave > 260) { lastWave = t; frame ^= 1; }
+  const ready = Object.values(IMG).every(i => i.complete);
+  if (ready) {
+    if (document.getElementById('page-power').classList.contains('on')) {
+      const c = document.getElementById('cv-power').getContext('2d'); c.imageSmoothingEnabled = false; drawPower(c, t);
+    } else if (document.getElementById('page-matrix').classList.contains('on')) {
+      cells.forEach(([th, k, b, cv]) => { b.tick(t); if (b.doneAt && t - b.doneAt > 2200) b.start(); const c = cv.getContext('2d'); c.imageSmoothingEnabled = false; drawBootScreen(c, th, k, b); });
+    } else if (document.getElementById('page-all').classList.contains('on')) {
+      allBoots.forEach(([th, b]) => {
+        b.tick(t); if (b.doneAt && t - b.doneAt > 2600) b.start();
+        const cb = document.getElementById('boot-' + th.id).getContext('2d'); cb.imageSmoothingEnabled = false; drawBootScreen(cb, th, allBootKey, b);
+        const ch = document.getElementById('home-' + th.id).getContext('2d'); ch.imageSmoothingEnabled = false; drawHome(ch, th);
+      });
+    } else {
+      const c = document.getElementById('cv-flow').getContext('2d'); c.imageSmoothingEnabled = false;
+      if (flowMode === 'config') drawConfig(c);
+      else if (flowMode.startsWith('pick-')) drawPicker(c, flowMode.slice(5));
+      else { const p = previewTheme(); if (flowMode === 'boot') { flowBoot.tick(t); drawBootScreen(c, THEMES[p.tema], BOOT_KEYS[p.boot], flowBoot); } else drawHome(c, THEMES[p.tema]); }
+    }
+  }
+  requestAnimationFrame(loop);
+}
+function toggleZoom(el) { const z = document.body.classList.toggle('zoom'); el.textContent = 'zoom 2×: ' + (z ? 'on' : 'off'); el.classList.toggle('on', z); }
+function showPage(p, el) {
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active')); el.classList.add('active');
+  ['power', 'matrix', 'all', 'flow'].forEach(k => document.getElementById('page-' + k).classList.toggle('on', p === k));
+  if (p === 'flow') flowGo('config');
+}
+{ const h = location.hash.slice(1), tabs = { power: 0, matrix: 1, all: 2, flow: 3 }; if (h in tabs) showPage(h, document.querySelectorAll('.variant-tab')[tabs[h]]); }
+Promise.all([document.fonts.load(`8px ${PX}`), document.fonts.load(`10px ${MONO}`)]).finally(() => { restartAll(); requestAnimationFrame(loop); });
+</script>
+</body>
+</html>
