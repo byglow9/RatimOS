@@ -35,6 +35,8 @@
 #include "ratimos/apps/jogos_app.h"
 #include "ratimos/apps/jogos/conexo.h"
 #include "ratimos/apps/jogos/cruzadinha.h"
+#include "ratimos/apps/jogos/cruzadinha_engine.h"
+#include "ratimos/apps/jogos/cruzadinha_puzzles.h"
 #include "ratimos/apps/jogos/paciencia.h"
 #include "ratimos/apps/jogos/sudoku.h"
 #include "ratimos/apps/jogos/termo.h"
@@ -601,6 +603,196 @@ void test_jogos_descriptions_fit_on_one_line(void)
     lv_obj_delete(list);
 }
 
+/* ------------------------------------------------------------------------
+ * Plano 02.1-15 Task 3: a grade da cruzadinha e' UM objeto desenhado (sem
+ * filhos) com clique por coordenada. Confere contra o save + o motor
+ * (fonte da verdade da geometria) que os pixels e o toque batem.
+ * ------------------------------------------------------------------------ */
+
+static lv_point_t s_ptr_pos;
+static bool s_ptr_pressed;
+
+static void ptr_read_cb(lv_indev_t * indev, lv_indev_data_t * data)
+{
+    (void) indev;
+    data->point = s_ptr_pos;
+    data->state = s_ptr_pressed ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
+}
+
+static void pump_ms(int ms)
+{
+    for (int t = 0; t < ms; t += 10) {
+        lv_tick_inc(10);
+        lv_timer_handler();
+    }
+}
+
+static void tap_at(int32_t x, int32_t y)
+{
+    s_ptr_pos.x = x;
+    s_ptr_pos.y = y;
+    s_ptr_pressed = true;
+    pump_ms(60);
+    s_ptr_pressed = false;
+    pump_ms(60);
+}
+
+static uint16_t px565(int32_t x, int32_t y)
+{
+    size_t idx = ((size_t) y * RATIMOS_SCREEN_W + (size_t) x) * 2u;
+    return (uint16_t) (s_disp_buf[idx] | (s_disp_buf[idx + 1] << 8));
+}
+
+static uint16_t to565(lv_color_t c)
+{
+    return lv_color_to_u16(c);
+}
+
+static bool load_cruz_state(ratimos_cruzadinha_state_t * st, ratimos_cruzadinha_puzzle_t * pz,
+                            ratimos_cruzadinha_grid_t * grid)
+{
+    ratimos_game_state_t blob;
+    if (ratimos_storage_get_game_state(RATIMOS_GAME_CRUZADINHA, &blob) != RATIMOS_GAME_STATE_OK) {
+        return false;
+    }
+    memcpy(st, blob.bytes, sizeof(*st));
+    if (!ratimos_cruzadinha_get_puzzle(st->puzzle_index, pz)) {
+        return false;
+    }
+    ratimos_cruzadinha_number_grid(pz, grid);
+    return true;
+}
+
+void test_cruzadinha_grid_is_one_drawn_object_and_taps_select_cells(void)
+{
+    lv_obj_t * scr = show_game(3);
+    lv_obj_t * content = lv_obj_get_child(scr, 3);
+    lv_obj_t * board = lv_obj_get_child(content, 3);
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, lv_obj_get_child_count(board), "grid must be drawn, not one obj per cell");
+
+    ratimos_cruzadinha_state_t st;
+    ratimos_cruzadinha_puzzle_t pz;
+    ratimos_cruzadinha_grid_t grid;
+    TEST_ASSERT_TRUE(load_cruz_state(&st, &pz, &grid));
+
+    lv_obj_update_layout(scr);
+    lv_area_t bc;
+    lv_obj_get_coords(board, &bc);
+    int32_t cell = lv_area_get_width(&bc) / pz.grid_w;
+    TEST_ASSERT_EQUAL_INT(lv_area_get_width(&bc), cell * pz.grid_w);
+
+    lv_refr_now(NULL);
+
+    /* Celula fora do desenho = fundo liso; celula de letra = borda na
+     * quina + fundo de painel no miolo. Acha uma de cada e uma celula de
+     * letra que nao seja a selecionada (pro toque). */
+    int found_block = 0, found_cell = 0;
+    int tap_r = -1, tap_c = -1;
+    for (int r = 0; r < pz.grid_h; r++) {
+        for (int c = 0; c < pz.grid_w; c++) {
+            int32_t x1 = bc.x1 + c * cell, y1 = bc.y1 + r * cell;
+            if (!grid.is_cell[r][c]) {
+                TEST_ASSERT_EQUAL_HEX16(to565(RATIMOS_COLOR_BG), px565(x1 + cell / 2, y1 + cell / 2));
+                found_block++;
+                continue;
+            }
+            found_cell++;
+            bool selected = (r == st.cursor_row && c == st.cursor_col);
+            if (!selected && tap_r < 0 && grid.numbers[r][c] == 0) {
+                tap_r = r;
+                tap_c = c;
+            }
+            if (selected) {
+                TEST_ASSERT_EQUAL_HEX16(to565(RATIMOS_COLOR_ACCENT), px565(x1, y1));
+            }
+        }
+    }
+    TEST_ASSERT_TRUE(found_block > 0);
+    TEST_ASSERT_TRUE(found_cell > 0);
+    TEST_ASSERT_TRUE(tap_r >= 0);
+
+    /* Numero da dica desenhado: a 1a celula numerada tem pixels "de texto"
+     * (nem fundo nem borda) no canto superior esquerdo. */
+    bool number_ink = false;
+    for (int r = 0; r < pz.grid_h && !number_ink; r++) {
+        for (int c = 0; c < pz.grid_w && !number_ink; c++) {
+            if (grid.numbers[r][c] == 0 || (r == st.cursor_row && c == st.cursor_col)) {
+                continue;
+            }
+            int32_t x1 = bc.x1 + c * cell, y1 = bc.y1 + r * cell;
+            uint16_t bg = px565(x1 + cell - 3, y1 + cell - 3);
+            for (int dy = 1; dy < 10 && !number_ink; dy++) {
+                for (int dx = 2; dx < 8; dx++) {
+                    uint16_t p = px565(x1 + dx, y1 + dy);
+                    if (p != bg && p != to565(RATIMOS_COLOR_PANEL_ACTIVE) && p != to565(RATIMOS_COLOR_PANEL)) {
+                        number_ink = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    TEST_ASSERT_TRUE_MESSAGE(number_ink, "clue numbers must be drawn");
+
+    /* Toque de verdade no meio de outra celula de letra move o cursor pra
+     * ela (e grava no save). */
+    lv_indev_t * indev = lv_indev_create();
+    lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
+    lv_indev_set_read_cb(indev, ptr_read_cb);
+    tap_at(bc.x1 + tap_c * cell + cell / 2, bc.y1 + tap_r * cell + cell / 2);
+    lv_indev_delete(indev);
+
+    TEST_ASSERT_TRUE(load_cruz_state(&st, &pz, &grid));
+    TEST_ASSERT_EQUAL_UINT8(tap_r, st.cursor_row);
+    TEST_ASSERT_EQUAL_UINT8(tap_c, st.cursor_col);
+
+    /* Digitar uma letra desenha a letra na celula (pixels claros de texto). */
+    lv_obj_t * kb = lv_obj_get_child(content, 4);
+    for (uint32_t id = 0; id < 40; id++) {
+        const char * t = lv_buttonmatrix_get_button_text(kb, id);
+        if (t && strcmp(t, "w") == 0) {
+            lv_buttonmatrix_set_selected_button(kb, id);
+            lv_obj_send_event(kb, LV_EVENT_VALUE_CHANGED, NULL);
+            break;
+        }
+    }
+    TEST_ASSERT_TRUE(load_cruz_state(&st, &pz, &grid));
+    TEST_ASSERT_TRUE(st.entered[tap_r][tap_c] != 0);
+    lv_refr_now(NULL);
+    int32_t x1 = bc.x1 + tap_c * cell, y1 = bc.y1 + tap_r * cell;
+    bool letter_ink = false;
+    for (int dy = 3; dy < cell - 3 && !letter_ink; dy++) {
+        for (int dx = 3; dx < cell - 3; dx++) {
+            uint16_t p = px565(x1 + dx, y1 + dy);
+            if (p == to565(RATIMOS_COLOR_TEXT)) {
+                letter_ink = true;
+                break;
+            }
+        }
+    }
+    TEST_ASSERT_TRUE_MESSAGE(letter_ink, "typed letter must be drawn");
+}
+
+/* A lista de dicas so' existe aberta: "dicas" monta, "fechar" deleta. */
+void test_cruzadinha_clue_list_is_built_on_open_and_deleted_on_close(void)
+{
+    lv_obj_t * scr = show_game(3);
+    uint32_t children_closed = lv_obj_get_child_count(scr);
+    lv_obj_t * actions = lv_obj_get_child(lv_obj_get_child(scr, 3), 2);
+    lv_obj_send_event(lv_obj_get_child(actions, 1), LV_EVENT_CLICKED, NULL); /* dicas */
+    TEST_ASSERT_EQUAL_UINT32(children_closed + 1, lv_obj_get_child_count(scr));
+
+    lv_obj_t * scrim = lv_obj_get_child(scr, -1);
+    TEST_ASSERT_TRUE(lv_obj_has_flag(scrim, LV_OBJ_FLAG_FLOATING));
+    TEST_ASSERT_FALSE(lv_obj_has_flag(scrim, LV_OBJ_FLAG_HIDDEN));
+    lv_obj_t * panel = lv_obj_get_child(scrim, 0);
+    TEST_ASSERT_TRUE(subtree_has_text(panel, "horizontais"));
+    TEST_ASSERT_TRUE(subtree_has_text(panel, "verticais"));
+
+    lv_obj_send_event(lv_obj_get_child(panel, 0), LV_EVENT_CLICKED, NULL); /* fechar */
+    TEST_ASSERT_EQUAL_UINT32(children_closed, lv_obj_get_child_count(scr));
+}
+
 int main(void)
 {
     char tmpl[] = "/tmp/ratimos_game_screens_XXXXXX";
@@ -632,5 +824,7 @@ int main(void)
     RUN_TEST(test_back_from_a_game_goes_to_jogos_and_from_an_app_goes_home);
     RUN_TEST(test_home_tiles_and_list_rows_follow_one_vertical_rhythm);
     RUN_TEST(test_jogos_descriptions_fit_on_one_line);
+    RUN_TEST(test_cruzadinha_grid_is_one_drawn_object_and_taps_select_cells);
+    RUN_TEST(test_cruzadinha_clue_list_is_built_on_open_and_deleted_on_close);
     return UNITY_END();
 }

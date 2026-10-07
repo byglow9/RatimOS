@@ -67,10 +67,11 @@ static lv_obj_t * s_cruzadinha_screen = NULL;
 
 static lv_obj_t * s_unavailable_label = NULL;
 static lv_obj_t * s_error_label = NULL;
+/* Grade inteira = UM objeto desenhado (board_draw_cb) + um clique por
+ * coordenada (board_clicked_cb) -- plano 02.1-15 Task 3. Antes eram 121
+ * lv_obj (celula) + 242 labels (letra/numero), cada um com estilos locais,
+ * ~100KB de heap so' pra grade. */
 static lv_obj_t * s_board = NULL;
-static lv_obj_t * s_cell[CRUZ_MAX_DIM][CRUZ_MAX_DIM];
-static lv_obj_t * s_cell_letter_label[CRUZ_MAX_DIM][CRUZ_MAX_DIM];
-static lv_obj_t * s_cell_number_label[CRUZ_MAX_DIM][CRUZ_MAX_DIM];
 static lv_obj_t * s_clue_strip = NULL;
 static lv_obj_t * s_clue_strip_label = NULL;
 static lv_obj_t * s_next_word_btn = NULL;
@@ -78,9 +79,10 @@ static lv_obj_t * s_keyboard = NULL;
 static lv_obj_t * s_banner_label = NULL;
 static lv_obj_t * s_castle_label = NULL;
 static lv_obj_t * s_confirm_overlay = NULL;
+/* Lista de dicas: construida so' quando "dicas" e' tocado e deletada ao
+ * fechar (02.1-15 Task 3) -- eram 32 linhas-painel montadas escondidas em
+ * toda visita. NULL = lista fechada. */
 static lv_obj_t * s_clue_list_overlay = NULL;
-static lv_obj_t * s_clue_list_across_header = NULL;
-static lv_obj_t * s_clue_list_down_header = NULL;
 static lv_obj_t * s_clue_list_across_row[RATIMOS_CRUZADINHA_MAX_WORDS];
 static lv_obj_t * s_clue_list_down_row[RATIMOS_CRUZADINHA_MAX_WORDS];
 static lv_obj_t * s_clue_list_across_label[RATIMOS_CRUZADINHA_MAX_WORDS];
@@ -101,9 +103,6 @@ static void cruzadinha_screen_deleted_cb(lv_event_t * e)
     s_unavailable_label = NULL;
     s_error_label = NULL;
     s_board = NULL;
-    memset(s_cell, 0, sizeof(s_cell));
-    memset(s_cell_letter_label, 0, sizeof(s_cell_letter_label));
-    memset(s_cell_number_label, 0, sizeof(s_cell_number_label));
     s_clue_strip = NULL;
     s_clue_strip_label = NULL;
     s_next_word_btn = NULL;
@@ -112,8 +111,6 @@ static void cruzadinha_screen_deleted_cb(lv_event_t * e)
     s_castle_label = NULL;
     s_confirm_overlay = NULL;
     s_clue_list_overlay = NULL;
-    s_clue_list_across_header = NULL;
-    s_clue_list_down_header = NULL;
     memset(s_clue_list_across_row, 0, sizeof(s_clue_list_across_row));
     memset(s_clue_list_down_row, 0, sizeof(s_clue_list_down_row));
     memset(s_clue_list_across_label, 0, sizeof(s_clue_list_across_label));
@@ -303,6 +300,100 @@ static bool load_or_start_state(void)
  * Renderizacao.
  * ------------------------------------------------------------------------ */
 
+/* Cores/borda de uma celula de letra -- mesmas 3 variantes de antes
+ * (selecionada / na entrada ativa / normal). */
+static void cell_style(uint8_t r, uint8_t c, lv_draw_rect_dsc_t * dsc)
+{
+    if (r == s_state.cursor_row && c == s_state.cursor_col) {
+        dsc->bg_color = RATIMOS_COLOR_PANEL_ACTIVE;
+        dsc->border_color = RATIMOS_COLOR_ACCENT;
+        dsc->border_width = 2;
+    } else if (cell_is_in_active_entry(r, c)) {
+        dsc->bg_color = RATIMOS_COLOR_PANEL_ACTIVE;
+        dsc->border_color = RATIMOS_COLOR_PANEL;
+        dsc->border_width = 1;
+    } else {
+        dsc->bg_color = RATIMOS_COLOR_PANEL;
+        dsc->border_color = RATIMOS_COLOR_PANEL_ACTIVE;
+        dsc->border_width = 1;
+    }
+}
+
+/*
+ * Desenha a grade no LV_EVENT_DRAW_MAIN do board: por celula, o fundo +
+ * borda, o numero da dica (mono 10, canto superior esquerdo, 1px pra
+ * dentro da borda) e a letra digitada (fonte do tema, centralizada) --
+ * pixel a pixel o mesmo layout dos antigos lv_obj/labels por celula.
+ * Celula fora do desenho: bloco solido da cor do fundo, sem borda.
+ */
+static void board_draw_cb(lv_event_t * e)
+{
+    if (!s_puzzle_ready) {
+        return;
+    }
+    lv_obj_t * board = lv_event_get_target(e);
+    lv_layer_t * layer = lv_event_get_layer(e);
+    lv_area_t bc;
+    lv_obj_get_coords(board, &bc);
+
+    const lv_coord_t cell_px = cell_px_for_dim(s_puzzle.grid_w);
+    const lv_font_t * letter_font = lv_obj_get_style_text_font(board, LV_PART_MAIN);
+    const int32_t letter_h = lv_font_get_line_height(letter_font);
+
+    for (uint8_t r = 0; r < s_puzzle.grid_h && r < CRUZ_MAX_DIM; r++) {
+        for (uint8_t c = 0; c < s_puzzle.grid_w && c < CRUZ_MAX_DIM; c++) {
+            lv_area_t a;
+            a.x1 = bc.x1 + (int32_t) c * cell_px;
+            a.y1 = bc.y1 + (int32_t) r * cell_px;
+            a.x2 = a.x1 + cell_px - 1;
+            a.y2 = a.y1 + cell_px - 1;
+
+            lv_draw_rect_dsc_t rect;
+            lv_draw_rect_dsc_init(&rect);
+            rect.radius = 0;
+            rect.bg_opa = LV_OPA_COVER;
+
+            if (!s_grid.is_cell[r][c]) {
+                rect.bg_color = RATIMOS_COLOR_BG;
+                rect.border_width = 0;
+                lv_draw_rect(layer, &rect, &a);
+                continue;
+            }
+
+            cell_style(r, c, &rect);
+            lv_draw_rect(layer, &rect, &a);
+
+            if (s_grid.numbers[r][c] != 0) {
+                char num[4];
+                lv_snprintf(num, sizeof(num), "%u", (unsigned) s_grid.numbers[r][c]);
+                lv_draw_label_dsc_t ld;
+                lv_draw_label_dsc_init(&ld);
+                ld.font = &ratimos_font_mono_10;
+                ld.color = RATIMOS_COLOR_TEXT_MUTED;
+                ld.text = num;
+                ld.text_local = 1;
+                lv_area_t na = { a.x1 + rect.border_width + 1, a.y1 + rect.border_width, a.x2, a.y2 };
+                lv_draw_label(layer, &ld, &na);
+            }
+
+            if (s_state.entered[r][c] != 0) {
+                char letter[2] = { s_state.entered[r][c], 0 };
+                lv_draw_label_dsc_t ld;
+                lv_draw_label_dsc_init(&ld);
+                ld.font = letter_font;
+                ld.color = RATIMOS_COLOR_TEXT;
+                ld.align = LV_TEXT_ALIGN_CENTER;
+                ld.text = letter;
+                ld.text_local = 1;
+                lv_area_t la = { a.x1, a.y1 + (cell_px - letter_h) / 2, a.x2, 0 };
+                la.y2 = la.y1 + letter_h - 1;
+                lv_draw_label(layer, &ld, &la);
+            }
+        }
+    }
+}
+
+/* Tamanho/posicao do board por quebra-cabeca + redesenho. */
 static void render_grid(void)
 {
     lv_coord_t cell_px = cell_px_for_dim(s_puzzle.grid_w);
@@ -310,63 +401,7 @@ static void render_grid(void)
     lv_obj_set_size(s_board, board_px, board_px);
     /* Centraliza a grade (agora mais estreita que o content) no eixo X. */
     lv_obj_set_style_margin_left(s_board, (RATIMOS_SCREEN_W - 2 * RATIMOS_CONTENT_PAD - board_px) / 2, 0);
-
-    for (uint8_t r = 0; r < CRUZ_MAX_DIM; r++) {
-        for (uint8_t c = 0; c < CRUZ_MAX_DIM; c++) {
-            lv_obj_t * cell = s_cell[r][c];
-
-            if (r >= s_puzzle.grid_h || c >= s_puzzle.grid_w) {
-                lv_obj_add_flag(cell, LV_OBJ_FLAG_HIDDEN);
-                continue;
-            }
-
-            lv_obj_clear_flag(cell, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_set_size(cell, cell_px, cell_px);
-            lv_obj_set_pos(cell, (lv_coord_t) (c * cell_px), (lv_coord_t) (r * cell_px));
-
-            if (!s_grid.is_cell[r][c]) {
-                /* Celula fora do desenho: bloco solido sem borda (UI-SPEC). */
-                lv_obj_clear_flag(cell, LV_OBJ_FLAG_CLICKABLE);
-                lv_obj_set_style_bg_color(cell, RATIMOS_COLOR_BG, 0);
-                lv_obj_set_style_border_width(cell, 0, 0);
-                lv_label_set_text(s_cell_letter_label[r][c], "");
-                lv_label_set_text(s_cell_number_label[r][c], "");
-                continue;
-            }
-
-            lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
-
-            bool is_selected = (r == s_state.cursor_row && c == s_state.cursor_col);
-            bool in_active_entry = cell_is_in_active_entry(r, c);
-
-            if (is_selected) {
-                lv_obj_set_style_bg_color(cell, RATIMOS_COLOR_PANEL_ACTIVE, 0);
-                lv_obj_set_style_border_color(cell, RATIMOS_COLOR_ACCENT, 0);
-                lv_obj_set_style_border_width(cell, 2, 0);
-            } else if (in_active_entry) {
-                lv_obj_set_style_bg_color(cell, RATIMOS_COLOR_PANEL_ACTIVE, 0);
-                lv_obj_set_style_border_color(cell, RATIMOS_COLOR_PANEL, 0);
-                lv_obj_set_style_border_width(cell, 1, 0);
-            } else {
-                lv_obj_set_style_bg_color(cell, RATIMOS_COLOR_PANEL, 0);
-                lv_obj_set_style_border_color(cell, RATIMOS_COLOR_PANEL_ACTIVE, 0);
-                lv_obj_set_style_border_width(cell, 1, 0);
-            }
-
-            char letter_buf[2] = { 0, 0 };
-            if (s_state.entered[r][c] != 0) {
-                letter_buf[0] = s_state.entered[r][c];
-            }
-            lv_label_set_text(s_cell_letter_label[r][c], letter_buf);
-            lv_obj_set_style_text_color(s_cell_letter_label[r][c], RATIMOS_COLOR_TEXT, 0);
-
-            if (s_grid.numbers[r][c] != 0) {
-                lv_label_set_text_fmt(s_cell_number_label[r][c], "%u", (unsigned) s_grid.numbers[r][c]);
-            } else {
-                lv_label_set_text(s_cell_number_label[r][c], "");
-            }
-        }
-    }
+    lv_obj_invalidate(s_board);
 }
 
 static void render_clue_strip(void)
@@ -384,6 +419,10 @@ static void render_clue_strip(void)
 
 static void render_clue_list(void)
 {
+    if (s_clue_list_overlay == NULL) {
+        return; /* lista fechada: nada montado */
+    }
+
     uint8_t across_count = 0;
     uint8_t down_count = 0;
 
@@ -474,12 +513,36 @@ static void check_completion(void)
     }
 }
 
-static void cell_clicked_cb(lv_event_t * e)
+/* Toque na grade: a celula vem da coordenada do toque (o board e' um
+ * objeto so'). Celula fora do desenho nao reage -- igual a antes, quando
+ * ela nao era clicavel. */
+static void board_clicked_cb(lv_event_t * e)
 {
-    lv_obj_t * cell = lv_event_get_target(e);
-    uint32_t user_data = (uint32_t) (uintptr_t) lv_obj_get_user_data(cell);
-    uint8_t row = (uint8_t) (user_data >> 8);
-    uint8_t col = (uint8_t) (user_data & 0xFF);
+    if (!s_puzzle_ready) {
+        return;
+    }
+    lv_indev_t * indev = lv_indev_active();
+    if (indev == NULL) {
+        return;
+    }
+    lv_point_t p;
+    lv_indev_get_point(indev, &p);
+    lv_area_t bc;
+    lv_obj_get_coords(lv_event_get_target(e), &bc);
+    if (p.x < bc.x1 || p.y < bc.y1) {
+        return;
+    }
+    lv_coord_t cell_px = cell_px_for_dim(s_puzzle.grid_w);
+    uint32_t col32 = (uint32_t) (p.x - bc.x1) / (uint32_t) cell_px;
+    uint32_t row32 = (uint32_t) (p.y - bc.y1) / (uint32_t) cell_px;
+    if (row32 >= s_puzzle.grid_h || col32 >= s_puzzle.grid_w || row32 >= CRUZ_MAX_DIM || col32 >= CRUZ_MAX_DIM) {
+        return;
+    }
+    uint8_t row = (uint8_t) row32;
+    uint8_t col = (uint8_t) col32;
+    if (!s_grid.is_cell[row][col]) {
+        return;
+    }
 
     if (row == s_state.cursor_row && col == s_state.cursor_col) {
         /* Ja e a celula selecionada -- alterna a orientacao ativa quando
@@ -540,26 +603,49 @@ static void keyboard_value_changed_cb(lv_event_t * e)
     }
 }
 
+static void build_clue_list_overlay(void);
+
+/* Fecha = deleta o scrim inteiro (painel + linhas). Chamado de dentro do
+ * clique de um filho dele -- o LVGL 9 trata isso (mesmo caso do "voltar"
+ * deletando a tela, ver ratimos_screen_load). */
+static void close_clue_list(void)
+{
+    if (s_clue_list_overlay == NULL) {
+        return;
+    }
+    lv_obj_t * scrim = lv_obj_get_parent(s_clue_list_overlay);
+    s_clue_list_overlay = NULL;
+    memset(s_clue_list_across_row, 0, sizeof(s_clue_list_across_row));
+    memset(s_clue_list_down_row, 0, sizeof(s_clue_list_down_row));
+    memset(s_clue_list_across_label, 0, sizeof(s_clue_list_across_label));
+    memset(s_clue_list_down_label, 0, sizeof(s_clue_list_down_label));
+    lv_obj_delete(scrim);
+}
+
 static void clue_list_row_clicked_cb(lv_event_t * e)
 {
     lv_obj_t * row = lv_event_get_target(e);
     uint8_t entry_index = (uint8_t) (uintptr_t) lv_obj_get_user_data(row);
     jump_to_entry(entry_index);
     persist_state();
-    ratimos_modal_hide(s_clue_list_overlay);
+    close_clue_list();
     render_all();
 }
 
 static void ver_todas_clicked_cb(lv_event_t * e)
 {
     (void) e;
+    if (s_clue_list_overlay == NULL) {
+        build_clue_list_overlay();
+        render_clue_list();
+    }
     ratimos_modal_show(s_clue_list_overlay);
 }
 
 static void clue_list_close_clicked_cb(lv_event_t * e)
 {
     (void) e;
-    ratimos_modal_hide(s_clue_list_overlay);
+    close_clue_list();
 }
 
 static void confirm_cancel_cb(lv_event_t * e)
@@ -608,6 +694,42 @@ static lv_obj_t * build_clue_list_row(lv_obj_t * parent, lv_obj_t ** out_label)
     *out_label = label;
 
     return row;
+}
+
+/* Monta a lista de dicas (scrim + painel + 2 x MAX_WORDS linhas) na tela
+ * ativa da cruzadinha -- so' quando "dicas" e' tocado; close_clue_list()
+ * deleta tudo de novo. */
+static void build_clue_list_overlay(void)
+{
+    /* Overlay: lista completa de dicas (JOGOS-04's requisito literal de
+     * dica numerada para quem quer navegar). Modal compartilhado
+     * (ratimos_modal_create, theme.h): scrim FLOATING de tela cheia +
+     * painel centralizado -- igual aos dialogos de confirmacao. */
+    s_clue_list_overlay = ratimos_modal_create(s_cruzadinha_screen, 300, 400);
+    /* Lista longa e rolavel: comeca do topo (o centro do helper empurraria
+     * o inicio da lista pra cima, fora do alcance da rolagem). */
+    lv_obj_set_flex_align(s_clue_list_overlay, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_set_flex_flow(s_clue_list_overlay, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_row(s_clue_list_overlay, 6, 0);
+
+    lv_obj_t * close_btn = ratimos_button_create(s_clue_list_overlay, "fechar", clue_list_close_clicked_cb, lv_pct(100), LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_color(close_btn, RATIMOS_COLOR_ACCENT, 0);
+
+    lv_obj_t * across_header = lv_label_create(s_clue_list_overlay);
+    lv_label_set_text(across_header, "horizontais");
+    lv_obj_set_style_text_color(across_header, RATIMOS_COLOR_ACCENT, 0);
+
+    for (uint8_t i = 0; i < RATIMOS_CRUZADINHA_MAX_WORDS; i++) {
+        s_clue_list_across_row[i] = build_clue_list_row(s_clue_list_overlay, &s_clue_list_across_label[i]);
+    }
+
+    lv_obj_t * down_header = lv_label_create(s_clue_list_overlay);
+    lv_label_set_text(down_header, "verticais");
+    lv_obj_set_style_text_color(down_header, RATIMOS_COLOR_ACCENT, 0);
+
+    for (uint8_t i = 0; i < RATIMOS_CRUZADINHA_MAX_WORDS; i++) {
+        s_clue_list_down_row[i] = build_clue_list_row(s_clue_list_overlay, &s_clue_list_down_label[i]);
+    }
 }
 
 static lv_obj_t * build_cruzadinha_screen(void)
@@ -675,42 +797,16 @@ static lv_obj_t * build_cruzadinha_screen(void)
     lv_obj_t * novo_btn = ratimos_button_create(actions, "novo jogo", novo_jogo_clicked_cb, LV_SIZE_CONTENT, CRUZ_PILL_H);
     lv_obj_set_flex_grow(novo_btn, 1);
 
-    /* Grid -- construido UMA vez no tamanho maximo (11x11); render_grid()
-     * decide quantas celulas ficam visiveis e o tamanho de cada uma por
-     * quebra-cabeca. */
+    /* Grid -- UM objeto desenhado (board_draw_cb) com clique por coordenada
+     * (board_clicked_cb); render_grid() ajusta o tamanho por quebra-cabeca. */
     s_board = lv_obj_create(shell.content);
     lv_obj_remove_style_all(s_board);
     lv_obj_set_style_bg_color(s_board, RATIMOS_COLOR_BG, 0);
     lv_obj_set_style_bg_opa(s_board, LV_OPA_COVER, 0);
     lv_obj_clear_flag(s_board, LV_OBJ_FLAG_SCROLLABLE);
-
-    for (uint8_t r = 0; r < CRUZ_MAX_DIM; r++) {
-        for (uint8_t c = 0; c < CRUZ_MAX_DIM; c++) {
-            lv_obj_t * cell = lv_obj_create(s_board);
-            lv_obj_remove_style_all(cell);
-            lv_obj_set_style_bg_opa(cell, LV_OPA_COVER, 0);
-            lv_obj_set_style_radius(cell, 0, 0);
-            lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
-            lv_obj_set_user_data(cell, (void *) (uintptr_t) (((uint32_t) r << 8) | c));
-            lv_obj_add_event_cb(cell, cell_clicked_cb, LV_EVENT_CLICKED, NULL);
-            s_cell[r][c] = cell;
-
-            lv_obj_t * number_label = lv_label_create(cell);
-            lv_label_set_text(number_label, "");
-            lv_obj_set_style_text_color(number_label, RATIMOS_COLOR_TEXT_MUTED, 0);
-            /* Celulas de 18-23px: numero da dica em mono 10 pra nao
-             * encostar na letra (mono 12, centralizada). */
-            lv_obj_set_style_text_font(number_label, &ratimos_font_mono_10, 0);
-            lv_obj_align(number_label, LV_ALIGN_TOP_LEFT, 1, 0);
-            s_cell_number_label[r][c] = number_label;
-
-            lv_obj_t * letter_label = lv_label_create(cell);
-            lv_label_set_text(letter_label, "");
-            lv_obj_set_style_text_color(letter_label, RATIMOS_COLOR_TEXT, 0);
-            lv_obj_center(letter_label);
-            s_cell_letter_label[r][c] = letter_label;
-        }
-    }
+    lv_obj_add_flag(s_board, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(s_board, board_draw_cb, LV_EVENT_DRAW_MAIN, NULL);
+    lv_obj_add_event_cb(s_board, board_clicked_cb, LV_EVENT_CLICKED, NULL);
 
     /* Teclado A-Z compartilhado + apagar -- risco flagueado (UI-SPEC/
      * RESEARCH): celulas de ~30px ficam abaixo do alvo de toque ideal de
@@ -743,37 +839,6 @@ static lv_obj_t * build_cruzadinha_screen(void)
     lv_obj_set_style_text_align(s_castle_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(s_castle_label, RATIMOS_COLOR_TEXT_MUTED, 0);
     lv_obj_add_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
-
-    /* Overlay: lista completa de dicas (JOGOS-04's requisito literal de
-     * dica numerada para quem quer navegar). Modal compartilhado
-     * (ratimos_modal_create, theme.h): scrim FLOATING de tela cheia +
-     * painel centralizado -- igual aos dialogos de confirmacao. */
-    s_clue_list_overlay = ratimos_modal_create(shell.screen, 300, 400);
-    /* Lista longa e rolavel: comeca do topo (o centro do helper empurraria
-     * o inicio da lista pra cima, fora do alcance da rolagem). */
-    lv_obj_set_flex_align(s_clue_list_overlay, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-    lv_obj_set_flex_flow(s_clue_list_overlay, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_row(s_clue_list_overlay, 6, 0);
-    ratimos_modal_hide(s_clue_list_overlay);
-
-    lv_obj_t * close_btn = ratimos_button_create(s_clue_list_overlay, "fechar", clue_list_close_clicked_cb, lv_pct(100), LV_SIZE_CONTENT);
-    lv_obj_set_style_bg_color(close_btn, RATIMOS_COLOR_ACCENT, 0);
-
-    s_clue_list_across_header = lv_label_create(s_clue_list_overlay);
-    lv_label_set_text(s_clue_list_across_header, "horizontais");
-    lv_obj_set_style_text_color(s_clue_list_across_header, RATIMOS_COLOR_ACCENT, 0);
-
-    for (uint8_t i = 0; i < RATIMOS_CRUZADINHA_MAX_WORDS; i++) {
-        s_clue_list_across_row[i] = build_clue_list_row(s_clue_list_overlay, &s_clue_list_across_label[i]);
-    }
-
-    s_clue_list_down_header = lv_label_create(s_clue_list_overlay);
-    lv_label_set_text(s_clue_list_down_header, "verticais");
-    lv_obj_set_style_text_color(s_clue_list_down_header, RATIMOS_COLOR_ACCENT, 0);
-
-    for (uint8_t i = 0; i < RATIMOS_CRUZADINHA_MAX_WORDS; i++) {
-        s_clue_list_down_row[i] = build_clue_list_row(s_clue_list_overlay, &s_clue_list_down_label[i]);
-    }
 
     /* Dialogo de confirmacao destrutiva (Copywriting Contract) -- mesmo
      * padrao de sudoku.c/termo.c/conexo.c. */

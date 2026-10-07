@@ -10,7 +10,7 @@
  *   - nenhum crash;
  *   - heap estavel entre voltas (volta 3 <= volta 2 + 2%);
  *   - sair de uma tela devolve o heap (a tela nao fica em cache);
- *   - custo da tela da cruzadinha < 80KB.
+ *   - custo da tela da cruzadinha < 80KB (Task 3).
  *
  * Headless igual a test_game_screens.c: display 320x480 com flush que so'
  * libera o buffer; cada passo renderiza um frame de verdade (lv_refr_now),
@@ -256,6 +256,36 @@ void test_leaving_any_screen_releases_its_heap(void)
     }
 }
 
+/*
+ * Must-have 3 (Task 3): a tela da cruzadinha custa < 80KB (antes ~170KB:
+ * grade de 121 lv_obj + 242 labels = ~125KB, lista de dicas montada
+ * escondida = ~30KB). Abrir e fechar "dicas" nao deixa nada pra tras.
+ */
+void test_cruzadinha_screen_costs_under_80kb(void)
+{
+    go_home();
+    size_t base = ratimos_heap_used();
+    ratimos_cruzadinha_show(NULL);
+    render();
+    size_t cost = ratimos_heap_used() - base;
+    fprintf(stderr, "cruzadinha screen cost: %u bytes (budget %u)\n", (unsigned) cost, (unsigned) CRUZADINHA_BUDGET);
+    TEST_ASSERT_TRUE_MESSAGE(cost < CRUZADINHA_BUDGET, "cruzadinha screen over 80KB");
+
+    /* content = [0 erro, 1 dica, 2 acoes (proxima/dicas/novo jogo), ...] */
+    lv_obj_t * actions = lv_obj_get_child(lv_obj_get_child(lv_screen_active(), 3), 2);
+    lv_obj_send_event(lv_obj_get_child(actions, 1), LV_EVENT_CLICKED, NULL); /* dicas */
+    render();
+    size_t open_cost = ratimos_heap_used() - base;
+    fprintf(stderr, "cruzadinha with clue list open: %u bytes\n", (unsigned) open_cost);
+    lv_obj_t * scrim = lv_obj_get_child(lv_screen_active(), -1);
+    lv_obj_send_event(lv_obj_get_child(lv_obj_get_child(scrim, 0), 0), LV_EVENT_CLICKED, NULL); /* fechar */
+    render();
+    TEST_ASSERT_TRUE_MESSAGE(ratimos_heap_used() <= base + cost + RETAIN_SLACK, "clue list leaked after close");
+
+    go_home();
+    TEST_ASSERT_TRUE(ratimos_heap_used() <= base + RETAIN_SLACK);
+}
+
 /* ------------------------------------------------------------------------
  * Clique de verdade (indev pointer) no "voltar": a tela antiga e' deletada
  * DENTRO do callback de clique de um filho dela -- o LVGL tem que sair
@@ -338,6 +368,7 @@ int main(void)
     UNITY_BEGIN();
     RUN_TEST(test_full_session_three_laps_is_stable);
     RUN_TEST(test_leaving_any_screen_releases_its_heap);
+    RUN_TEST(test_cruzadinha_screen_costs_under_80kb);
     RUN_TEST(test_real_pointer_tap_on_voltar_deletes_old_screen_cleanly);
     return UNITY_END();
 }
