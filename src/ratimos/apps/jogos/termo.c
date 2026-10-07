@@ -84,9 +84,15 @@ static const lv_buttonmatrix_ctrl_t TERMO_KEYBOARD_CTRL[] = {
 };
 
 /* ------------------------------------------------------------------------
- * Tela (LVGL) -- cache-once, igual a sudoku.c/conexo.c. Todos os 4 boards x
- * 9 linhas x 5 colunas sao construidos UMA vez (o maximo que qualquer modo
- * usa); trocar de modo so mostra/esconde/redimensiona, nunca reconstroi.
+ * Tela (LVGL) -- construida a cada visita, deletada ao sair.
+ *
+ * ratimos_termo_show() constroi a tela a partir do save e
+ * ratimos_screen_load() (app_shell.h) a deleta quando a jogadora navega pra
+ * outra tela (plano 02.1-15, deferred-items #1: as telas em cache pra
+ * sempre esgotavam o heap do LVGL). Enquanto a tela existe, trocar de
+ * modo so mostra/esconde/redimensiona os 4 boards x 9 linhas x 5 colunas
+ * (o maximo que qualquer modo usa), nunca reconstroi.
+ * termo_screen_deleted_cb() zera os ponteiros de widget no LV_EVENT_DELETE.
  * ------------------------------------------------------------------------ */
 
 static lv_obj_t * s_termo_screen = NULL;
@@ -137,6 +143,33 @@ static uint8_t s_key_states[26];
  * (compose_guess). Derivado do historico a cada render -- nada novo no save.
  */
 static char s_locked[RATIMOS_TERMO_WORD_LEN];
+
+/* Tela deletada ao sair (ratimos_screen_load, plano 02.1-15): zera todo
+ * ponteiro de widget pro proximo ratimos_termo_show() reconstruir a partir
+ * do save -- nenhum callback pode achar um handle de uma tela que ja sumiu. */
+static void termo_screen_deleted_cb(lv_event_t * e)
+{
+    (void) e;
+    s_termo_screen = NULL;
+    s_section_title_label = NULL;
+    s_error_label = NULL;
+    s_pill_row = NULL;
+    memset(s_pills, 0, sizeof(s_pills));
+    s_status_label = NULL;
+    s_boards_wrap = NULL;
+    memset(s_board_panel, 0, sizeof(s_board_panel));
+    memset(s_row_wrap, 0, sizeof(s_row_wrap));
+    memset(s_tile, 0, sizeof(s_tile));
+    memset(s_tile_label, 0, sizeof(s_tile_label));
+    s_keyboard = NULL;
+    s_banner_label = NULL;
+    s_castle_label = NULL;
+    s_reveal_label = NULL;
+    s_confirm_overlay = NULL;
+    /* Rejeicao pendente e' so' da tela que sumiu (nao vai pro save). */
+    s_reject_flash = false;
+    s_reject_msg = NULL;
+}
 
 static int free_slots(void)
 {
@@ -875,6 +908,7 @@ void ratimos_termo_show(lv_event_t * e)
     (void) e;
     if (!s_termo_screen) {
         s_termo_screen = build_termo_screen();
+        lv_obj_add_event_cb(s_termo_screen, termo_screen_deleted_cb, LV_EVENT_DELETE, NULL);
     }
-    lv_screen_load(s_termo_screen);
+    ratimos_screen_load(s_termo_screen);
 }

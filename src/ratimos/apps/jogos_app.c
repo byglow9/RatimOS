@@ -10,13 +10,10 @@
 #include "jogos/termo.h"
 
 /*
- * Cache-once, like ratimos_cartas_show() (01-01) / ratimos_home_screen_show():
- * games are only ever indexed once, synchronously, during the splash's staged
- * init (D-10), so building this screen's row list once and reusing it forever
- * is both correct and required -- without caching, every visit builds a
- * brand-new, never-freed lv_obj_t screen, which exhausts LVGL's builtin heap
- * after only a handful of visits (same leak already fixed in cartas_app.c
- * during 01-01; deferred here for 01-03 per deferred-items.md).
+ * Construida a cada visita e deletada ao sair (ratimos_screen_load, plano
+ * 02.1-15) -- antes ficava em cache pra sempre, e todas as telas em cache
+ * juntas esgotavam o heap do LVGL (deferred-items #1). O LV_EVENT_DELETE
+ * (jogos_screen_deleted_cb) zera o ponteiro da tela e os handles de label.
  */
 static lv_obj_t * s_jogos_screen = NULL;
 
@@ -78,6 +75,15 @@ static const lv_event_cb_t s_game_callbacks[RATIMOS_GAME_COUNT] = {
 static lv_obj_t * s_game_title_labels[RATIMOS_GAME_COUNT] = { NULL };
 static char s_game_titles[RATIMOS_GAME_COUNT][RATIMOS_JOGOS_TITLE_LEN];
 
+static void jogos_screen_deleted_cb(lv_event_t * e)
+{
+    (void) e;
+    s_jogos_screen = NULL;
+    for (size_t i = 0; i < RATIMOS_GAME_COUNT; i++) {
+        s_game_title_labels[i] = NULL;
+    }
+}
+
 static lv_obj_t * build_jogos_screen(void)
 {
     ratimos_app_shell_t shell = ratimos_app_shell_create("./home/jogos", NULL);
@@ -117,10 +123,7 @@ static lv_obj_t * build_jogos_screen(void)
  * Reavalia a probe barata ratimos_storage_has_game_state() (plano 08 Task 1)
  * pra cada jogo e atualiza os cinco labels de subtitulo ("<descricao>" ou
  * "continuar · <descricao>") -- chamada em TODA
- * visita ao launcher. A tela e' cacheada uma unica vez (build_jogos_screen
- * so roda no primeiro ratimos_jogos_show()), entao sem isto o rotulo
- * sem progresso ficaria congelado mesmo depois da jogadora voltar de um jogo em
- * que acabou de salvar progresso real.
+ * visita ao launcher, logo depois de (re)construir a tela.
  */
 static void refresh_jogos_rows(void)
 {
@@ -147,7 +150,8 @@ void ratimos_jogos_show(lv_event_t * e)
     (void) e;
     if (!s_jogos_screen) {
         s_jogos_screen = build_jogos_screen();
+        lv_obj_add_event_cb(s_jogos_screen, jogos_screen_deleted_cb, LV_EVENT_DELETE, NULL);
     }
     refresh_jogos_rows();
-    lv_screen_load(s_jogos_screen);
+    ratimos_screen_load(s_jogos_screen);
 }

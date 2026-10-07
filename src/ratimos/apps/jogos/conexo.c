@@ -3,8 +3,8 @@
  *
  * Persistencia (JOGOS-02): TODA mudanca de estado (selecionar, enviar,
  * embaralhar) grava na hora via ratimos_storage_save_game_state(). Salvar so
- * ao sair da tela perderia o progresso num fechamento inesperado — e o cache
- * de tela em memoria, sozinho, nao sobrevive a um relaunch do processo.
+ * ao sair da tela perderia o progresso num fechamento inesperado — e a tela
+ * e' reconstruida do save a cada visita (plano 02.1-15).
  *
  * Este arquivo NAO abre arquivo nenhum: todo byte que chega ao disco passa
  * pela Storage/Content API (D-10).
@@ -209,12 +209,14 @@ bool ratimos_conexo_record_win_if_needed(ratimos_conexo_state_t * state)
 }
 
 /* ------------------------------------------------------------------------
- * Tela (LVGL) — cache-once, igual a jogos_app.c / cartas_app.c.
+ * Tela (LVGL) -- construida a cada visita, deletada ao sair.
  *
- * A tela e construida UMA vez e guardada em s_conexo_screen; toda jogada
- * apenas atualiza os objetos ja existentes via render_board(). Reconstruir a
- * tela a cada visita e exatamente o vazamento de heap do LVGL que a Fase 1 ja
- * corrigiu — nao pode voltar.
+ * ratimos_conexo_show() constroi a tela a partir do save e
+ * ratimos_screen_load() (app_shell.h) a deleta quando a jogadora navega pra
+ * outra tela (plano 02.1-15, deferred-items #1: as telas em cache pra
+ * sempre esgotavam o heap do LVGL). Enquanto a tela existe, toda jogada
+ * so atualiza os objetos existentes via render_board().
+ * conexo_screen_deleted_cb() zera os ponteiros de widget no LV_EVENT_DELETE.
  * ------------------------------------------------------------------------ */
 
 #define TILE_W 72
@@ -239,6 +241,27 @@ static lv_obj_t * s_confirm_overlay = NULL;
 static ratimos_conexo_state_t s_state;
 static ratimos_conexo_puzzle_t s_puzzle;
 static bool s_puzzle_ready = false;
+
+/* Tela deletada ao sair (ratimos_screen_load, plano 02.1-15): zera todo
+ * ponteiro de widget pro proximo ratimos_conexo_show() reconstruir a partir
+ * do save -- nenhum callback pode achar um handle de uma tela que ja sumiu. */
+static void conexo_screen_deleted_cb(lv_event_t * e)
+{
+    (void) e;
+    s_conexo_screen = NULL;
+    s_error_label = NULL;
+    s_unavailable_label = NULL;
+    memset(s_bands, 0, sizeof(s_bands));
+    memset(s_band_labels, 0, sizeof(s_band_labels));
+    s_grid = NULL;
+    memset(s_tiles, 0, sizeof(s_tiles));
+    memset(s_tile_labels, 0, sizeof(s_tile_labels));
+    s_banner_label = NULL;
+    s_castle_label = NULL;
+    s_mistakes_label = NULL;
+    s_confirm_overlay = NULL;
+    s_puzzle_ready = false;
+}
 
 static lv_color_t difficulty_color(ratimos_conexo_difficulty_t d)
 {
@@ -599,6 +622,7 @@ void ratimos_conexo_show(lv_event_t * e)
     (void) e;
     if (!s_conexo_screen) {
         s_conexo_screen = build_conexo_screen();
+        lv_obj_add_event_cb(s_conexo_screen, conexo_screen_deleted_cb, LV_EVENT_DELETE, NULL);
     }
-    lv_screen_load(s_conexo_screen);
+    ratimos_screen_load(s_conexo_screen);
 }

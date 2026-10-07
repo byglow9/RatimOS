@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: "02.1"
 current_phase_name: Visual Identity & Games (Simulator-Buildable Scope)
 status: executing
-stopped_at: Completed 02.1-14-PLAN.md
-last_updated: "2026-10-07T14:30:15.988Z"
+stopped_at: Completed 02.1-15-PLAN.md
+last_updated: "2026-10-07T18:18:48.740Z"
 last_activity: 2026-10-06
 last_activity_desc: Phase 02.1 execution resumed (wave continue)
-state_head: b0f60f5779b694c7cf3d4dfb4cbd00f44dbf5a60
+state_head: a5f6281e60ddffa9527626b035ce4997291d730c
 progress:
   total_phases: 10
   completed_phases: 2
   total_plans: 23
-  completed_plans: 21
+  completed_plans: 22
 milestone_name: milestone
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-26)
 ## Current Position
 
 Phase: 02.1 (Visual Identity & Games (Simulator-Buildable Scope)) — EXECUTING
-Plan: 3 of 12
+Plan: 4 of 12
 Status: Ready to execute
 Last activity: 2026-10-06 — Phase 02.1 execution resumed (wave continue)
 
@@ -74,6 +74,7 @@ Progress: [████████░░] 84%
 | Phase 02.1 P10 | 45min | 3 tasks | 8 files |
 | Phase 02.1 P13 | 89min | 4 tasks | 9 files |
 | Phase 02.1 P14 | ~70min + checkpoint iterations | 5 tasks | 61 files |
+| Phase 02.1 P15 | 2h41m | 3 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,8 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-14: Layout budgets are theme.h constants (home tile 80/gap 10, list row 48/gap 14, content inner 386px); test_game_screens enforces every game fits without scrolling
 - [Phase 02.1]: 02.1-14: Overlays/confirm dialogs use the shared ratimos_modal_*; games use ratimos_app_shell_create_with_back to return to ./home/jogos
 - [Phase 02.1]: 02.1-14: Splash progress bar and 'RATIMOS' topbar brand are superseded by 02.1-16 (sketches 008-011: themed boot, configurable loading, brand 'RatimOS')
+- [Phase 02.1]: 02.1-15: app/game screens are deleted on navigate via ratimos_screen_load(); only the home is persistent (LV_OBJ_FLAG_USER_1); every *_show() rebuilds from storage and nulls static handles in LV_EVENT_DELETE
+- [Phase 02.1]: 02.1-15: dense grids are drawn in one object (DRAW_MAIN + tap by coordinate), not one lv_obj per cell; LVGL heap is measured in tests with ratimos_heap_used() (src/ratimos/heap_probe.h)
 
 ### Pending Todos
 
@@ -147,6 +150,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-07T14:30:15.904Z
-Stopped at: Completed 02.1-14-PLAN.md
+Last session: 2026-10-07T18:18:48.654Z
+Stopped at: Completed 02.1-15-PLAN.md
 Resume file: None

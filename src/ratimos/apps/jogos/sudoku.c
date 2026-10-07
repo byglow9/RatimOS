@@ -3,8 +3,8 @@
  *
  * Persistencia (JOGOS-02): toda escrita de celula, troca de modo ou reset
  * grava na hora via ratimos_storage_save_game_state() -- salvar so ao sair
- * da tela perderia o progresso num fechamento inesperado, e o cache de tela
- * em memoria (build-once), sozinho, nao sobrevive a um relaunch do processo.
+ * da tela perderia o progresso num fechamento inesperado, e a tela e'
+ * reconstruida do save a cada visita (plano 02.1-15).
  *
  * Este arquivo NAO abre arquivo nenhum: todo byte que chega ao disco passa
  * pela Storage/Content API (D-10), igual a conexo.c.
@@ -33,12 +33,14 @@
 #define SUDOKU_NO_SELECTION 0xFFu
 
 /* ------------------------------------------------------------------------
- * Tela (LVGL) -- cache-once, igual a jogos_app.c / conexo.c.
+ * Tela (LVGL) -- construida a cada visita, deletada ao sair.
  *
- * A tela e construida UMA vez e guardada em s_sudoku_screen; toda jogada
- * apenas atualiza os objetos ja existentes via render_board(). Reconstruir a
- * tela a cada visita e exatamente o vazamento de heap do LVGL que a Fase 1 ja
- * corrigiu -- nao pode voltar.
+ * ratimos_sudoku_show() constroi a tela a partir do save e
+ * ratimos_screen_load() (app_shell.h) a deleta quando a jogadora navega pra
+ * outra tela (plano 02.1-15, deferred-items #1: as telas em cache pra
+ * sempre esgotavam o heap do LVGL). Enquanto a tela existe, toda jogada
+ * so atualiza os objetos existentes via render_board().
+ * sudoku_screen_deleted_cb() zera os ponteiros de widget no LV_EVENT_DELETE.
  * ------------------------------------------------------------------------ */
 
 static lv_obj_t * s_sudoku_screen = NULL;
@@ -70,6 +72,27 @@ typedef enum {
 } sudoku_pending_action_t;
 
 static sudoku_pending_action_t s_pending_action = SUDOKU_PENDING_MODE_SWITCH;
+
+/* Tela deletada ao sair (ratimos_screen_load, plano 02.1-15): zera todo
+ * ponteiro de widget pro proximo ratimos_sudoku_show() reconstruir a partir
+ * do save -- nenhum callback pode achar um handle de uma tela que ja sumiu. */
+static void sudoku_screen_deleted_cb(lv_event_t * e)
+{
+    (void) e;
+    s_sudoku_screen = NULL;
+    s_error_label = NULL;
+    s_pill_row = NULL;
+    memset(s_pills, 0, sizeof(s_pills));
+    s_board_wrap = NULL;
+    s_board = NULL;
+    memset(s_cells, 0, sizeof(s_cells));
+    memset(s_cell_labels, 0, sizeof(s_cell_labels));
+    s_keypad = NULL;
+    s_banner_label = NULL;
+    s_castle_label = NULL;
+    s_gen_fail_container = NULL;
+    s_confirm_overlay = NULL;
+}
 
 static const char * const SUDOKU_MODE_LABELS[RATIMOS_SUDOKU_MODE_COUNT] = {
     "facil", "medio", "dificil", "diario"
@@ -615,6 +638,7 @@ void ratimos_sudoku_show(lv_event_t * e)
     (void) e;
     if (!s_sudoku_screen) {
         s_sudoku_screen = build_sudoku_screen();
+        lv_obj_add_event_cb(s_sudoku_screen, sudoku_screen_deleted_cb, LV_EVENT_DELETE, NULL);
     }
-    lv_screen_load(s_sudoku_screen);
+    ratimos_screen_load(s_sudoku_screen);
 }
