@@ -36,7 +36,7 @@ essa é a causa provável de "tive que clicar umas 10 vezes" (G-02.1-1). Fix: `l
 | 008 | boot-loading-marca | Qual barra de boot conversa com o símbolo (torre + bandeira + letreiro em degradê)? | **B** (hastear a bandeira) é a padrão; A, C e D viram opções em Configurações | boot, splash, loading, brand |
 | 009 | boot-fundo | O que vai atrás do logo no boot 008-B sem tirar o destaque da marca? | incorporado ao 010 (temas) | boot, splash, background |
 | 010 | temas | Tema (fundo do boot + fundo da home) e carregamento (animação do 008) escolhidos à parte em config | **4 temas** (Clássico padrão, Noite, Castelo, Xadrez) × 4 carregamentos, escolhidos à parte | theme, boot, background, settings |
-| 011 | boot-temas-plano | Prévia do plano 02.1-16: ligar → boot (tema × carregamento) → pronto! → home | _pendente_ | boot, theme, settings, plan-preview |
+| 011 | boot-temas-plano | Prévia do plano 02.1-16: ligar → boot (tema × carregamento) → pronto! → home | **aprovado**: referência visual do 02.1-16 | boot, theme, settings, plan-preview |
 
 ## Locked — direção final (2026-09-11)
 

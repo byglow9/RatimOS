@@ -2,7 +2,7 @@
 sketch: 011
 name: boot-temas-plano
 question: "O que o plano 02.1-16 entrega, visto como vai rodar: ligar → boot do tema + carregamento → pronto! → home?"
-winner: null
+winner: "aprovado (2026-10-07)"
 tags: [boot, theme, settings, plan-preview]
 ---
 
