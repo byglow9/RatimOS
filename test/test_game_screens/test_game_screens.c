@@ -41,6 +41,8 @@
 #include "ratimos/apps/jogos/sudoku.h"
 #include "ratimos/apps/jogos/termo.h"
 #include "ratimos/apps/jogos/termo_engine.h"
+#include "ratimos/apps/jogos/termo_words.h"
+#include "ratimos/fonts/ratimos_fonts.h"
 #include "ratimos/apps/jogos/daily_seed.h"
 #include "widgets/buttonmatrix/lv_buttonmatrix_private.h"
 #include "storage/content_api.h"
@@ -98,18 +100,25 @@ static bool subtree_has_text(lv_obj_t * obj, const char * needle)
     return false;
 }
 
-static lv_obj_t * find_confirm_panel(lv_obj_t * scr)
+/* Painel de um modal (filho unico de um scrim FLOATING da tela) cujo texto
+ * contem `needle`; NULL se nao houver. */
+static lv_obj_t * find_modal_with_text(lv_obj_t * scr, const char * needle)
 {
     for (uint32_t i = 0; i < lv_obj_get_child_count(scr); i++) {
         lv_obj_t * c = lv_obj_get_child(scr, (int32_t) i);
         if (lv_obj_has_flag(c, LV_OBJ_FLAG_FLOATING) && lv_obj_get_child_count(c) == 1) {
             lv_obj_t * panel = lv_obj_get_child(c, 0);
-            if (subtree_has_text(panel, "comecar de novo?")) {
+            if (subtree_has_text(panel, needle)) {
                 return panel;
             }
         }
     }
     return NULL;
+}
+
+static lv_obj_t * find_confirm_panel(lv_obj_t * scr)
+{
+    return find_modal_with_text(scr, "comecar de novo?");
 }
 
 /*
@@ -366,7 +375,12 @@ void test_termo_keyboard_reflects_letter_states_and_resets(void)
     assert_row(scr, 2, "POSSE");
     /* Enter envia a palavra inteira: POSSE acerta. */
     termo_press(kb, "enter");
-    TEST_ASSERT_TRUE(lv_obj_has_flag(status, LV_OBJ_FLAG_HIDDEN)); /* partida encerrada */
+    /* Partida encerrada: o status vira o atalho "ver resultado" e o modal de
+     * fim de jogo aparece. */
+    TEST_ASSERT_EQUAL_STRING("acertou! · ver resultado", lv_label_get_text(status));
+    lv_obj_t * done = find_modal_with_text(scr, "acertou!");
+    TEST_ASSERT_NOT_NULL(done);
+    TEST_ASSERT_TRUE(ratimos_modal_is_visible(done));
 
     /* Jogo novo (troca de modo): teclado zerado, R/T usaveis de novo. */
     termo_switch_mode(scr, 1);
@@ -553,6 +567,246 @@ void test_termo_dueto_tap_is_per_board_and_the_cursor_is_shared(void)
     TEST_ASSERT_FALSE(cell_is_cursor(scr, 1, 1, 0));
 }
 
+/* Painel do modal de fim de jogo: filhos [0 titulo, 1 legenda, 2 respostas,
+ * 3 "+1 no castelo", 4 botao "ver tabuleiro"]. */
+static lv_obj_t * end_modal(lv_obj_t * scr)
+{
+    lv_obj_t * m = find_modal_with_text(scr, "a palavra era");
+    if (m == NULL) {
+        m = find_modal_with_text(scr, "as palavras eram");
+    }
+    TEST_ASSERT_NOT_NULL(m);
+    return m;
+}
+
+static lv_obj_t * end_answer(lv_obj_t * scr, int b)
+{
+    return lv_obj_get_child(lv_obj_get_child(end_modal(scr), 2), b);
+}
+
+/* RATIMOS_DUMP_DIR=<dir absoluto>: grava o quadro atual como PPM (conferencia
+ * visual, nao afeta o resultado; mesmo padrao de test_boot_screen). */
+static void maybe_dump(const char * name)
+{
+    const char * dir = getenv("RATIMOS_DUMP_DIR");
+    if (dir == NULL) {
+        return;
+    }
+    lv_refr_now(NULL);
+    char path[256];
+    snprintf(path, sizeof(path), "%s/%s.ppm", dir, name);
+    FILE * f = fopen(path, "wb");
+    if (!f) {
+        return;
+    }
+    fprintf(f, "P6\n%d %d\n255\n", RATIMOS_SCREEN_W, RATIMOS_SCREEN_H);
+    for (int y = 0; y < RATIMOS_SCREEN_H; y++) {
+        for (int x = 0; x < RATIMOS_SCREEN_W; x++) {
+            int r, g, b;
+            px_rgb(x, y, &r, &g, &b);
+            fputc(r, f);
+            fputc(g, f);
+            fputc(b, f);
+        }
+    }
+    fclose(f);
+}
+
+/* Algum scrim de modal (FLOATING com 1 filho: o painel; o fundo ditherizado
+ * tambem e' FLOATING mas nao tem filhos) visivel na tela? */
+static bool any_scrim_visible(lv_obj_t * scr)
+{
+    for (uint32_t i = 0; i < lv_obj_get_child_count(scr); i++) {
+        lv_obj_t * c = lv_obj_get_child(scr, (int32_t) i);
+        if (lv_obj_has_flag(c, LV_OBJ_FLAG_FLOATING) && lv_obj_get_child_count(c) == 1 &&
+            !lv_obj_has_flag(c, LV_OBJ_FLAG_HIDDEN)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Palpites aceitos que nunca acertam as respostas usadas nestes testes. */
+static void termo_submit_wrong(ratimos_termo_state_t * st, int n)
+{
+    static const char * const WRONG[] = {
+        "resto", "teste", "casal", "trigo", "verde", "preto", "praia", "mundo",
+        "bicho", "fruta", "lugar", "noite", "plano", "grupo",
+    };
+    for (int i = 0; i < n; i++) {
+        TEST_ASSERT_TRUE_MESSAGE(ratimos_termo_submit(st, WRONG[i]), WRONG[i]);
+    }
+}
+
+/*
+ * UAT 02.1-17: vitoria ao vivo no termo -> modal 003-C centralizado SOBRE os
+ * tabuleiros, com "acertou!" e a resposta; nada de texto de resultado embaixo
+ * do teclado; "+1 no castelo" so' na vitoria diaria creditada.
+ */
+void test_termo_win_opens_a_modal_centered_over_the_boards(void)
+{
+    ratimos_termo_state_t st;
+    termo_seed(&st, RATIMOS_TERMO_MODE_TERMO, "posse", "", "", "");
+    lv_obj_t * scr = termo_open_with_state(&st);
+    lv_obj_t * content = lv_obj_get_child(scr, 3);
+    lv_obj_t * kb = lv_obj_get_child(content, 4);
+    lv_obj_t * status = lv_obj_get_child(content, 2);
+
+    TEST_ASSERT_FALSE_MESSAGE(any_scrim_visible(scr), "no modal while playing");
+    TEST_ASSERT_FALSE(lv_obj_has_flag(status, LV_OBJ_FLAG_CLICKABLE));
+
+    termo_type(kb, "posse");
+    termo_press(kb, "enter");
+    lv_obj_update_layout(scr);
+
+    lv_obj_t * panel = end_modal(scr);
+    TEST_ASSERT_TRUE(ratimos_modal_is_visible(panel));
+    TEST_ASSERT_TRUE(subtree_has_text(panel, "acertou!"));
+    TEST_ASSERT_TRUE(subtree_has_text(panel, "POSSE"));
+    TEST_ASSERT_TRUE(subtree_has_text(panel, "a palavra era"));
+    TEST_ASSERT_FALSE_MESSAGE(lv_obj_has_flag(lv_obj_get_child(panel, 3), LV_OBJ_FLAG_HIDDEN), "+1 no castelo on a credited win");
+    TEST_ASSERT_TRUE(subtree_has_text(panel, "+1 no castelo"));
+
+    lv_area_t p, w;
+    lv_obj_get_coords(panel, &p);
+    lv_obj_get_coords(lv_obj_get_child(content, 3), &w);
+    TEST_ASSERT_INT_WITHIN(2, RATIMOS_SCREEN_W / 2, (p.x1 + p.x2) / 2);
+    int32_t want_cy = (w.y1 + w.y2) / 2;
+    int32_t h = lv_area_get_height(&p);
+    if (want_cy - h / 2 < 8) {
+        want_cy = 8 + h / 2; /* encosta na margem de 8px */
+    }
+    TEST_ASSERT_INT_WITHIN(4, want_cy, (p.y1 + p.y2) / 2);
+    TEST_ASSERT_TRUE(p.x1 >= 0 && p.y1 >= 8 && p.x2 < RATIMOS_SCREEN_W && p.y2 < RATIMOS_SCREEN_H);
+
+    /* Nenhum texto de resultado embaixo do teclado: o content so' tem os 5
+     * filhos (erro, pilulas, status, tabuleiros, teclado). */
+    TEST_ASSERT_EQUAL_UINT32(5, lv_obj_get_child_count(content));
+
+    maybe_dump("termo_win_modal");
+
+    /* A resposta vencedora sai em GAME_CORRECT. */
+    TEST_ASSERT_TRUE(lv_color_eq(lv_obj_get_style_text_color(end_answer(scr, 0), LV_PART_MAIN), RATIMOS_COLOR_GAME_CORRECT));
+}
+
+/* "ver tabuleiro" fecha, o status "ver resultado" reabre, e trocar de modo
+ * esconde o modal. */
+void test_termo_end_modal_close_reopen_and_mode_switch(void)
+{
+    ratimos_termo_state_t st;
+    termo_seed(&st, RATIMOS_TERMO_MODE_TERMO, "posse", "", "", "");
+    lv_obj_t * scr = termo_open_with_state(&st);
+    lv_obj_t * content = lv_obj_get_child(scr, 3);
+    lv_obj_t * kb = lv_obj_get_child(content, 4);
+    lv_obj_t * status = lv_obj_get_child(content, 2);
+
+    termo_type(kb, "posse");
+    termo_press(kb, "enter");
+    lv_obj_t * panel = end_modal(scr);
+    TEST_ASSERT_TRUE(ratimos_modal_is_visible(panel));
+    TEST_ASSERT_TRUE(lv_obj_has_flag(status, LV_OBJ_FLAG_CLICKABLE));
+
+    lv_obj_send_event(lv_obj_get_child(panel, 4), LV_EVENT_CLICKED, NULL); /* ver tabuleiro */
+    TEST_ASSERT_FALSE(ratimos_modal_is_visible(panel));
+    TEST_ASSERT_EQUAL_STRING("acertou! · ver resultado", lv_label_get_text(status));
+
+    lv_obj_send_event(status, LV_EVENT_CLICKED, NULL); /* ver resultado */
+    TEST_ASSERT_TRUE(ratimos_modal_is_visible(panel));
+    TEST_ASSERT_TRUE(subtree_has_text(panel, "POSSE"));
+
+    termo_switch_mode(scr, 1);
+    TEST_ASSERT_FALSE(ratimos_modal_is_visible(end_modal(scr)));
+    TEST_ASSERT_FALSE(lv_obj_has_flag(lv_obj_get_child(content, 2), LV_OBJ_FLAG_CLICKABLE)); /* jogo novo */
+    termo_switch_mode(scr, 0);
+}
+
+/* Dueto, derrota restaurada: ao abrir a tela o modal ja' esta visivel com a
+ * resposta ACENTUADA de cada tabuleiro. */
+void test_termo_dueto_loss_modal_shows_both_answers_accented(void)
+{
+    ratimos_termo_state_t st;
+    termo_seed(&st, RATIMOS_TERMO_MODE_DUETO, "aviao", "carta", "", "");
+    termo_submit_wrong(&st, 7);
+    TEST_ASSERT_EQUAL_UINT8(2, st.finished);
+
+    lv_obj_t * scr = termo_open_with_state(&st);
+    lv_obj_t * panel = end_modal(scr);
+    TEST_ASSERT_TRUE(ratimos_modal_is_visible(panel));
+    TEST_ASSERT_TRUE(subtree_has_text(panel, "não foi dessa vez"));
+    TEST_ASSERT_TRUE(subtree_has_text(panel, "as palavras eram"));
+    TEST_ASSERT_EQUAL_STRING("AVI\xc3\x83O", lv_label_get_text(end_answer(scr, 0)));
+    TEST_ASSERT_EQUAL_STRING("CARTA", lv_label_get_text(end_answer(scr, 1)));
+    TEST_ASSERT_TRUE(lv_obj_has_flag(end_answer(scr, 2), LV_OBJ_FLAG_HIDDEN));
+    TEST_ASSERT_TRUE(lv_obj_has_flag(lv_obj_get_child(panel, 3), LV_OBJ_FLAG_HIDDEN)); /* sem "+1 no castelo" */
+    TEST_ASSERT_EQUAL_STRING("não foi dessa vez · ver resultado",
+                             lv_label_get_text(lv_obj_get_child(lv_obj_get_child(scr, 3), 2)));
+    maybe_dump("dueto_loss_modal");
+}
+
+/* Quarteto, derrota restaurada: 4 respostas, 2 por linha; resolvida em
+ * GAME_CORRECT, as outras (a revelacao) em TEXT. */
+void test_termo_quarteto_loss_modal_shows_four_answers_two_per_row(void)
+{
+    ratimos_termo_state_t st;
+    termo_seed(&st, RATIMOS_TERMO_MODE_QUARTETO, "aviao", "carta", "posse", "cesta");
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "posse")); /* resolve o tabuleiro 2 */
+    termo_submit_wrong(&st, 8);
+    TEST_ASSERT_EQUAL_UINT8(2, st.finished);
+    TEST_ASSERT_EQUAL_UINT8(1, st.boards[2].solved);
+
+    lv_obj_t * scr = termo_open_with_state(&st);
+    lv_obj_update_layout(scr);
+    const char * want[4] = { "AVI\xc3\x83O", "CARTA", "POSSE", "CESTA" };
+    lv_area_t a[4];
+    for (int b = 0; b < 4; b++) {
+        lv_obj_t * label = end_answer(scr, b);
+        TEST_ASSERT_FALSE(lv_obj_has_flag(label, LV_OBJ_FLAG_HIDDEN));
+        TEST_ASSERT_EQUAL_STRING(want[b], lv_label_get_text(label));
+        lv_color_t expect = (b == 2) ? RATIMOS_COLOR_GAME_CORRECT : RATIMOS_COLOR_TEXT;
+        TEST_ASSERT_TRUE_MESSAGE(lv_color_eq(lv_obj_get_style_text_color(label, LV_PART_MAIN), expect), want[b]);
+        lv_obj_get_coords(label, &a[b]);
+    }
+    TEST_ASSERT_EQUAL_INT(a[0].y1, a[1].y1);
+    TEST_ASSERT_EQUAL_INT(a[2].y1, a[3].y1);
+    TEST_ASSERT_TRUE(a[2].y1 > a[0].y1);
+    TEST_ASSERT_TRUE(a[1].x1 > a[0].x2);
+    lv_area_t p;
+    lv_obj_get_coords(end_modal(scr), &p);
+    TEST_ASSERT_TRUE(p.x1 >= 0 && p.y1 >= 8 && p.x2 < RATIMOS_SCREEN_W && p.y2 <= RATIMOS_SCREEN_H - 8);
+    maybe_dump("quarteto_loss_modal");
+}
+
+/* Codepoint (UTF-8 de 1 ou 2 bytes) -> glifo em ratimos_font_title_16. */
+static void assert_title_glyphs(const char * text)
+{
+    for (const unsigned char * p = (const unsigned char *) text; *p;) {
+        uint32_t cp;
+        if (*p < 0x80) {
+            cp = *p++;
+        } else {
+            cp = ((uint32_t) (p[0] & 0x1f) << 6) | (uint32_t) (p[1] & 0x3f);
+            p += 2;
+        }
+        lv_font_glyph_dsc_t dsc;
+        char msg[48];
+        snprintf(msg, sizeof(msg), "glyph U+%04X in \"%s\"", (unsigned) cp, text);
+        TEST_ASSERT_TRUE_MESSAGE(lv_font_get_glyph_dsc(&ratimos_font_title_16, &dsc, cp, 0), msg);
+    }
+}
+
+/* Toda forma acentuada da tabela de exibicao (e o titulo do modal) tem glifo
+ * na fonte do modal -- senao a revelacao sairia com um quadrado vazio. */
+void test_end_modal_forms_have_glyphs_in_the_title_font(void)
+{
+    TEST_ASSERT_TRUE(ratimos_termo_display_count() > 0);
+    for (size_t i = 0; i < ratimos_termo_display_count(); i++) {
+        assert_title_glyphs(ratimos_termo_display_at(i));
+    }
+    assert_title_glyphs("acertou!");
+    assert_title_glyphs("não foi dessa vez");
+    assert_title_glyphs("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+}
+
 /* Linha (board b, r) inteira dentro da area visivel do painel do board. */
 static bool termo_row_visible(lv_obj_t * scr, int b, int r)
 {
@@ -575,7 +829,9 @@ void test_termo_quarteto_boards_start_at_top_and_follow_active_row(void)
         "carta", "mundo", "bicho", "fruta", "lugar", "noite", "plano", "grupo",
         "campo", "banho", "claro", "vinho", "jeito", "dizer", "feliz",
     };
-    lv_obj_t * scr = show_game(2);
+    ratimos_termo_state_t fresh;
+    ratimos_termo_start_daily(&fresh, RATIMOS_TERMO_MODE_TERMO, ratimos_daily_index());
+    lv_obj_t * scr = termo_open_with_state(&fresh);
     lv_obj_t * content = lv_obj_get_child(scr, 3);
     lv_obj_t * kb = lv_obj_get_child(content, 4);
     lv_obj_t * status = lv_obj_get_child(content, 2);
@@ -627,7 +883,9 @@ void test_termo_quarteto_boards_start_at_top_and_follow_active_row(void)
 
 void test_termo_enter_submits_and_rejections_are_visible(void)
 {
-    lv_obj_t * scr = show_game(2);
+    ratimos_termo_state_t fresh;
+    ratimos_termo_start_daily(&fresh, RATIMOS_TERMO_MODE_TERMO, ratimos_daily_index());
+    lv_obj_t * scr = termo_open_with_state(&fresh);
     lv_obj_t * content = lv_obj_get_child(scr, 3);
     lv_obj_t * status = lv_obj_get_child(content, 2);
     lv_obj_t * kb = lv_obj_get_child(content, 4);
@@ -1049,6 +1307,11 @@ int main(void)
     RUN_TEST(test_termo_tap_moves_the_cursor_and_typing_follows_it);
     RUN_TEST(test_termo_not_accepted_word_keeps_the_row_and_the_try);
     RUN_TEST(test_termo_dueto_tap_is_per_board_and_the_cursor_is_shared);
+    RUN_TEST(test_termo_win_opens_a_modal_centered_over_the_boards);
+    RUN_TEST(test_termo_end_modal_close_reopen_and_mode_switch);
+    RUN_TEST(test_termo_dueto_loss_modal_shows_both_answers_accented);
+    RUN_TEST(test_termo_quarteto_loss_modal_shows_four_answers_two_per_row);
+    RUN_TEST(test_end_modal_forms_have_glyphs_in_the_title_font);
     RUN_TEST(test_termo_quarteto_boards_start_at_top_and_follow_active_row);
     /* Sem pool extra de heap: desde o plano 02.1-15 cada tela de jogo e'
      * deletada ao navegar pra outra (ratimos_screen_load), entao o heap

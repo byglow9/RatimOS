@@ -108,10 +108,16 @@ static lv_obj_t * s_row_wrap[RATIMOS_TERMO_MAX_BOARDS][RATIMOS_TERMO_MAX_TRIES];
 static lv_obj_t * s_tile[RATIMOS_TERMO_MAX_BOARDS][RATIMOS_TERMO_MAX_TRIES][RATIMOS_TERMO_WORD_LEN];
 static lv_obj_t * s_tile_label[RATIMOS_TERMO_MAX_BOARDS][RATIMOS_TERMO_MAX_TRIES][RATIMOS_TERMO_WORD_LEN];
 static lv_obj_t * s_keyboard = NULL;
-static lv_obj_t * s_banner_label = NULL;
-static lv_obj_t * s_castle_label = NULL;
-static lv_obj_t * s_reveal_label = NULL;
 static lv_obj_t * s_confirm_overlay = NULL;
+
+/* Modal de fim de jogo (003-C, ratimos_modal_create): montado UMA vez por
+ * tela, preenchido a cada abertura (termo_end_modal_open). */
+static lv_obj_t * s_end_modal = NULL;
+static lv_obj_t * s_end_title = NULL;
+static lv_obj_t * s_end_caption = NULL;
+static lv_obj_t * s_end_answers = NULL;
+static lv_obj_t * s_end_answer[RATIMOS_TERMO_MAX_BOARDS];
+static lv_obj_t * s_end_castle = NULL;
 
 static ratimos_termo_state_t s_state;
 static ratimos_termo_mode_t s_pending_mode = RATIMOS_TERMO_MODE_TERMO;
@@ -159,10 +165,13 @@ static void termo_screen_deleted_cb(lv_event_t * e)
     memset(s_tile, 0, sizeof(s_tile));
     memset(s_tile_label, 0, sizeof(s_tile_label));
     s_keyboard = NULL;
-    s_banner_label = NULL;
-    s_castle_label = NULL;
-    s_reveal_label = NULL;
     s_confirm_overlay = NULL;
+    s_end_modal = NULL;
+    s_end_title = NULL;
+    s_end_caption = NULL;
+    s_end_answers = NULL;
+    memset(s_end_answer, 0, sizeof(s_end_answer));
+    s_end_castle = NULL;
     /* Rejeicao pendente e' so' da tela que sumiu (nao vai pro save). */
     s_reject_flash = false;
     s_reject_msg = NULL;
@@ -173,6 +182,7 @@ static void render_all(void);
 static void render_boards(void);
 static void persist_state(void);
 static void switch_to_mode(ratimos_termo_mode_t mode);
+static void termo_end_modal_open(void);
 
 static lv_coord_t termo_board_width(ratimos_termo_mode_t mode)
 {
@@ -249,6 +259,7 @@ static void switch_to_mode(ratimos_termo_mode_t mode)
 {
     s_reject_msg = NULL;
     s_reject_flash = false;
+    ratimos_modal_hide(s_end_modal); /* jogo novo: o resultado anterior some */
     ratimos_termo_start_daily(&s_state, mode, ratimos_daily_index());
     s_cursor = ratimos_termo_row_first_empty(s_state.current_guess);
     persist_state();
@@ -302,12 +313,18 @@ static void render_pills(void)
 
 static void render_status(void)
 {
+    lv_obj_clear_flag(s_status_label, LV_OBJ_FLAG_HIDDEN);
+
     if (s_state.finished != 0) {
-        lv_obj_add_flag(s_status_label, LV_OBJ_FLAG_HIDDEN);
+        /* Partida encerrada: o status vira o atalho pra reabrir o resultado
+         * (clicavel so' enquanto finished != 0). */
+        lv_label_set_text(s_status_label, s_state.finished == 1 ? "acertou! · ver resultado"
+                                                                  : "não foi dessa vez · ver resultado");
+        lv_obj_set_style_text_color(s_status_label, RATIMOS_COLOR_TEXT_MUTED, 0);
+        lv_obj_add_flag(s_status_label, LV_OBJ_FLAG_CLICKABLE);
         return;
     }
-
-    lv_obj_clear_flag(s_status_label, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(s_status_label, LV_OBJ_FLAG_CLICKABLE);
 
     if (s_reject_msg) {
         lv_label_set_text(s_status_label, s_reject_msg);
@@ -324,58 +341,6 @@ static void render_status(void)
     char buf[32];
     snprintf(buf, sizeof(buf), "tentativa %u de %u", attempt, (unsigned) s_state.max_tries);
     lv_label_set_text(s_status_label, buf);
-}
-
-/* Banner Display-tier (UI-SPEC): "acertou!" quando finished==1 (com "+1 no
- * castelo" so quando a vitoria diaria ja foi creditada), "nao foi dessa
- * vez" quando finished==2 -- copia calorosa, nunca punitiva, seguida da
- * revelacao das respostas ainda nao resolvidas em texto silenciado. */
-static void render_banner(void)
-{
-    if (s_state.finished == 0) {
-        lv_obj_add_flag(s_banner_label, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(s_reveal_label, LV_OBJ_FLAG_HIDDEN);
-        return;
-    }
-
-    if (s_state.finished == 1) {
-        lv_label_set_text(s_banner_label, "acertou!");
-        lv_obj_clear_flag(s_banner_label, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(s_reveal_label, LV_OBJ_FLAG_HIDDEN);
-
-        if (s_state.daily_win_recorded) {
-            lv_obj_clear_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
-        } else {
-            lv_obj_add_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
-        }
-        return;
-    }
-
-    lv_label_set_text(s_banner_label, "nao foi dessa vez");
-    lv_obj_clear_flag(s_banner_label, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
-
-    char buf[160];
-    size_t offset = 0;
-    int written = snprintf(buf, sizeof(buf), "respostas: ");
-    offset = (written > 0) ? (size_t) written : 0;
-
-    bool first = true;
-    for (uint8_t b = 0; b < s_state.board_count && offset < sizeof(buf); b++) {
-        if (s_state.boards[b].solved) {
-            continue;
-        }
-        written = snprintf(buf + offset, sizeof(buf) - offset, "%s%s",
-                            first ? "" : ", ", s_state.boards[b].answer);
-        if (written > 0) {
-            offset += (size_t) written;
-        }
-        first = false;
-    }
-
-    lv_label_set_text(s_reveal_label, buf);
-    lv_obj_clear_flag(s_reveal_label, LV_OBJ_FLAG_HIDDEN);
 }
 
 /* Redesenha todos os boards para o modo ativo -- mostra/esconde boards e
@@ -572,7 +537,84 @@ static void render_all(void)
     render_status();
     render_boards();
     render_keyboard();
-    render_banner();
+}
+
+/*
+ * Modal de fim de jogo (UAT 02.1-17): "acertou!"/"não foi dessa vez" + a
+ * resposta de CADA tabuleiro, centralizado SOBRE os tabuleiros (antes eram
+ * labels no fim do content, embaixo do teclado). Preenche o conteudo a partir
+ * de s_state, mostra e posiciona sobre o centro de s_boards_wrap.
+ */
+#define TERMO_END_ANSWER_W 120 /* 2 respostas por linha no dueto/quarteto */
+
+static void termo_end_modal_open(void)
+{
+    if (s_end_modal == NULL || s_state.finished == 0) {
+        return;
+    }
+
+    bool won = s_state.finished == 1;
+    lv_label_set_text(s_end_title, won ? "acertou!" : "não foi dessa vez");
+    lv_obj_set_style_text_color(s_end_title, won ? RATIMOS_COLOR_GAME_CORRECT : RATIMOS_COLOR_TEXT, 0);
+    lv_label_set_text(s_end_caption, s_state.board_count == 1 ? "a palavra era" : "as palavras eram");
+
+    for (uint8_t b = 0; b < RATIMOS_TERMO_MAX_BOARDS; b++) {
+        lv_obj_t * label = s_end_answer[b];
+        if (b >= s_state.board_count) {
+            lv_obj_add_flag(label, LV_OBJ_FLAG_HIDDEN);
+            continue;
+        }
+        char shown[RATIMOS_TERMO_DISPLAY_MAX];
+        if (!ratimos_termo_display_form(s_state.boards[b].answer, shown, sizeof(shown))) {
+            snprintf(shown, sizeof(shown), "%s", s_state.boards[b].answer);
+        }
+        lv_label_set_text(label, shown);
+        /* Resolvido = verde; nao resolvido = a revelacao (cor de texto). */
+        lv_obj_set_style_text_color(label,
+                                    s_state.boards[b].solved ? RATIMOS_COLOR_GAME_CORRECT : RATIMOS_COLOR_TEXT, 0);
+        lv_obj_set_width(label, s_state.board_count == 1 ? LV_SIZE_CONTENT : TERMO_END_ANSWER_W);
+        lv_obj_clear_flag(label, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    if (won && s_state.daily_win_recorded) {
+        lv_obj_clear_flag(s_end_castle, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(s_end_castle, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    ratimos_modal_show(s_end_modal);
+    lv_obj_t * screen = lv_obj_get_screen(s_end_modal);
+    lv_obj_update_layout(screen);
+
+    /* Sobre os tabuleiros: centro y do painel = centro y do wrap, preso as
+     * margens de 8px da tela. */
+    lv_area_t wrap;
+    lv_obj_get_coords(s_boards_wrap, &wrap);
+    lv_coord_t cy = (lv_coord_t) ((wrap.y1 + wrap.y2) / 2);
+    lv_coord_t h = lv_obj_get_height(s_end_modal);
+    lv_coord_t y = (lv_coord_t) (cy - h / 2);
+    if (y > RATIMOS_SCREEN_H - 8 - h) {
+        y = (lv_coord_t) (RATIMOS_SCREEN_H - 8 - h);
+    }
+    if (y < 8) {
+        y = 8;
+    }
+    lv_obj_align(s_end_modal, LV_ALIGN_TOP_MID, 0, y);
+}
+
+static void end_modal_close_cb(lv_event_t * e)
+{
+    (void) e;
+    ratimos_modal_hide(s_end_modal);
+}
+
+/* Status "... · ver resultado" (so' clicavel com a partida encerrada). */
+static void status_clicked_cb(lv_event_t * e)
+{
+    (void) e;
+    if (s_state.finished != 0) {
+        termo_end_modal_open();
+    }
 }
 
 static void try_submit(void)
@@ -607,6 +649,9 @@ static void try_submit(void)
 
     persist_state();
     render_all();
+    if (s_state.finished != 0) {
+        termo_end_modal_open();
+    }
 }
 
 /* Toque numa casa da linha ativa: poe o cursor ali. UM handler por painel de
@@ -736,6 +781,10 @@ static lv_obj_t * build_termo_screen(void)
     lv_obj_set_width(s_status_label, lv_pct(100));
     lv_obj_set_style_text_align(s_status_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(s_status_label, RATIMOS_COLOR_TEXT_MUTED, 0);
+    /* Com a partida encerrada vira "... · ver resultado" e reabre o modal;
+     * area de toque estendida sem mexer no orcamento vertical. */
+    lv_obj_set_ext_click_area(s_status_label, 8);
+    lv_obj_add_event_cb(s_status_label, status_clicked_cb, LV_EVENT_CLICKED, NULL);
 
     /* Boards -- ate 4 paineis num wrap centralizado; render_boards() decide
      * quantos ficam visiveis e o tamanho de cada um por modo. */
@@ -822,31 +871,6 @@ static lv_obj_t * build_termo_screen(void)
     /* SEND_DRAW_TASK_EVENTS ja ligado por ratimos_bevel_style_buttonmatrix. */
     lv_obj_add_event_cb(s_keyboard, keyboard_draw_task_cb, LV_EVENT_DRAW_TASK_ADDED, NULL);
 
-    /* Banner de vitoria/derrota (Display-tier, UI-SPEC). */
-    s_banner_label = lv_label_create(shell.content);
-    lv_label_set_text(s_banner_label, "");
-    lv_obj_set_width(s_banner_label, lv_pct(100));
-    lv_label_set_long_mode(s_banner_label, LV_LABEL_LONG_MODE_WRAP);
-    lv_obj_set_style_text_align(s_banner_label, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_color(s_banner_label, RATIMOS_COLOR_TEXT, 0);
-    lv_obj_set_style_text_font(s_banner_label, &ratimos_font_title_20, 0);
-    lv_obj_add_flag(s_banner_label, LV_OBJ_FLAG_HIDDEN);
-
-    s_castle_label = lv_label_create(shell.content);
-    lv_label_set_text(s_castle_label, "+1 no castelo");
-    lv_obj_set_width(s_castle_label, lv_pct(100));
-    lv_obj_set_style_text_align(s_castle_label, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_color(s_castle_label, RATIMOS_COLOR_TEXT_MUTED, 0);
-    lv_obj_add_flag(s_castle_label, LV_OBJ_FLAG_HIDDEN);
-
-    s_reveal_label = lv_label_create(shell.content);
-    lv_label_set_text(s_reveal_label, "");
-    lv_obj_set_width(s_reveal_label, lv_pct(100));
-    lv_label_set_long_mode(s_reveal_label, LV_LABEL_LONG_MODE_WRAP);
-    lv_obj_set_style_text_align(s_reveal_label, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_color(s_reveal_label, RATIMOS_COLOR_TEXT_MUTED, 0);
-    lv_obj_add_flag(s_reveal_label, LV_OBJ_FLAG_HIDDEN);
-
     /* Dialogo de confirmacao destrutiva (Copywriting Contract) -- so
      * aparece numa troca de modo com progresso em curso. Modal
      * compartilhado centralizado na tela (ratimos_modal_create, theme.h). */
@@ -878,7 +902,58 @@ static lv_obj_t * build_termo_screen(void)
     lv_obj_t * restart_btn = ratimos_button_create(confirm_actions, "recomecar", confirm_restart_cb, 100, LV_SIZE_CONTENT);
     lv_obj_set_style_bg_color(restart_btn, RATIMOS_COLOR_ACCENT, 0);
 
+    /* Modal de fim de jogo (003-C compartilhado), montado uma vez por tela. O
+     * painel e' reposicionado sobre os tabuleiros a cada abertura. */
+    s_end_modal = ratimos_modal_create(shell.screen, 280, LV_SIZE_CONTENT);
+    lv_obj_clear_flag(s_end_modal, LV_OBJ_FLAG_SCROLLABLE);
+    ratimos_modal_hide(s_end_modal);
+
+    s_end_title = lv_label_create(s_end_modal);
+    lv_label_set_text(s_end_title, "");
+    lv_obj_set_width(s_end_title, lv_pct(100));
+    lv_label_set_long_mode(s_end_title, LV_LABEL_LONG_MODE_WRAP);
+    lv_obj_set_style_text_align(s_end_title, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(s_end_title, &ratimos_font_title_16, 0);
+
+    s_end_caption = lv_label_create(s_end_modal);
+    lv_label_set_text(s_end_caption, "");
+    lv_obj_set_width(s_end_caption, lv_pct(100));
+    lv_obj_set_style_text_align(s_end_caption, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(s_end_caption, &ratimos_font_mono_12, 0);
+    lv_obj_set_style_text_color(s_end_caption, RATIMOS_COLOR_TEXT_MUTED, 0);
+
+    /* O painel do modal ja tem 8px de padding: o container so' ganha respiro
+     * vertical, senao 2 respostas de 120px + gap nao cabem na linha. */
+    s_end_answers = lv_obj_create(s_end_modal);
+    lv_obj_remove_style_all(s_end_answers);
+    lv_obj_set_width(s_end_answers, lv_pct(100));
+    lv_obj_set_height(s_end_answers, LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(s_end_answers, LV_FLEX_FLOW_ROW_WRAP);
+    lv_obj_set_flex_align(s_end_answers, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_ver(s_end_answers, 8, 0);
+    lv_obj_set_style_pad_row(s_end_answers, 8, 0);
+    lv_obj_set_style_pad_column(s_end_answers, 8, 0);
+    lv_obj_clear_flag(s_end_answers, LV_OBJ_FLAG_SCROLLABLE);
+    for (uint8_t b = 0; b < RATIMOS_TERMO_MAX_BOARDS; b++) {
+        lv_obj_t * label = lv_label_create(s_end_answers);
+        lv_label_set_text(label, "");
+        lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_text_font(label, &ratimos_font_title_16, 0);
+        lv_obj_add_flag(label, LV_OBJ_FLAG_HIDDEN);
+        s_end_answer[b] = label;
+    }
+
+    s_end_castle = lv_label_create(s_end_modal);
+    lv_label_set_text(s_end_castle, "+1 no castelo");
+    lv_obj_set_style_text_font(s_end_castle, &ratimos_font_mono_12, 0);
+    lv_obj_set_style_text_color(s_end_castle, RATIMOS_COLOR_TEXT_MUTED, 0);
+    lv_obj_add_flag(s_end_castle, LV_OBJ_FLAG_HIDDEN);
+
+    ratimos_button_create(s_end_modal, "ver tabuleiro", end_modal_close_cb, 136, 36);
+
     render_all();
+    /* Save ja encerrado: reabre o resultado (como o term.ooo reabre o do dia). */
+    termo_end_modal_open();
 
     return shell.screen;
 }
