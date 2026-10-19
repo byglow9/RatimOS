@@ -7,9 +7,9 @@
  *   - o enter do termo submete "peste" e um palpite rejeitado mostra o
  *     motivo na tela (antes so' engrossava a borda em 1px);
  *   - o teclado do termo reflete o estado das letras (desabilita as fora da
- *     palavra, tinge amarelas/verdes), inclusive num save restaurado;
- *   - letras verdes confirmadas ja aparecem travadas na linha ativa do
- *     termo; os boards do quarteto abrem no topo e seguem a linha ativa;
+ *     palavra, tinge laranja/verde), inclusive num save restaurado;
+ *   - nenhuma letra e' pre-colocada (02.1-17); os boards do quarteto abrem
+ *     no topo e seguem a linha ativa;
  *   - o "voltar" de um jogo leva a ./home/jogos (antes ia pra ./home);
  *   - cards do mesmo tipo tem a mesma altura (home e listas, theme.h);
  *   - tabuleiro + teclado de todo jogo (e dos 3 modos do termo) cabem no
@@ -236,25 +236,73 @@ static void assert_row(lv_obj_t * scr, int r, const char * expect5)
     }
 }
 
+/* Objeto da casa (board b, linha r, coluna c) do termo. */
+static lv_obj_t * termo_cell_obj(lv_obj_t * scr, int b, int r, int c)
+{
+    lv_obj_t * wrap = lv_obj_get_child(lv_obj_get_child(scr, 3), 3);
+    lv_obj_t * row = lv_obj_get_child(lv_obj_get_child(wrap, b), r);
+    return lv_obj_get_child(row, c);
+}
+
 /*
- * Fix de checkpoint 02.1-14 (rodada 2): roda ANTES de qualquer outro teste
- * do termo pra semear um save conhecido -- resposta "posse", palpites RESTO
- * e TESTE -- e provar que a tela restaurada ja mostra o teclado certo.
+ * Plano 02.1-17: desde o 02.1-15 a tela do termo so' e' reconstruida a partir
+ * do save quando foi deletada. Todo teste que semeia um save navega para
+ * outra tela (a deleta), grava pela Storage API e so' entao abre o termo.
+ */
+static lv_obj_t * termo_open_with_state(const ratimos_termo_state_t * st)
+{
+    ratimos_jogos_show(NULL);
+    ratimos_game_state_t blob;
+    memset(&blob, 0, sizeof(blob));
+    memcpy(blob.bytes, st, sizeof(*st));
+    blob.used = sizeof(*st);
+    TEST_ASSERT_TRUE(ratimos_storage_save_game_state(RATIMOS_GAME_TERMO, &blob));
+    return show_game(2);
+}
+
+/* Estado do dia no modo `mode`, com as respostas trocadas. */
+static void termo_seed(ratimos_termo_state_t * st, ratimos_termo_mode_t mode,
+                       const char * a0, const char * a1, const char * a2, const char * a3)
+{
+    ratimos_termo_start_daily(st, mode, ratimos_daily_index());
+    const char * answers[4] = { a0, a1, a2, a3 };
+    for (int b = 0; b < st->board_count; b++) {
+        snprintf(st->boards[b].answer, sizeof(st->boards[b].answer), "%s", answers[b]);
+    }
+}
+
+/* RGB (8 bits por canal, expandido do RGB565) de um pixel da tela. */
+static void px_rgb(int32_t x, int32_t y, int * r, int * g, int * b)
+{
+    size_t idx = ((size_t) y * RATIMOS_SCREEN_W + (size_t) x) * 2u;
+    uint16_t c = (uint16_t) (s_disp_buf[idx] | (s_disp_buf[idx + 1] << 8));
+    *r = ((c >> 11) & 0x1F) << 3;
+    *g = ((c >> 5) & 0x3F) << 2;
+    *b = (c & 0x1F) << 3;
+}
+
+/* +-8 por canal contra um token (RGB565 perde ate' 7 por canal). */
+static void assert_rgb_is(int r, int g, int b, lv_color_t want, const char * what)
+{
+    TEST_ASSERT_INT_WITHIN_MESSAGE(8, want.red, r, what);
+    TEST_ASSERT_INT_WITHIN_MESSAGE(8, want.green, g, what);
+    TEST_ASSERT_INT_WITHIN_MESSAGE(8, want.blue, b, what);
+}
+
+/*
+ * Roda ANTES de qualquer outro teste do termo pra semear um save conhecido --
+ * resposta "posse", palpites RESTO e TESTE -- e provar que a tela restaurada
+ * ja mostra o teclado certo. Plano 02.1-17: a linha ativa abre VAZIA (nenhuma
+ * letra verde vem pre-colocada) e as cores sao verde/laranja/cinza neutro.
  */
 void test_termo_keyboard_reflects_letter_states_and_resets(void)
 {
     ratimos_termo_state_t st;
-    ratimos_termo_start_daily(&st, RATIMOS_TERMO_MODE_TERMO, ratimos_daily_index());
-    snprintf(st.boards[0].answer, sizeof(st.boards[0].answer), "%s", "posse");
+    termo_seed(&st, RATIMOS_TERMO_MODE_TERMO, "posse", "", "", "");
     TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "resto"));
     TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "teste"));
-    ratimos_game_state_t blob;
-    memset(&blob, 0, sizeof(blob));
-    memcpy(blob.bytes, &st, sizeof(st));
-    blob.used = sizeof(st);
-    TEST_ASSERT_TRUE(ratimos_storage_save_game_state(RATIMOS_GAME_TERMO, &blob));
 
-    lv_obj_t * scr = show_game(2);
+    lv_obj_t * scr = termo_open_with_state(&st);
     lv_obj_t * content = lv_obj_get_child(scr, 3);
     lv_obj_t * kb = lv_obj_get_child(content, 4);
 
@@ -265,46 +313,58 @@ void test_termo_keyboard_reflects_letter_states_and_resets(void)
     TEST_ASSERT_FALSE(key_disabled(kb, "O"));
     TEST_ASSERT_FALSE(key_disabled(kb, "Z"));
 
-    /* Cores renderizadas: S verde, O amarela, R cinza, Z sem tom (roxo). */
+    /* Cores renderizadas contra os tokens: S verde, O laranja, R cinza
+     * neutro; Z (nunca tentada) sem tom de jogo. */
     lv_refr_now(NULL);
     int r, g, b, sr, sg, sb, rr, rg, rb;
     key_fill_rgb(kb, "S", &sr, &sg, &sb);
-    TEST_ASSERT_TRUE_MESSAGE(sg > sr + 40 && sg > sb + 40, "S must be green (correct)");
+    assert_rgb_is(sr, sg, sb, RATIMOS_COLOR_GAME_CORRECT, "S must be GAME_CORRECT");
     key_fill_rgb(kb, "O", &r, &g, &b);
-    TEST_ASSERT_TRUE_MESSAGE(r > b + 60 && g > b + 60, "O must be yellow (present)");
+    assert_rgb_is(r, g, b, RATIMOS_COLOR_GAME_PRESENT, "O must be orange (GAME_PRESENT)");
     key_fill_rgb(kb, "R", &rr, &rg, &rb);
-    TEST_ASSERT_TRUE_MESSAGE(abs(rr - rg) < 24 && abs(rg - rb) < 24, "R must be grey (absent)");
-    /* Z (nunca tentada): o roxo translucido normal da tecla, sem tom de jogo
-     * -- diferente do cinza de R e do verde de S. */
+    assert_rgb_is(rr, rg, rb, RATIMOS_COLOR_GAME_ABSENT, "R must be neutral grey (GAME_ABSENT)");
     key_fill_rgb(kb, "Z", &r, &g, &b);
     TEST_ASSERT_TRUE_MESSAGE(abs(r - rr) + abs(g - rg) + abs(b - rb) > 40, "Z must not be tinted grey");
     TEST_ASSERT_TRUE_MESSAGE(abs(r - sr) + abs(g - sg) + abs(b - sb) > 40, "Z must not be tinted green");
+
+    /* Borda esquerda da tecla descartada (meio da altura): BEVEL_DARK puro,
+     * sem o recolor claro que o tema padrao do LVGL poe em teclas
+     * desabilitadas. Remover o recolor_opa=TRANSP do termo.c faz isto falhar. */
+    {
+        lv_buttonmatrix_t * bm = (lv_buttonmatrix_t *) kb;
+        lv_area_t a = bm->button_areas[termo_key_id(kb, "R")];
+        lv_area_t o;
+        lv_obj_get_coords(kb, &o);
+        int br, bg, bb;
+        px_rgb(o.x1 + a.x1, o.y1 + a.y1 + lv_area_get_height(&a) / 2, &br, &bg, &bb);
+        TEST_ASSERT_TRUE_MESSAGE(br <= 24 && bg <= 24 && bb <= 24, "discarded key border must stay BEVEL_DARK");
+    }
 
     /* Tocar numa tecla desabilitada nao digita nada. */
     lv_obj_t * status = lv_obj_get_child(content, 2);
     termo_press(kb, "R");
     termo_press(kb, "enter");
     TEST_ASSERT_EQUAL_STRING("complete as 5 letras", lv_label_get_text(status));
-    termo_press(kb, "S");
-    termo_press(kb, "enter");
-    TEST_ASSERT_EQUAL_STRING("complete as 5 letras", lv_label_get_text(status));
-    termo_press(kb, LV_SYMBOL_BACKSPACE);
 
-    /* Rodada 3: S (pos 2) e E (pos 4) verdes ja vem travadas na linha
-     * ativa (linha 2) do save restaurado. */
-    assert_row(scr, 2, "__S_E");
-    /* Digitar preenche so' as livres: P -> pos 0, O -> pos 1, S -> pos 3. */
-    termo_press(kb, "P");
-    assert_row(scr, 2, "P_S_E");
-    termo_press(kb, "O");
-    /* Backspace apaga a ultima DIGITADA; nunca as travadas. */
-    termo_press(kb, LV_SYMBOL_BACKSPACE);
-    termo_press(kb, LV_SYMBOL_BACKSPACE);
-    termo_press(kb, LV_SYMBOL_BACKSPACE);
-    assert_row(scr, 2, "__S_E");
+    /* UAT 02.1-17: a linha ativa (2) abre com as 5 casas VAZIAS -- S e E
+     * verdes do historico nao vem pre-colocadas -- e nenhuma borda da linha
+     * e verde. */
+    assert_row(scr, 2, "_____");
+    for (int c = 0; c < 5; c++) {
+        lv_color_t border = lv_obj_get_style_border_color(termo_cell_obj(scr, 0, 2, c), LV_PART_MAIN);
+        TEST_ASSERT_FALSE_MESSAGE(lv_color_eq(border, RATIMOS_COLOR_GAME_CORRECT), "no green border on the active row");
+    }
+
+    /* A jogadora digita todas as letras; backspace apaga a ultima. */
     termo_type(kb, "pos");
+    assert_row(scr, 2, "POS__");
+    termo_press(kb, LV_SYMBOL_BACKSPACE);
+    termo_press(kb, LV_SYMBOL_BACKSPACE);
+    termo_press(kb, LV_SYMBOL_BACKSPACE);
+    assert_row(scr, 2, "_____");
+    termo_type(kb, "posse");
     assert_row(scr, 2, "POSSE");
-    /* Enter envia a palavra inteira (travadas + digitadas): POSSE acerta. */
+    /* Enter envia a palavra inteira: POSSE acerta. */
     termo_press(kb, "enter");
     TEST_ASSERT_TRUE(lv_obj_has_flag(status, LV_OBJ_FLAG_HIDDEN)); /* partida encerrada */
 
@@ -314,6 +374,34 @@ void test_termo_keyboard_reflects_letter_states_and_resets(void)
     TEST_ASSERT_FALSE(key_disabled(kb, "T"));
     termo_switch_mode(scr, 0); /* volta pro termo do dia, limpo */
     TEST_ASSERT_FALSE(key_disabled(kb, "R"));
+}
+
+/*
+ * UAT 02.1-17 (caso da usuaria): ARARA contra PASTA no tabuleiro. Pixel 2px
+ * pra dentro do canto da casa (longe da letra): casa 0 laranja (so' o 1o 'a'
+ * sobra como presente), casas 1-3 cinza, casa 4 verde.
+ */
+void test_termo_board_cells_arara_against_pasta(void)
+{
+    ratimos_termo_state_t st;
+    termo_seed(&st, RATIMOS_TERMO_MODE_TERMO, "pasta", "", "", "");
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "arara"));
+
+    lv_obj_t * scr = termo_open_with_state(&st);
+    lv_obj_update_layout(scr);
+    lv_refr_now(NULL);
+
+    lv_color_t want[5] = {
+        RATIMOS_COLOR_GAME_PRESENT, RATIMOS_COLOR_GAME_ABSENT, RATIMOS_COLOR_GAME_ABSENT,
+        RATIMOS_COLOR_GAME_ABSENT, RATIMOS_COLOR_GAME_CORRECT,
+    };
+    for (int c = 0; c < 5; c++) {
+        lv_area_t a;
+        lv_obj_get_coords(termo_cell_obj(scr, 0, 0, c), &a);
+        int r, g, b;
+        px_rgb(a.x1 + 2, a.y1 + 2, &r, &g, &b);
+        assert_rgb_is(r, g, b, want[c], "ARARA x PASTA cell colour");
+    }
 }
 
 /* Linha (board b, r) inteira dentro da area visivel do painel do board. */
@@ -352,7 +440,7 @@ void test_termo_quarteto_boards_start_at_top_and_follow_active_row(void)
     }
 
     /* 5 palpites aceitos (linha ativa 5, alem das 4 visiveis). Pula
-     * palavra com letra desabilitada; digita so' nas posicoes livres. */
+     * palavra com letra desabilitada. */
     int accepted = 0;
     for (size_t w = 0; w < sizeof(WORDS) / sizeof(WORDS[0]) && accepted < 5; w++) {
         const char * word = WORDS[w];
@@ -364,12 +452,7 @@ void test_termo_quarteto_boards_start_at_top_and_follow_active_row(void)
         if (!usable) {
             continue;
         }
-        for (int c = 0; c < 5; c++) {
-            if (termo_cell(scr, 0, accepted, c)[0] == '\0') {
-                char k[2] = { (char) toupper((unsigned char) word[c]), 0 };
-                termo_press(kb, k);
-            }
-        }
+        termo_type(kb, word);
         termo_press(kb, "enter");
         char expect[24];
         snprintf(expect, sizeof(expect), "tentativa %d de 9", accepted + 2);
@@ -812,6 +895,7 @@ int main(void)
 
     UNITY_BEGIN();
     RUN_TEST(test_termo_keyboard_reflects_letter_states_and_resets);
+    RUN_TEST(test_termo_board_cells_arara_against_pasta);
     RUN_TEST(test_termo_quarteto_boards_start_at_top_and_follow_active_row);
     /* Sem pool extra de heap: desde o plano 02.1-15 cada tela de jogo e'
      * deletada ao navegar pra outra (ratimos_screen_load), entao o heap

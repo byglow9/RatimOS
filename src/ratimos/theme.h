@@ -59,15 +59,27 @@
  *
  * D-17 travou a paleta de MARCA/CHROME (as 6 macros acima) — nao havia jogo
  * nenhum quando ela foi definida, entao ela nao previu feedback de acerto/erro.
- * Estas 7 macros existem SOMENTE para feedback de jogabilidade dentro do
+ * Estas 8 macros existem SOMENTE para feedback de jogabilidade dentro do
  * tabuleiro (letra certa/presente/ausente no termo, faixa de categoria
  * resolvida no conexo). Nunca use nenhuma delas como cor de chrome, de botao
  * primario ou de CTA — esse papel continua sendo exclusivo de
  * RATIMOS_COLOR_ACCENT.
  */
+/*
+ * Revisado no plano 02.1-17 (UAT 2026-10-07: "laranja/cinza como no term.ooo"):
+ * - PRESENT = laranja #e06c0a (matiz ~27 graus, contraste 3,0:1 com a letra
+ *   branca RATIMOS_COLOR_TEXT = limiar WCAG de texto grande). Fica a ~31 graus
+ *   do ACCENT #e6010f e a ~112 graus do verde. #e8780f e #f08a1c, sugeridos
+ *   pela usuaria, dao so' 2,7:1 e 2,3:1 -- claros demais pra letra branca.
+ *   Ajuste futuro fica DENTRO da faixa: matiz 24-32 graus e contraste >= 3,0:1.
+ * - ABSENT = cinza neutro #3a3a3c (saturacao ~0,03); o antigo #3a3a42 puxava
+ *   pro azul.
+ * - ABSENT_KEY_TEXT = a letra apagada da tecla descartada do teclado.
+ */
 #define RATIMOS_COLOR_GAME_CORRECT   lv_color_hex(0x2f8f4e)
-#define RATIMOS_COLOR_GAME_PRESENT   lv_color_hex(0xd99a1b)
-#define RATIMOS_COLOR_GAME_ABSENT    lv_color_hex(0x3a3a42)
+#define RATIMOS_COLOR_GAME_PRESENT   lv_color_hex(0xe06c0a)
+#define RATIMOS_COLOR_GAME_ABSENT    lv_color_hex(0x3a3a3c)
+#define RATIMOS_COLOR_GAME_ABSENT_KEY_TEXT lv_color_hex(0x7a7a7e)
 
 #define RATIMOS_COLOR_CONEXO_YELLOW  lv_color_hex(0xd9a520)
 #define RATIMOS_COLOR_CONEXO_GREEN   lv_color_hex(0x3f8f4e)

@@ -135,15 +135,6 @@ static const char * s_reject_msg = NULL;
  * save restaurado e zera sozinho em jogo novo / troca de modo. */
 static uint8_t s_key_states[26];
 
-/*
- * Letras verdes travadas na linha ativa (fix de checkpoint 02.1-14, rodada
- * 3 -- ratimos_termo_locked_letters): ja aparecem pre-colocadas e nao saem.
- * A partir daqui s_state.current_guess guarda SO' as letras digitadas nas
- * posicoes LIVRES, em ordem; a palavra enviada e' a combinacao das duas
- * (compose_guess). Derivado do historico a cada render -- nada novo no save.
- */
-static char s_locked[RATIMOS_TERMO_WORD_LEN];
-
 /* Tela deletada ao sair (ratimos_screen_load, plano 02.1-15): zera todo
  * ponteiro de widget pro proximo ratimos_termo_show() reconstruir a partir
  * do save -- nenhum callback pode achar um handle de uma tela que ja sumiu. */
@@ -169,46 +160,6 @@ static void termo_screen_deleted_cb(lv_event_t * e)
     /* Rejeicao pendente e' so' da tela que sumiu (nao vai pro save). */
     s_reject_flash = false;
     s_reject_msg = NULL;
-}
-
-static int free_slots(void)
-{
-    int n = 0;
-    for (int c = 0; c < RATIMOS_TERMO_WORD_LEN; c++) {
-        if (!s_locked[c]) {
-            n++;
-        }
-    }
-    return n;
-}
-
-/* Recalcula as travas; um save antigo (current_guess posicional, de antes
- * das travas) com mais letras que posicoes livres e' cortado. */
-static void refresh_locks(void)
-{
-    ratimos_termo_locked_letters(&s_state, s_locked);
-    size_t len = strlen(s_state.current_guess);
-    if ((int) len > free_slots()) {
-        s_state.current_guess[free_slots()] = '\0';
-    }
-}
-
-/* Palavra da linha ativa: travadas + digitadas nas livres. Posicao livre
- * ainda vazia vira '\0' (strlen < 5 -> "complete as 5 letras"). */
-static void compose_guess(char out[RATIMOS_TERMO_WORD_LEN + 1])
-{
-    size_t typed = strlen(s_state.current_guess);
-    size_t t = 0;
-    for (int c = 0; c < RATIMOS_TERMO_WORD_LEN; c++) {
-        if (s_locked[c]) {
-            out[c] = s_locked[c];
-        } else if (t < typed) {
-            out[c] = s_state.current_guess[t++];
-        } else {
-            out[c] = '\0';
-        }
-    }
-    out[RATIMOS_TERMO_WORD_LEN] = '\0';
 }
 
 static void render_all(void);
@@ -439,9 +390,6 @@ static void render_boards(void)
     lv_coord_t board_w = termo_board_width(mode);
     lv_coord_t board_h = termo_board_height(mode);
     bool scroll_needed = (mode == RATIMOS_TERMO_MODE_QUARTETO);
-    refresh_locks();
-    char composed[RATIMOS_TERMO_WORD_LEN + 1];
-    compose_guess(composed);
 
     for (uint8_t b = 0; b < RATIMOS_TERMO_MAX_BOARDS; b++) {
         if (b >= s_state.board_count) {
@@ -501,16 +449,11 @@ static void render_boards(void)
                     }
                     border = bg;
                 } else if (is_current_row) {
-                    ch = composed[c];
-                    if (s_locked[c]) {
-                        /* Travada: letra e moldura verdes, fixas. */
-                        border = RATIMOS_COLOR_GAME_CORRECT;
-                        text = RATIMOS_COLOR_GAME_CORRECT;
-                        border_w = 2;
-                    } else {
-                        border = RATIMOS_COLOR_ACCENT;
-                        border_w = s_reject_flash ? 3 : 2;
-                    }
+                    /* So' o que a jogadora digitou; nenhuma casa recebe cor ou
+                     * moldura verde fora das linhas de historico. */
+                    ch = s_state.current_guess[c];
+                    border = RATIMOS_COLOR_ACCENT;
+                    border_w = s_reject_flash ? 3 : 2;
                 }
 
                 char buf[2] = { 0, 0 };
@@ -564,7 +507,7 @@ static int key_letter(lv_obj_t * kb, uint32_t id)
 /*
  * Teclado com o estado das letras (fix de checkpoint 02.1-14, como no Termo
  * real): ABSENT -> LV_BUTTONMATRIX_CTRL_DISABLED (o toque nao faz nada) e
- * tecla cinza; PRESENT/CORRECT -> tecla amarela/verde, ainda usavel. As
+ * tecla cinza; PRESENT/CORRECT -> tecla laranja/verde, ainda usavel. As
  * cores entram no draw task da tecla (keyboard_draw_task_cb), por cima do
  * bevel 003-C -- moldura e friso continuam.
  */
@@ -610,8 +553,8 @@ static void keyboard_draw_task_cb(lv_event_t * e)
         fill->opa = LV_OPA_COVER;
     } else if (lv_draw_task_get_type(t) == LV_DRAW_TASK_TYPE_LABEL && ks == RATIMOS_TERMO_KEY_ABSENT) {
         lv_draw_label_dsc_t * label = lv_draw_task_get_label_dsc(t);
-        label->color = RATIMOS_COLOR_TEXT_MUTED;
-        label->opa = LV_OPA_60;
+        label->color = RATIMOS_COLOR_GAME_ABSENT_KEY_TEXT;
+        label->opa = LV_OPA_COVER;
     }
 }
 
@@ -641,10 +584,8 @@ static const char * reject_reason(const char * guess)
 
 static void try_submit(void)
 {
-    char word[RATIMOS_TERMO_WORD_LEN + 1];
-    compose_guess(word);
-    const char * reason = reject_reason(word);
-    bool ok = ratimos_termo_submit(&s_state, word);
+    const char * reason = reject_reason(s_state.current_guess);
+    bool ok = ratimos_termo_submit(&s_state, s_state.current_guess);
     s_reject_flash = !ok;
     s_reject_msg = ok ? NULL : (reason ? reason : TERMO_MSG_NOT_IN_LIST);
 
@@ -705,9 +646,8 @@ static void keyboard_value_changed_cb(lv_event_t * e)
     if (!isalpha((unsigned char) text[0])) {
         return; /* espacador oculto / tecla sem letra */
     }
-    /* So' as posicoes livres recebem letra (as travadas ja estao la'). */
     size_t len = strlen(s_state.current_guess);
-    if ((int) len < free_slots()) {
+    if (len < RATIMOS_TERMO_WORD_LEN) {
         s_state.current_guess[len] = (char) tolower((unsigned char) text[0]);
         s_state.current_guess[len + 1] = '\0';
         s_reject_flash = false;
@@ -835,6 +775,19 @@ static lv_obj_t * build_termo_screen(void)
     lv_obj_set_width(s_keyboard, lv_pct(100));
     lv_obj_set_height(s_keyboard, TERMO_KEYBOARD_H);
     ratimos_bevel_style_buttonmatrix(s_keyboard);
+    /* Tecla descartada (CTRL_DISABLED): o tema padrao do LVGL esta em modo
+     * CLARO (lv_conf.h nao define LV_THEME_DEFAULT_DARK) e aplica
+     * styles.disabled = recolor lighten(GREY, 2) a 50% em
+     * LV_PART_ITEMS|LV_STATE_DISABLED (lv_theme_default.c). Esse recolor
+     * clareia a borda e a letra da tecla (lv_obj_draw.c,
+     * normal_apply_layer_recolor) -- o "aspecto claro/esverdeado" que a
+     * usuaria viu. Desliga o recolor e fixa o visual da tecla descartada:
+     * fundo cinza, borda escura do bevel e letra apagada (UAT 02.1-17). */
+    lv_obj_set_style_recolor_opa(s_keyboard, LV_OPA_TRANSP, LV_PART_ITEMS | LV_STATE_DISABLED);
+    lv_obj_set_style_bg_color(s_keyboard, RATIMOS_COLOR_GAME_ABSENT, LV_PART_ITEMS | LV_STATE_DISABLED);
+    lv_obj_set_style_bg_opa(s_keyboard, LV_OPA_COVER, LV_PART_ITEMS | LV_STATE_DISABLED);
+    lv_obj_set_style_text_color(s_keyboard, RATIMOS_COLOR_GAME_ABSENT_KEY_TEXT, LV_PART_ITEMS | LV_STATE_DISABLED);
+    lv_obj_set_style_border_color(s_keyboard, RATIMOS_COLOR_BEVEL_DARK, LV_PART_ITEMS | LV_STATE_DISABLED);
     lv_obj_set_style_pad_column(s_keyboard, TERMO_KEY_GAP, 0);
     lv_obj_set_style_pad_row(s_keyboard, TERMO_KEY_GAP, 0);
     lv_obj_set_style_text_font(s_keyboard, &ratimos_font_mono_12, LV_PART_ITEMS);

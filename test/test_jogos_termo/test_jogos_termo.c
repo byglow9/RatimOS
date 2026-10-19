@@ -105,6 +105,34 @@ void test_score_guess_duplicate_letter_mixed_present_only(void)
     TEST_ASSERT_EQUAL_INT(RATIMOS_TERMO_FEEDBACK_ABSENT, fb[4]);
 }
 
+/* UAT 02.1-17 (caso da usuaria): ARARA contra PASTA. A resposta tem 2 'a';
+ * o 'a' final acerta a posicao e consome uma contagem, entao so' o 1o 'a' do
+ * palpite sobra como presente; o 2o 'a' e os 2 'r' ficam ausentes. */
+void test_score_guess_arara_against_pasta_two_pass(void)
+{
+    ratimos_termo_feedback_t fb[RATIMOS_TERMO_WORD_LEN];
+    ratimos_termo_score_guess("arara", "pasta", fb);
+
+    TEST_ASSERT_EQUAL_INT(RATIMOS_TERMO_FEEDBACK_PRESENT, fb[0]);
+    TEST_ASSERT_EQUAL_INT(RATIMOS_TERMO_FEEDBACK_ABSENT, fb[1]);
+    TEST_ASSERT_EQUAL_INT(RATIMOS_TERMO_FEEDBACK_ABSENT, fb[2]);
+    TEST_ASSERT_EQUAL_INT(RATIMOS_TERMO_FEEDBACK_ABSENT, fb[3]);
+    TEST_ASSERT_EQUAL_INT(RATIMOS_TERMO_FEEDBACK_CORRECT, fb[4]);
+}
+
+/* ARARA contra CARTA: 'r' existe uma vez, so' o 1o 'r' do palpite e' presente. */
+void test_score_guess_arara_against_carta_two_pass(void)
+{
+    ratimos_termo_feedback_t fb[RATIMOS_TERMO_WORD_LEN];
+    ratimos_termo_score_guess("arara", "carta", fb);
+
+    TEST_ASSERT_EQUAL_INT(RATIMOS_TERMO_FEEDBACK_PRESENT, fb[0]);
+    TEST_ASSERT_EQUAL_INT(RATIMOS_TERMO_FEEDBACK_PRESENT, fb[1]);
+    TEST_ASSERT_EQUAL_INT(RATIMOS_TERMO_FEEDBACK_ABSENT, fb[2]);
+    TEST_ASSERT_EQUAL_INT(RATIMOS_TERMO_FEEDBACK_ABSENT, fb[3]);
+    TEST_ASSERT_EQUAL_INT(RATIMOS_TERMO_FEEDBACK_CORRECT, fb[4]);
+}
+
 /* ------------------------------------------------------------------------
  * Tabela de modos.
  * ------------------------------------------------------------------------ */
@@ -290,58 +318,41 @@ void test_key_states_dueto_only_count_boards_still_in_play(void)
     TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_UNUSED, key(ks, 'C'));
 }
 
-/*
- * Rodada 3: letras verdes ja confirmadas ficam pre-colocadas e travadas na
- * proxima linha. posse x RESTO -> S travada na posicao 2; + TESTE -> S e E
- * (posicao 4). Partida encerrada: nada travado.
- */
-void test_locked_letters_termo_follow_confirmed_greens(void)
+/* Estado de tecla do caso ARARA x PASTA: 'a' verde (o acerto vence o presente),
+ * 'r' cinza (descartada). */
+void test_key_states_arara_against_pasta(void)
 {
     ratimos_termo_state_t st;
-    make_termo_state(&st, "posse");
-    char lk[RATIMOS_TERMO_WORD_LEN];
+    make_termo_state(&st, "pasta");
+    uint8_t ks[26];
 
-    TEST_ASSERT_EQUAL_INT(0, ratimos_termo_locked_letters(&st, lk));
-
-    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "resto"));
-    TEST_ASSERT_EQUAL_INT(1, ratimos_termo_locked_letters(&st, lk));
-    TEST_ASSERT_EQUAL_CHAR('s', lk[2]);
-    TEST_ASSERT_EQUAL_CHAR(0, lk[0]);
-
-    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "teste"));
-    TEST_ASSERT_EQUAL_INT(2, ratimos_termo_locked_letters(&st, lk));
-    TEST_ASSERT_EQUAL_CHAR('s', lk[2]);
-    TEST_ASSERT_EQUAL_CHAR('e', lk[4]);
-    TEST_ASSERT_EQUAL_CHAR(0, lk[1]);
-
-    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "posse"));
-    TEST_ASSERT_EQUAL_UINT8(1, st.finished);
-    TEST_ASSERT_EQUAL_INT(0, ratimos_termo_locked_letters(&st, lk));
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "arara"));
+    ratimos_termo_key_states(&st, ks);
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_CORRECT, key(ks, 'A'));
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_KEY_ABSENT, key(ks, 'R'));
 }
 
 /*
- * Dueto: a linha e' compartilhada, so' trava o que e' verde na MESMA
- * posicao em todos os boards ainda em jogo. posse/cesta x RESTO: S@2 e'
- * verde nos dois (trava); E@1 so' em cesta (nao trava). Depois de resolver
- * posse, so' cesta conta: E@1, S@2 e T@3 (todos verdes em cesta) travam.
+ * UAT 02.1-17: NENHUMA letra e' pre-colocada (o pre-preenchimento do 2c292eb
+ * foi rejeitado). Depois de um palpite com letra verde, a linha de entrada
+ * continua exatamente como a jogadora deixou -- o motor nunca escreve nela.
  */
-void test_locked_letters_dueto_require_all_boards_in_play(void)
+void test_submit_never_prefills_the_current_guess(void)
 {
     ratimos_termo_state_t st;
-    make_dueto_state(&st, "posse", "cesta");
-    char lk[RATIMOS_TERMO_WORD_LEN];
+    make_termo_state(&st, "posse");
 
-    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "resto"));
-    TEST_ASSERT_EQUAL_INT(1, ratimos_termo_locked_letters(&st, lk));
-    TEST_ASSERT_EQUAL_CHAR('s', lk[2]);
-    TEST_ASSERT_EQUAL_CHAR(0, lk[1]);
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "resto")); /* S verde na posicao 2 */
+    for (int i = 0; i < RATIMOS_TERMO_WORD_LEN + 1; i++) {
+        TEST_ASSERT_EQUAL_UINT8(0, (uint8_t) st.current_guess[i]);
+    }
 
-    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "posse"));
-    TEST_ASSERT_EQUAL_UINT8(1, st.boards[0].solved);
-    TEST_ASSERT_EQUAL_INT(3, ratimos_termo_locked_letters(&st, lk));
-    TEST_ASSERT_EQUAL_CHAR('e', lk[1]);
-    TEST_ASSERT_EQUAL_CHAR('s', lk[2]);
-    TEST_ASSERT_EQUAL_CHAR('t', lk[3]);
+    /* E o motor nao mexe no que ja' estava la' (quem zera e' a tela). */
+    memset(st.current_guess, 0, sizeof(st.current_guess));
+    st.current_guess[0] = 'x';
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st, "teste"));
+    TEST_ASSERT_EQUAL_CHAR('x', st.current_guess[0]);
+    TEST_ASSERT_EQUAL_UINT8(0, (uint8_t) st.current_guess[1]);
 }
 
 void test_submit_consumes_exactly_one_try_per_guess(void)
@@ -424,6 +435,8 @@ int main(void)
     RUN_TEST(test_score_guess_duplicate_letters_both_misplaced_marks_both_present);
     RUN_TEST(test_score_guess_triple_duplicate_letter_one_in_answer_marks_one_hit);
     RUN_TEST(test_score_guess_duplicate_letter_mixed_present_only);
+    RUN_TEST(test_score_guess_arara_against_pasta_two_pass);
+    RUN_TEST(test_score_guess_arara_against_carta_two_pass);
 
     RUN_TEST(test_mode_table_board_counts_and_max_tries);
 
@@ -436,8 +449,8 @@ int main(void)
     RUN_TEST(test_blocklisted_common_words_are_accepted_guesses_but_never_answers);
     RUN_TEST(test_key_states_termo_correct_beats_present_and_absent_letters);
     RUN_TEST(test_key_states_dueto_only_count_boards_still_in_play);
-    RUN_TEST(test_locked_letters_termo_follow_confirmed_greens);
-    RUN_TEST(test_locked_letters_dueto_require_all_boards_in_play);
+    RUN_TEST(test_key_states_arara_against_pasta);
+    RUN_TEST(test_submit_never_prefills_the_current_guess);
     RUN_TEST(test_submit_consumes_exactly_one_try_per_guess);
     RUN_TEST(test_submit_wins_when_all_boards_solved);
     RUN_TEST(test_submit_loses_when_tries_exhausted_with_unsolved_board);

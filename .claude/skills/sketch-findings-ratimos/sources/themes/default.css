@@ -18,8 +18,8 @@
 
   /* ---- Game feedback tokens (unchanged, not touched by this rework) ---- */
   --ratimos-game-correct: #2f8f4e;
-  --ratimos-game-present: #d99a1b;
-  --ratimos-game-absent: #3a3a42;
+  --ratimos-game-present: #e06c0a;
+  --ratimos-game-absent: #3a3a3c;
 
   /* ---- New: gradient background family (this rework) ---- */
   --ratimos-grad-top: #1c0a3d;

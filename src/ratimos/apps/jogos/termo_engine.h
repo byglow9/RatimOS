@@ -57,6 +57,9 @@ typedef struct {
     uint8_t tries_used;
     uint8_t finished;
     uint8_t daily_win_recorded;
+    /* Linha de entrada em andamento: as letras que a jogadora DIGITOU, nunca
+     * pre-preenchida pelo jogo (UAT 02.1-17: ela digita toda letra, como no
+     * term.ooo). */
     char current_guess[RATIMOS_TERMO_WORD_LEN + 1];
 } ratimos_termo_state_t;
 
@@ -106,16 +109,6 @@ typedef enum {
 } ratimos_termo_key_state_t;
 
 void ratimos_termo_key_states(const ratimos_termo_state_t * st, uint8_t out[26]);
-
-/*
- * Letras travadas da linha ativa (fix de checkpoint 02.1-14, rodada 3):
- * out[c] = letra minuscula ja confirmada CORRETA na posicao c em TODOS os
- * boards ainda em jogo (a linha de entrada e' compartilhada no dueto/
- * quarteto), ou '\0' se a posicao esta livre. Sem board em jogo (partida
- * encerrada) nada fica travado. Derivado do historico, nunca salvo.
- * Retorna quantas posicoes ficaram travadas.
- */
-int ratimos_termo_locked_letters(const ratimos_termo_state_t * st, char out[RATIMOS_TERMO_WORD_LEN]);
 
 uint8_t ratimos_termo_board_count(ratimos_termo_mode_t mode);
 uint8_t ratimos_termo_max_tries(ratimos_termo_mode_t mode);
