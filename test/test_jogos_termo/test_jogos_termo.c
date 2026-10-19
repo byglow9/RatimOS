@@ -626,6 +626,133 @@ void test_state_sanitize_recomputes_counts_and_limits_tries(void)
     TEST_ASSERT_TRUE(st.boards[0].guesses_made <= st.tries_used);
 }
 
+/* ------------------------------------------------------------------------
+ * Lista aceita com flexoes comuns + formas acentuadas (plano 02.1-17).
+ * ------------------------------------------------------------------------ */
+
+/* Sonda do UAT 2026-10-07: palavras comuns flexionadas que o lexico (so'
+ * lemas) recusava. Todas tem de ser palpites aceitos. */
+void test_accepted_list_takes_the_common_inflections_probe(void)
+{
+    static const char * const probe[] = {
+        "falou", "comeu", "vamos", "fomos", "sejam", "andei", "casas", "pesos",
+        "gatos", "ficou", "disse", "podem", "fazia", "deram", "achei", "amava",
+        "senti", "olhei", "dizia", "temos", "sabem", "novas", "bolos", "dados",
+    };
+    TEST_ASSERT_EQUAL_UINT32(24, (uint32_t) (sizeof(probe) / sizeof(probe[0])));
+    for (size_t i = 0; i < sizeof(probe) / sizeof(probe[0]); i++) {
+        TEST_ASSERT_TRUE_MESSAGE(ratimos_termo_is_accepted_guess(probe[i]), probe[i]);
+    }
+}
+
+void test_every_answer_is_an_accepted_guess_and_the_pool_is_unchanged(void)
+{
+    TEST_ASSERT_EQUAL_UINT32(577, (uint32_t) ratimos_termo_answer_count());
+    for (size_t a = 0; a < ratimos_termo_answer_count(); a++) {
+        TEST_ASSERT_TRUE_MESSAGE(ratimos_termo_is_accepted_guess(ratimos_termo_answer_at(a)),
+                                 ratimos_termo_answer_at(a));
+    }
+}
+
+/* Entrada sem acento equivale a palavra acentuada (teclado sem acento);
+ * qualquer byte nao ASCII e' recusado sem crash. */
+void test_accent_insensitive_input_and_non_ascii_rejected(void)
+{
+    TEST_ASSERT_TRUE(ratimos_termo_is_accepted_guess("aurea"));
+    TEST_ASSERT_TRUE(ratimos_termo_is_accepted_guess("AUREA"));
+    TEST_ASSERT_TRUE(ratimos_termo_is_accepted_guess("aviao"));
+
+    TEST_ASSERT_FALSE(ratimos_termo_is_accepted_guess("\xc3\xa1urea")); /* "áurea": 6 bytes */
+    TEST_ASSERT_FALSE(ratimos_termo_is_accepted_guess("\xc3\xa1" "rea")); /* 5 bytes, 1 nao ASCII */
+    TEST_ASSERT_FALSE(ratimos_termo_is_accepted_guess("\xff\xfe\xfd\xfc\xfb"));
+    TEST_ASSERT_FALSE(ratimos_termo_is_accepted_guess(NULL));
+    TEST_ASSERT_FALSE(ratimos_termo_is_accepted_guess("zzzzz"));
+}
+
+/* UTF-8 de exibicao (so' o conjunto PT-BR das fontes) -> ASCII minusculo.
+ * Devolve quantos code points tinha, ou -1 se aparecer algo fora do conjunto. */
+static int display_to_ascii(const char * s, char out[RATIMOS_TERMO_WORD_LEN + 1])
+{
+    int cps = 0;
+    for (const unsigned char * p = (const unsigned char *) s; *p; cps++) {
+        char c = 0;
+        if (*p < 0x80) {
+            c = (char) ((*p >= 'A' && *p <= 'Z') ? *p - 'A' + 'a' : *p);
+            p++;
+        } else if (p[0] == 0xc3) {
+            switch (p[1]) {
+            case 0x81: case 0x80: case 0x83: case 0x82: c = 'a'; break;
+            case 0x89: case 0x8a: c = 'e'; break;
+            case 0x8d: c = 'i'; break;
+            case 0x93: case 0x94: case 0x95: c = 'o'; break;
+            case 0x9a: c = 'u'; break;
+            case 0x87: c = 'c'; break;
+            default: return -1;
+            }
+            p += 2;
+        } else {
+            return -1;
+        }
+        if (cps >= RATIMOS_TERMO_WORD_LEN) {
+            return cps + 1;
+        }
+        out[cps] = c;
+    }
+    out[cps < RATIMOS_TERMO_WORD_LEN ? cps : RATIMOS_TERMO_WORD_LEN] = '\0';
+    return cps;
+}
+
+void test_display_form_shows_the_accented_answer(void)
+{
+    char out[RATIMOS_TERMO_DISPLAY_MAX];
+
+    TEST_ASSERT_TRUE(ratimos_termo_display_form("aviao", out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("AVI\xc3\x83O", out); /* AVIAO com til: "AVIÃO" */
+    TEST_ASSERT_TRUE(ratimos_termo_display_form("AVIAO", out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("AVI\xc3\x83O", out);
+
+    TEST_ASSERT_TRUE(ratimos_termo_display_form("posse", out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("POSSE", out);
+    /* Fora das respostas: ASCII maiusculo. */
+    TEST_ASSERT_TRUE(ratimos_termo_display_form("falou", out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("FALOU", out);
+}
+
+void test_display_form_rejects_bad_arguments(void)
+{
+    char out[RATIMOS_TERMO_DISPLAY_MAX];
+    TEST_ASSERT_FALSE(ratimos_termo_display_form(NULL, out, sizeof(out)));
+    TEST_ASSERT_FALSE(ratimos_termo_display_form("aviao", NULL, sizeof(out)));
+    TEST_ASSERT_FALSE(ratimos_termo_display_form("aviao", out, RATIMOS_TERMO_DISPLAY_MAX - 1)); /* buffer pequeno */
+    TEST_ASSERT_FALSE(ratimos_termo_display_form("avia", out, sizeof(out)));
+    TEST_ASSERT_FALSE(ratimos_termo_display_form("aviaos", out, sizeof(out)));
+    TEST_ASSERT_FALSE(ratimos_termo_display_form("avi\xc3\xa3", out, sizeof(out))); /* 5 bytes nao ASCII */
+}
+
+/* Toda forma da tabela tem 5 code points e, normalizada, volta a uma chave
+ * ASCII que e' resposta e que a propria funcao traduz de volta a ela. */
+void test_display_table_forms_normalize_back_to_their_ascii_key(void)
+{
+    TEST_ASSERT_TRUE(ratimos_termo_display_count() > 0);
+    for (size_t i = 0; i < ratimos_termo_display_count(); i++) {
+        const char * form = ratimos_termo_display_at(i);
+        TEST_ASSERT_NOT_NULL(form);
+        char key[RATIMOS_TERMO_WORD_LEN + 2];
+        TEST_ASSERT_EQUAL_INT_MESSAGE(5, display_to_ascii(form, key), form);
+
+        bool is_answer = false;
+        for (size_t a = 0; a < ratimos_termo_answer_count() && !is_answer; a++) {
+            is_answer = strcmp(ratimos_termo_answer_at(a), key) == 0;
+        }
+        TEST_ASSERT_TRUE_MESSAGE(is_answer, form);
+
+        char out[RATIMOS_TERMO_DISPLAY_MAX];
+        TEST_ASSERT_TRUE(ratimos_termo_display_form(key, out, sizeof(out)));
+        TEST_ASSERT_EQUAL_STRING(form, out);
+    }
+    TEST_ASSERT_NULL(ratimos_termo_display_at(ratimos_termo_display_count()));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -665,6 +792,13 @@ int main(void)
     RUN_TEST(test_state_sanitize_cleans_current_guess_and_missing_nuls);
     RUN_TEST(test_state_sanitize_rejects_bad_answers_mode_and_finished);
     RUN_TEST(test_state_sanitize_recomputes_counts_and_limits_tries);
+
+    RUN_TEST(test_accepted_list_takes_the_common_inflections_probe);
+    RUN_TEST(test_every_answer_is_an_accepted_guess_and_the_pool_is_unchanged);
+    RUN_TEST(test_accent_insensitive_input_and_non_ascii_rejected);
+    RUN_TEST(test_display_form_shows_the_accented_answer);
+    RUN_TEST(test_display_form_rejects_bad_arguments);
+    RUN_TEST(test_display_table_forms_normalize_back_to_their_ascii_key);
 
     return UNITY_END();
 }
