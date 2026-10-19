@@ -5,6 +5,7 @@
 #include "theme.h"
 
 #include <stdio.h>
+#include "src/misc/lv_area_private.h" /* lv_area_intersect (LVGL 9.5 o mantem nos headers privados) */
 
 /*
  * Rotinas dos carregamentos (plano 02.1-16). Geometria FINAL do sketch 010

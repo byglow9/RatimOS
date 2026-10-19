@@ -3,6 +3,7 @@
 #include "home_screen.h"
 #include "app_shell.h"
 #include "theme.h"
+#include "theme_catalog.h"
 #include "status_bar.h"
 #include "progression.h"
 #include "apps/jogos_app.h"
@@ -15,6 +16,9 @@
 
 static lv_obj_t * s_home_screen = NULL;
 static lv_obj_t * s_castelo_status_label = NULL;
+/* Geracao do tema (ratimos_theme_generation) com que a home em cache foi
+ * construida: se mudou, o fundo dela esta velho e ela e' reconstruida. */
+static uint32_t s_home_generation = 0;
 
 static lv_obj_t * tile_create(lv_obj_t * parent, const char * icon_id, const char * title,
                                lv_coord_t w, lv_coord_t h, lv_event_cb_t click_cb)
@@ -153,10 +157,31 @@ static lv_obj_t * build_home_screen(void)
     return scr;
 }
 
+/*
+ * O tema mudou (aplicar/previa) desde que a home foi construida: o fundo em
+ * cache e' o do tema antigo. Solta a home velha -- se ela e' a tela ativa, o
+ * ratimos_screen_load() da nova a deleta (ja nao e' mais persistente); se nao
+ * e', deleta ja.
+ */
+static void drop_stale_home(void)
+{
+    lv_obj_t * old = s_home_screen;
+    s_home_screen = NULL;
+    s_castelo_status_label = NULL;
+    ratimos_screen_clear_persistent(old);
+    if (lv_screen_active() != old) {
+        lv_obj_delete(old);
+    }
+}
+
 void ratimos_home_screen_show(lv_event_t * e)
 {
     (void) e;
+    if (s_home_screen && s_home_generation != ratimos_theme_generation()) {
+        drop_stale_home();
+    }
     if (!s_home_screen) {
+        s_home_generation = ratimos_theme_generation();
         s_home_screen = build_home_screen();
         /* A home e' a UNICA tela em cache (02.1-15): toda navegacao volta
          * por ela, e ela custa pouco. Todas as outras sao deletadas ao

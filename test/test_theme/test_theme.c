@@ -20,6 +20,12 @@
 #include "ratimos/fonts/ratimos_fonts.h"
 #include "ratimos/splash.h"
 #include "ratimos/icons.h"
+#include "ratimos/theme_catalog.h"
+#include "ratimos/home_screen.h"
+#include "ratimos/app_shell.h"
+#include "ratimos/theme_art.h"
+#include "ratimos/heap_probe.h"
+#include "storage/content_api.h"
 
 static uint8_t s_disp_buf[RATIMOS_SCREEN_W * RATIMOS_SCREEN_H * 2]; /* LV_COLOR_DEPTH 16 */
 
@@ -30,8 +36,18 @@ static void headless_flush_cb(lv_display_t * disp, const lv_area_t * area, uint8
     lv_display_flush_ready(disp);
 }
 
-void setUp(void) {}
-void tearDown(void) {}
+/* Este binario le o assets/save/ real: o tema aplicado em memoria e' fixado no
+ * Classico para que os testes de fundo nao dependam do que esta salvo. */
+void setUp(void)
+{
+    ratimos_theme_preview_end();
+    ratimos_theme_apply(RATIMOS_THEME_CLASSICO);
+}
+
+void tearDown(void)
+{
+    ratimos_theme_preview_end();
+}
 
 /*
  * Behavior 1: match de icone real -- retorna um objeto NAO clicavel cujo
@@ -524,6 +540,105 @@ void test_row_icon_ids_used_by_apps_are_compiled_26px_icons(void)
 }
 
 /*
+ * Plano 02.1-16, Task 3: o fundo do sistema (home e telas de app) e' o do
+ * tema EXIBIDO -- o aplicado, ou o da previa em andamento. Com o Classico o
+ * resultado e' identico ao de antes (bg_dither, sem recolor).
+ */
+static lv_obj_t * bg_of_new_screen(void)
+{
+    lv_obj_t * scr = lv_obj_create(NULL);
+    ratimos_theme_apply_screen(scr);
+    return scr;
+}
+
+void test_classico_system_background_is_identical_to_before(void)
+{
+    lv_obj_t * scr = bg_of_new_screen();
+    lv_obj_t * bg = lv_obj_get_child(scr, 0);
+    TEST_ASSERT_EQUAL_PTR(&ratimos_bg_dither_desc, lv_image_get_src(bg));
+    TEST_ASSERT_EQUAL_UINT8(LV_OPA_TRANSP, lv_obj_get_style_image_recolor_opa(bg, LV_PART_MAIN));
+    lv_obj_delete(scr);
+}
+
+void test_system_background_follows_the_displayed_theme_and_its_dim(void)
+{
+    ratimos_theme_preview_begin(RATIMOS_THEME_CASTELO);
+    lv_obj_t * scr = bg_of_new_screen();
+    lv_obj_t * bg = lv_obj_get_child(scr, 0);
+    TEST_ASSERT_EQUAL_PTR(&ratimos_home_bg_castelo_desc, lv_image_get_src(bg));
+    /* escurecimento de 20% em tempo de execucao: recolor preto a 20% */
+    TEST_ASSERT_EQUAL_UINT32(lv_color_to_u32(lv_color_black()),
+                              lv_color_to_u32(lv_obj_get_style_image_recolor(bg, LV_PART_MAIN)));
+    TEST_ASSERT_EQUAL_UINT8(20 * 255 / 100, lv_obj_get_style_image_recolor_opa(bg, LV_PART_MAIN));
+    lv_obj_delete(scr);
+
+    ratimos_theme_preview_begin(RATIMOS_THEME_NOITE);
+    scr = bg_of_new_screen();
+    bg = lv_obj_get_child(scr, 0);
+    TEST_ASSERT_EQUAL_PTR(&ratimos_home_bg_noite_desc, lv_image_get_src(bg));
+    TEST_ASSERT_EQUAL_UINT8(LV_OPA_TRANSP, lv_obj_get_style_image_recolor_opa(bg, LV_PART_MAIN));
+    lv_obj_delete(scr);
+
+    ratimos_theme_preview_begin(RATIMOS_THEME_XADREZ);
+    scr = bg_of_new_screen();
+    TEST_ASSERT_EQUAL_PTR(&ratimos_home_bg_xadrez_desc, lv_image_get_src(lv_obj_get_child(scr, 0)));
+    lv_obj_delete(scr);
+}
+
+void test_preview_changes_the_displayed_theme_only(void)
+{
+    ratimos_theme_id_t stored = ratimos_storage_get_theme_id();
+    uint32_t gen = ratimos_theme_generation();
+
+    ratimos_theme_preview_begin(RATIMOS_THEME_XADREZ);
+    TEST_ASSERT_EQUAL_INT(RATIMOS_THEME_XADREZ, ratimos_theme_displayed()->id);
+    TEST_ASSERT_EQUAL_INT(RATIMOS_THEME_CLASSICO, ratimos_theme_applied()->id);
+    TEST_ASSERT_TRUE(ratimos_theme_generation() != gen);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(stored, ratimos_storage_get_theme_id(), "a preview must not write the storage");
+
+    ratimos_theme_preview_end();
+    TEST_ASSERT_EQUAL_INT(RATIMOS_THEME_CLASSICO, ratimos_theme_displayed()->id);
+}
+
+void test_theme_apply_raises_the_generation_and_the_home_rebuilds_with_the_new_background(void)
+{
+    ratimos_home_screen_show(NULL);
+    lv_obj_t * home1 = lv_screen_active();
+    TEST_ASSERT_EQUAL_PTR(&ratimos_bg_dither_desc, lv_image_get_src(lv_obj_get_child(home1, 0)));
+
+    ratimos_home_screen_show(NULL);
+    TEST_ASSERT_EQUAL_PTR_MESSAGE(home1, lv_screen_active(), "the home must stay cached while the theme is unchanged");
+
+    uint32_t gen = ratimos_theme_generation();
+    ratimos_theme_apply(RATIMOS_THEME_NOITE);
+    TEST_ASSERT_TRUE(ratimos_theme_generation() > gen);
+
+    size_t heap_before = ratimos_heap_used();
+    ratimos_home_screen_show(NULL);
+    lv_obj_t * home2 = lv_screen_active();
+    TEST_ASSERT_TRUE_MESSAGE(home2 != home1, "the home must be rebuilt after a theme change");
+    TEST_ASSERT_EQUAL_PTR(&ratimos_home_bg_noite_desc, lv_image_get_src(lv_obj_get_child(home2, 0)));
+    TEST_ASSERT_TRUE_MESSAGE(ratimos_heap_used() <= heap_before + 2048, "the stale home was not deleted");
+
+    /* e volta ao Classico sem vazar */
+    ratimos_theme_apply(RATIMOS_THEME_CLASSICO);
+    ratimos_home_screen_show(NULL);
+    TEST_ASSERT_EQUAL_PTR(&ratimos_bg_dither_desc, lv_image_get_src(lv_obj_get_child(lv_screen_active(), 0)));
+    TEST_ASSERT_TRUE(ratimos_heap_used() <= heap_before + 2048);
+}
+
+void test_invalid_theme_ids_fall_back_to_classico_and_are_never_applied(void)
+{
+    TEST_ASSERT_EQUAL_PTR(ratimos_theme_get(RATIMOS_THEME_CLASSICO), ratimos_theme_get((ratimos_theme_id_t) 77));
+    TEST_ASSERT_EQUAL_PTR(ratimos_theme_get(RATIMOS_THEME_CLASSICO), ratimos_theme_get((ratimos_theme_id_t) -1));
+    uint32_t gen = ratimos_theme_generation();
+    ratimos_theme_apply((ratimos_theme_id_t) 99);
+    ratimos_theme_preview_begin((ratimos_theme_id_t) 99);
+    TEST_ASSERT_EQUAL_UINT32(gen, ratimos_theme_generation());
+    TEST_ASSERT_EQUAL_INT(RATIMOS_THEME_CLASSICO, ratimos_theme_displayed()->id);
+}
+
+/*
  * Plano 02.1-16: a tela de boot e' OPACA e nao carrega nenhum lv_image --
  * o fundo do tema e o carregamento sao desenhados pelo "stage" (nenhum objeto
  * por quadro). O boot preto liso do 02.1-14 foi substituido pelo fundo do
@@ -628,6 +743,11 @@ int main(void)
     RUN_TEST(test_background_is_full_frame_and_drawn_one_to_one);
     RUN_TEST(test_row_with_icon_and_two_labels_is_compact);
     RUN_TEST(test_row_icon_ids_used_by_apps_are_compiled_26px_icons);
+    RUN_TEST(test_classico_system_background_is_identical_to_before);
+    RUN_TEST(test_system_background_follows_the_displayed_theme_and_its_dim);
+    RUN_TEST(test_preview_changes_the_displayed_theme_only);
+    RUN_TEST(test_theme_apply_raises_the_generation_and_the_home_rebuilds_with_the_new_background);
+    RUN_TEST(test_invalid_theme_ids_fall_back_to_classico_and_are_never_applied);
     RUN_TEST(test_splash_screen_is_opaque_without_images_and_starts_at_zero);
     RUN_TEST(test_splash_fills_one_unit_at_a_time_behind_real_progress);
     return UNITY_END();

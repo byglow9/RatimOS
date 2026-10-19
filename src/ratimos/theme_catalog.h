@@ -28,7 +28,10 @@
 
 typedef enum {
     RATIMOS_BOOT_BG_BLACK = 0, /* preto liso: defensivo e testes */
-    RATIMOS_BOOT_BG_DITHER     /* bg_dither.png 1:1 */
+    RATIMOS_BOOT_BG_DITHER,    /* bg_dither.png 1:1 */
+    RATIMOS_BOOT_BG_STARS,     /* Noite estrelada: faixas + 70 estrelas piscando + lua */
+    RATIMOS_BOOT_BG_SUNSET,    /* Castelo ao entardecer: imagem + janelas piscando */
+    RATIMOS_BOOT_BG_CHESS      /* Xadrez: tabuleiro em perspectiva por pixel, rolando */
 } ratimos_boot_bg_source_t;
 
 typedef struct {

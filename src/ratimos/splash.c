@@ -68,7 +68,11 @@ static bool s_real_boot;
 static bool s_done;
 static uint8_t s_wave_phase;
 static lv_opa_t s_fade_opa;
-static uint32_t s_bg_prev_ms;
+/* Instante do ULTIMO tick do fundo animado. O desenho usa ESTE instante (nao
+ * lv_tick_get()), entao o que e' desenhado sempre bate com o que o tick ja
+ * invalidou -- uma estrela que muda de fase entre o tick e o redesenho nao
+ * aparece 'pela metade' no modo parcial do dispositivo. */
+static uint32_t s_bg_now_ms;
 static void (*s_on_done)(void);
 
 static ratimos_theme_id_t s_theme_id = RATIMOS_THEME_DEFAULT;
@@ -129,7 +133,7 @@ static void splash_draw_background(lv_layer_t * layer, const lv_area_t * area)
         s_bg_override(layer, area);
         return;
     }
-    ratimos_theme_boot_bg_draw(ratimos_theme_get(s_theme_id), layer, area, lv_tick_get());
+    ratimos_theme_boot_bg_draw(ratimos_theme_get(s_theme_id), layer, area, s_bg_now_ms);
 }
 
 static void stage_draw_cb(lv_event_t * e)
@@ -309,8 +313,8 @@ static void splash_bg_cb(lv_timer_t * t)
 {
     (void) t;
     uint32_t now = lv_tick_get();
-    ratimos_theme_boot_bg_tick(ratimos_theme_get(s_theme_id), s_bg_prev_ms, now, s_stage);
-    s_bg_prev_ms = now;
+    ratimos_theme_boot_bg_tick(ratimos_theme_get(s_theme_id), s_bg_now_ms, now, s_stage);
+    s_bg_now_ms = now;
 }
 
 /* ---------------------------------------------------------------------- *
@@ -360,7 +364,7 @@ static void splash_play(ratimos_theme_id_t theme, ratimos_boot_style_t style, bo
     s_done = false;
     s_wave_phase = 0;
     s_fade_opa = s_fade_ms == 0 ? LV_OPA_COVER : LV_OPA_TRANSP;
-    s_bg_prev_ms = lv_tick_get();
+    s_bg_now_ms = lv_tick_get();
 
     /* Tela preta opaca, sem flex, sem imagem. O fundo do tema e' desenhado
      * pelo stage (etapa separada), nao por um objeto. */

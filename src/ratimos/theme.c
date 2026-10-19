@@ -1,6 +1,7 @@
 #include "theme.h"
 #include "icons.h"
 #include "bg_images.h"
+#include "theme_catalog.h"
 
 /*
  * Fundo de tela: gradiente ditherizado pre-gerado (fundo-e-ambiente.md,
@@ -18,7 +19,14 @@
  * toda tela usa pra topbar/sectionbar/content/bottombar. RATIMOS_COLOR_BG
  * solido continua desenhado por baixo como fallback de resiliencia.
  *
- * A splash NAO usa esta funcao: o boot tem fundo preto liso (splash.c).
+ * Plano 02.1-16: a imagem de fundo e' a do TEMA EXIBIDO (o aplicado, ou o
+ * da previa em andamento): ratimos_theme_displayed()->system_bg. Se o tema
+ * pede escurecimento (castelo, 20%), ele e' aplicado em tempo de execucao
+ * com image_recolor preto -- a imagem estatica em flash nao muda. Com o
+ * Classico o resultado e' identico ao de antes.
+ *
+ * A splash NAO usa esta funcao: o boot desenha o fundo do tema pelo stage
+ * (splash.c, splash_draw_background).
  */
 void ratimos_theme_apply_screen(lv_obj_t * scr)
 {
@@ -32,8 +40,13 @@ void ratimos_theme_apply_screen(lv_obj_t * scr)
     lv_obj_set_style_pad_column(scr, 0, 0);
     lv_obj_set_style_border_width(scr, 0, 0);
 
+    const ratimos_theme_t * theme = ratimos_theme_displayed();
     lv_obj_t * bg = lv_image_create(scr);
-    lv_image_set_src(bg, &ratimos_bg_dither_desc);
+    lv_image_set_src(bg, theme->system_bg.image);
+    if (theme->system_bg.dim_pct > 0) {
+        lv_obj_set_style_image_recolor(bg, lv_color_black(), 0);
+        lv_obj_set_style_image_recolor_opa(bg, (lv_opa_t) (theme->system_bg.dim_pct * 255 / 100), 0);
+    }
     lv_obj_set_size(bg, RATIMOS_SCREEN_W, RATIMOS_SCREEN_H);
     lv_obj_set_pos(bg, 0, 0);
     lv_obj_add_flag(bg, LV_OBJ_FLAG_FLOATING);

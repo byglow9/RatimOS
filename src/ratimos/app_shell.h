@@ -46,4 +46,9 @@ void ratimos_screen_load(lv_obj_t * scr);
 /* Marca `scr` como persistente: ratimos_screen_load() nunca a deleta. */
 void ratimos_screen_set_persistent(lv_obj_t * scr);
 
+/* Desfaz ratimos_screen_set_persistent(): a tela volta a ser deletada pelo
+ * proximo ratimos_screen_load() (plano 02.1-16: a home e' reconstruida
+ * quando o tema muda). */
+void ratimos_screen_clear_persistent(lv_obj_t * scr);
+
 #endif

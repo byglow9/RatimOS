@@ -26,6 +26,7 @@
 #include "ratimos/logo_image.h"
 #include "ratimos/splash.h"
 #include "ratimos/theme.h"
+#include "ratimos/theme_art.h"
 #include "ratimos/theme_catalog.h"
 
 static uint8_t s_disp_buf[RATIMOS_SCREEN_W * RATIMOS_SCREEN_H * 2]; /* LV_COLOR_DEPTH 16 */
@@ -926,6 +927,371 @@ void test_three_laps_of_style_previews_keep_the_heap_and_timers_stable(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(base_timers, count_timers(), "orphan lv_timer after the laps");
 }
 
+
+/* ------------------------------------------------------------------ *
+ * Task 3: Noite estrelada, Castelo ao entardecer e Xadrez
+ * ------------------------------------------------------------------ */
+
+static void snap(uint8_t * dst)
+{
+    memcpy(dst, s_disp_buf, sizeof(s_disp_buf));
+}
+
+static bool snap_px_differs(const uint8_t * a, const uint8_t * b, int32_t x, int32_t y)
+{
+    size_t idx = ((size_t) y * RATIMOS_SCREEN_W + (size_t) x) * 2u;
+    return a[idx] != b[idx] || a[idx + 1] != b[idx + 1];
+}
+
+static bool near_a_star(int32_t x, int32_t y)
+{
+    for (int i = 0; i < RATIMOS_NOITE_STAR_COUNT; i++) {
+        if (abs_i(ratimos_noite_stars[i].x - (int) x) <= 1 && abs_i(ratimos_noite_stars[i].y - (int) y) <= 1) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void test_the_catalog_has_the_4_themes_with_the_sketch_dims_and_images(void)
+{
+    const ratimos_theme_t * c = ratimos_theme_get(RATIMOS_THEME_CLASSICO);
+    const ratimos_theme_t * n = ratimos_theme_get(RATIMOS_THEME_NOITE);
+    const ratimos_theme_t * k = ratimos_theme_get(RATIMOS_THEME_CASTELO);
+    const ratimos_theme_t * x = ratimos_theme_get(RATIMOS_THEME_XADREZ);
+
+    TEST_ASSERT_EQUAL_INT(55, c->boot_bg.dim_pct);
+    TEST_ASSERT_EQUAL_PTR(&ratimos_bg_dither_desc, c->system_bg.image);
+    TEST_ASSERT_EQUAL_INT(0, c->system_bg.dim_pct);
+
+    TEST_ASSERT_EQUAL_INT(0, n->boot_bg.dim_pct);
+    TEST_ASSERT_EQUAL_PTR(&ratimos_home_bg_noite_desc, n->system_bg.image);
+
+    TEST_ASSERT_EQUAL_INT(15, k->boot_bg.dim_pct);
+    TEST_ASSERT_EQUAL_PTR(&ratimos_home_bg_castelo_desc, k->system_bg.image);
+    TEST_ASSERT_EQUAL_INT(20, k->system_bg.dim_pct);
+
+    TEST_ASSERT_EQUAL_INT(10, x->boot_bg.dim_pct);
+    TEST_ASSERT_EQUAL_PTR(&ratimos_home_bg_xadrez_desc, x->system_bg.image);
+    TEST_ASSERT_EQUAL_INT(0, x->system_bg.dim_pct);
+
+    const ratimos_theme_t * all[4] = { c, n, k, x };
+    for (int i = 0; i < 4; i++) {
+        /* fundos 320x480 sao RGB565 CRU: indexado passaria pelo decoder e alocaria heap */
+        TEST_ASSERT_EQUAL_UINT32(LV_COLOR_FORMAT_RGB565, all[i]->system_bg.image->header.cf);
+        TEST_ASSERT_EQUAL_UINT32(320, all[i]->system_bg.image->header.w);
+        TEST_ASSERT_EQUAL_UINT32(480, all[i]->system_bg.image->header.h);
+        TEST_ASSERT_NOT_NULL(all[i]->home_thumb);
+        TEST_ASSERT_NOT_NULL(all[i]->boot_bg_thumb);
+        TEST_ASSERT_EQUAL_UINT32(40, all[i]->home_thumb->header.w);
+        TEST_ASSERT_EQUAL_UINT32(60, all[i]->boot_bg_thumb->header.h);
+    }
+    TEST_ASSERT_EQUAL_STRING("noite estrelada", n->name);
+    TEST_ASSERT_EQUAL_STRING("castelo ao entardecer", k->name);
+}
+
+void test_noite_boot_has_the_sky_band_and_the_moon(void)
+{
+    ratimos_splash_preview(RATIMOS_THEME_NOITE, RATIMOS_BOOT_STYLE_TORRES, NULL);
+    refresh("noite_boot");
+    TEST_ASSERT_TRUE_MESSAGE(px_is(5, 5, 0x07030f, 8), "Noite: sky band 0 (#07030f) at (5,5)");
+    TEST_ASSERT_TRUE_MESSAGE(px_is(5, 200, 0x0b0518, 8), "Noite: sky band 1");
+    TEST_ASSERT_TRUE_MESSAGE(px_is(5, 470, 0x110822, 8), "Noite: sky band 2");
+    TEST_ASSERT_TRUE_MESSAGE(px_is(262, 56, 0xd9cfe6, 8), "Noite: moon at (262,56)");
+}
+
+void test_noite_boot_stars_twinkle_and_nothing_else_moves(void)
+{
+    static uint8_t a[sizeof(s_disp_buf)], b[sizeof(s_disp_buf)];
+    ratimos_splash_preview(RATIMOS_THEME_NOITE, RATIMOS_BOOT_STYLE_BANDEIRA, NULL);
+    refresh(NULL);
+    pump_ms(50);
+    refresh(NULL);
+    snap(a);
+    pump_ms(1700);
+    refresh("noite_boot_depois");
+    snap(b);
+
+    int changed = 0;
+    /* acima do logo (y < 80) e abaixo do texto (y >= 380): so' as estrelas podem mudar */
+    for (int32_t y = 0; y < 480; y++) {
+        if (y >= 80 && y < 380) {
+            continue;
+        }
+        for (int32_t x = 0; x < RATIMOS_SCREEN_W; x++) {
+            if (snap_px_differs(a, b, x, y)) {
+                changed++;
+                TEST_ASSERT_TRUE_MESSAGE(near_a_star(x, y), "a non-star pixel changed in the Noite boot background");
+            }
+        }
+    }
+    TEST_ASSERT_TRUE_MESSAGE(changed > 0, "no star twinkled in ~1.7s");
+}
+
+void test_noite_home_background_is_the_generated_static_image(void)
+{
+    const ratimos_theme_t * n = ratimos_theme_get(RATIMOS_THEME_NOITE);
+    TEST_ASSERT_EQUAL_PTR(&ratimos_home_bg_noite_desc, n->system_bg.image);
+    /* a lua esta no fundo da home (parada) */
+    int rgb[3];
+    desc_rgb8(&ratimos_home_bg_noite_desc, 262, 56, rgb);
+    int moon[3] = { 0xd9, 0xcf, 0xe6 };
+    TEST_ASSERT_TRUE(near_rgb(rgb, moon, 8));
+}
+
+void test_castelo_boot_sky_roof_and_blinking_windows(void)
+{
+    ratimos_splash_preview(RATIMOS_THEME_CASTELO, RATIMOS_BOOT_STYLE_TORRES, NULL);
+    refresh("castelo_boot");
+
+    /* faixa de ceu y=10: #0c0420 (a imagem e' RGB565) com 15% de escurecimento */
+    int got[3], want[3], band[3] = { 0x0c, 0x04, 0x20 };
+    desc_rgb8(&ratimos_boot_bg_castelo_desc, 5, 10, want);
+    TEST_ASSERT_TRUE_MESSAGE(near_rgb(want, band, 8), "Castelo boot image: band 0 is #0c0420 at y=10");
+    for (int k = 0; k < 3; k++) {
+        want[k] = want[k] * 85 / 100;
+    }
+    rgb8_of(5, 10, got);
+    TEST_ASSERT_TRUE_MESSAGE(near_rgb(got, want, 8), "Castelo boot: sky band at y=10 under 15% dim");
+
+    /* telhado vermelho a direita (x > 150): ha pixels do vermelho do telhado na imagem do boot */
+    int roof_px = 0;
+    for (int32_t y = 330; y < 460; y++) {
+        for (int32_t x = 151; x < 320; x++) {
+            int c[3];
+            desc_rgb8(&ratimos_boot_bg_castelo_desc, x, y, c);
+            int roof[3] = { 0x8a, 0x0a, 0x18 };
+            if (near_rgb(c, roof, 8)) {
+                roof_px++;
+            }
+        }
+    }
+    TEST_ASSERT_TRUE_MESSAGE(roof_px > 100, "Castelo boot image: no red roof on the right (x > 150)");
+
+    /* as janelas alternam: em cada amostra o pixel bate com o estado esperado pelo relogio */
+    int saw_on[RATIMOS_CASTELO_WINDOW_COUNT] = { 0 }, saw_off[RATIMOS_CASTELO_WINDOW_COUNT] = { 0 };
+    for (int step = 0; step < 24; step++) {
+        pump_ms(100);
+        refresh(NULL);
+        for (int i = 0; i < RATIMOS_CASTELO_WINDOW_COUNT; i++) {
+            const ratimos_window_t * w = &ratimos_castelo_windows[i];
+            int32_t cx = w->x + 1, cy = w->y + 3; /* dentro da janela, abaixo do friso */
+            /* o estado vem do instante do ULTIMO tick do fundo (50ms), nao do relogio exato */
+            uint32_t now = lv_tick_get();
+            bool off_now = ((now / 800u) + w->i) % 5u == 0u;
+            bool off_prev = (((now - 50u) / 800u) + w->i) % 5u == 0u; /* tolerancia de 1 tick */
+            int c_on[3] = { 0xff * 85 / 100, 0xc0 * 85 / 100, 0x4a * 85 / 100 };
+            int c_off[3] = { 0x7a * 85 / 100, 0x4a * 85 / 100, 0x10 * 85 / 100 };
+            int g[3];
+            rgb8_of(cx, cy, g);
+            bool is_on = near_rgb(g, c_on, 14), is_off = near_rgb(g, c_off, 14);
+            TEST_ASSERT_TRUE_MESSAGE(is_on || is_off, "window pixel is neither on nor off color");
+            TEST_ASSERT_TRUE_MESSAGE(is_off == off_now || is_off == off_prev, "window state disagrees with the 800ms clock");
+            if (is_on) saw_on[i] = 1;
+            if (is_off) saw_off[i] = 1;
+        }
+    }
+    int toggled = 0;
+    for (int i = 0; i < RATIMOS_CASTELO_WINDOW_COUNT; i++) {
+        if (saw_on[i] && saw_off[i]) toggled++;
+    }
+    /* 24 amostras de 100ms = 2.4s: 3 valores de floor(now/800); pelo menos 2 das janelas
+     * (indices 0,1,2,3 mod 5) apagam e acendem nesse intervalo */
+    TEST_ASSERT_TRUE_MESSAGE(toggled >= 1, "no castle window toggled between lit and unlit");
+}
+
+void test_castelo_home_background_is_the_static_image_with_horizon_450(void)
+{
+    const ratimos_theme_t * k = ratimos_theme_get(RATIMOS_THEME_CASTELO);
+    TEST_ASSERT_EQUAL_PTR(&ratimos_home_bg_castelo_desc, k->system_bg.image);
+    TEST_ASSERT_EQUAL_INT(20, k->system_bg.dim_pct);
+    /* horizonte em 450 (boot: 466): a faixa de ceu mais baixa (#ee6a12) comeca em y 405 na home
+     * (10 faixas de 45) e em y 423 no boot (10 faixas de 47) -- y=410 e' laranja so' na home */
+    int home[3], boot[3], orange[3] = { 0xee, 0x6a, 0x12 };
+    desc_rgb8(&ratimos_home_bg_castelo_desc, 5, 410, home);
+    desc_rgb8(&ratimos_boot_bg_castelo_desc, 5, 410, boot);
+    TEST_ASSERT_TRUE_MESSAGE(near_rgb(home, orange, 12), "home: last sky band (#ee6a12) starts at y=405");
+    TEST_ASSERT_FALSE_MESSAGE(near_rgb(boot, orange, 12), "boot horizon is lower than the home one");
+}
+
+void test_xadrez_boot_line_board_scrolls_and_sky_stays(void)
+{
+    static uint8_t a[sizeof(s_disp_buf)], b[sizeof(s_disp_buf)];
+    ratimos_splash_preview(RATIMOS_THEME_XADREZ, RATIMOS_BOOT_STYLE_LETREIRO, NULL);
+    refresh("xadrez_boot");
+    /* a linha do horizonte (y=140) #4e2277 com 10% de escurecimento */
+    uint32_t line_dimmed = (uint32_t) (((0x4e * 90 / 100) << 16) | ((0x22 * 90 / 100) << 8) | (0x77 * 90 / 100));
+    TEST_ASSERT_TRUE_MESSAGE(px_is(5, 140, line_dimmed, 8), "Xadrez boot: horizon line (#4e2277 under 10% dim)");
+    snap(a);
+    pump_ms(1000);
+    refresh(NULL);
+    pump_ms(1000);
+    refresh("xadrez_boot_2s");
+    snap(b);
+
+    int sky = 0, board_near_base = 0;
+    for (int32_t y = 0; y < 80; y++) {
+        for (int32_t x = 0; x < RATIMOS_SCREEN_W; x++) {
+            sky += snap_px_differs(a, b, x, y);
+        }
+    }
+    for (int32_t y = 400; y < 480; y++) {
+        for (int32_t x = 0; x < RATIMOS_SCREEN_W; x++) {
+            board_near_base += snap_px_differs(a, b, x, y);
+        }
+    }
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, sky, "the sky (y < 80) must not change");
+    TEST_ASSERT_TRUE_MESSAGE(board_near_base > 100, "the board did not scroll in ~2s");
+}
+
+void test_xadrez_home_has_horizon_70_and_brightness_085(void)
+{
+    const ratimos_theme_t * x = ratimos_theme_get(RATIMOS_THEME_XADREZ);
+    TEST_ASSERT_EQUAL_PTR(&ratimos_home_bg_xadrez_desc, x->system_bg.image);
+    TEST_ASSERT_EQUAL_INT(0, x->system_bg.dim_pct);
+    /* sem linha de horizonte na home (bgChessHome so' copia a imagem): a linha 70 e' so' tabuleiro/nevoa */
+    int line[3] = { 0x4e, 0x22, 0x77 }, got[3];
+    desc_rgb8(&ratimos_home_bg_xadrez_desc, 5, 70, got);
+    TEST_ASSERT_FALSE(near_rgb(got, line, 20));
+    /* brilho 0.85: nenhum canal passa de 70 * 0.85 = 60 (a casa mais clara) */
+    int maxc = 0;
+    for (int32_t y = 0; y < 480; y += 7) {
+        for (int32_t xx = 0; xx < 320; xx += 5) {
+            int c[3];
+            desc_rgb8(&ratimos_home_bg_xadrez_desc, xx, y, c);
+            for (int k = 0; k < 3; k++) if (c[k] > maxc) maxc = c[k];
+        }
+    }
+    TEST_ASSERT_TRUE_MESSAGE(maxc <= 70 * 85 / 100 + 8, "xadrez home must be at 0.85 brightness");
+}
+
+void test_all_16_theme_style_combinations_finish_the_preview(void)
+{
+    for (int t = 0; t < RATIMOS_THEME_COUNT; t++) {
+        for (int st = 0; st < RATIMOS_BOOT_STYLE_COUNT; st++) {
+            memset(&s_done_info, 0, sizeof(s_done_info));
+            ratimos_splash_preview((ratimos_theme_id_t) t, (ratimos_boot_style_t) st, done_cb);
+            int guard = 0;
+            while (!s_done_info.called && guard++ < 700) {
+                pump_ms(10);
+            }
+            TEST_ASSERT_TRUE_MESSAGE(s_done_info.called, "a theme x style combination never finished");
+            TEST_ASSERT_EQUAL_STRING("pronto!", s_done_info.pct_text);
+            TEST_ASSERT_EQUAL_UINT32(5, s_done_info.children);
+        }
+    }
+}
+
+static size_t run_themes_lap(void)
+{
+    for (int t = 0; t < RATIMOS_THEME_COUNT; t++) {
+        memset(&s_done_info, 0, sizeof(s_done_info));
+        ratimos_splash_preview((ratimos_theme_id_t) t, RATIMOS_BOOT_STYLE_LETREIRO, done_cb);
+        int guard = 0;
+        while (!s_done_info.called && guard++ < 700) {
+            pump_ms(10);
+        }
+        TEST_ASSERT_TRUE(s_done_info.called);
+    }
+    pump_ms(50);
+    return ratimos_heap_used();
+}
+
+void test_three_laps_of_theme_previews_keep_the_heap_and_timers_stable(void)
+{
+    ratimos_splash_set_fade_ms_for_test(400);
+    int base_timers = count_timers();
+    run_themes_lap();
+    size_t lap2 = run_themes_lap();
+    size_t lap3 = run_themes_lap();
+    TEST_ASSERT_TRUE_MESSAGE(lap3 <= lap2 + lap2 / 50, "LVGL heap grew from lap 2 to lap 3 across the 4 themes");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(base_timers, count_timers(), "orphan lv_timer after the theme laps");
+}
+
+void test_animated_backgrounds_create_no_lvgl_object_per_frame(void)
+{
+    for (int t = 0; t < RATIMOS_THEME_COUNT; t++) {
+        ratimos_splash_preview((ratimos_theme_id_t) t, RATIMOS_BOOT_STYLE_BANDEIRA, NULL);
+        lv_obj_t * scr = lv_screen_active();
+        uint32_t children = lv_obj_get_child_count(scr);
+        size_t heap0 = ratimos_heap_used();
+        pump_ms(600);
+        refresh(NULL);
+        pump_ms(600);
+        refresh(NULL);
+        TEST_ASSERT_EQUAL_UINT32(children, lv_obj_get_child_count(scr));
+        /* o heap oscila so' pelos textos (3 labels) e pelas draw tasks transitorias; sem objetos */
+        TEST_ASSERT_TRUE_MESSAGE(ratimos_heap_used() <= heap0 + 4096, "animated background grew the LVGL heap");
+    }
+}
+
+
+/*
+ * O que torna a invalidacao parcial SEGURA no dispositivo (T-02.1-41/42): um
+ * display em modo PARTIAL (como o da placa) renderizando so' as areas que
+ * splash/boot_styles/theme_catalog invalidam tem que produzir EXATAMENTE o
+ * mesmo quadro que um redesenho completo -- nenhum pixel mudou sem ser
+ * invalidado. Vale para as 16 combinacoes tema x carregamento.
+ */
+static uint8_t s_part_buf[RATIMOS_SCREEN_W * 48 * 2];
+static uint8_t s_part_fb[RATIMOS_SCREEN_W * RATIMOS_SCREEN_H * 2];
+
+static void part_flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * px_map)
+{
+    int32_t w = lv_area_get_width(area), h = lv_area_get_height(area);
+    uint32_t stride = lv_draw_buf_width_to_stride((uint32_t) w, LV_COLOR_FORMAT_RGB565);
+    for (int32_t y = 0; y < h; y++) {
+        memcpy(&s_part_fb[(((size_t) area->y1 + (size_t) y) * RATIMOS_SCREEN_W + (size_t) area->x1) * 2u],
+               px_map + (size_t) y * stride, (size_t) w * 2u);
+    }
+    lv_display_flush_ready(disp);
+}
+
+void test_partial_rendering_equals_a_full_redraw_for_the_16_combinations(void)
+{
+    static uint8_t reference[sizeof(s_part_fb)];
+    lv_display_t * prev_default = lv_display_get_default();
+    lv_display_t * part = lv_display_create(RATIMOS_SCREEN_W, RATIMOS_SCREEN_H);
+    lv_display_set_buffers(part, s_part_buf, NULL, sizeof(s_part_buf), LV_DISPLAY_RENDER_MODE_PARTIAL);
+    lv_display_set_flush_cb(part, part_flush_cb);
+    lv_display_set_default(part);
+
+    int compares = 0;
+    for (int t = 0; t < RATIMOS_THEME_COUNT; t++) {
+        for (int st = 0; st < RATIMOS_BOOT_STYLE_COUNT; st++) {
+            ratimos_splash_preview((ratimos_theme_id_t) t, (ratimos_boot_style_t) st, NULL);
+            lv_refr_now(part);
+            for (int n = 1; n <= 260 && ratimos_splash_units_shown() < RATIMOS_SPLASH_UNITS; n++) {
+                pump_ms(10);
+                lv_refr_now(part);
+                if (n % 9 != 0) {
+                    continue;
+                }
+                memcpy(reference, s_part_fb, sizeof(reference)); /* o que o modo parcial acumulou */
+                lv_obj_invalidate(lv_screen_active());
+                lv_refr_now(part); /* redesenho completo no MESMO instante */
+                compares++;
+                if (memcmp(reference, s_part_fb, sizeof(reference)) != 0) {
+                    size_t i = 0;
+                    while (reference[i] == s_part_fb[i]) {
+                        i++;
+                    }
+                    char msg[120];
+                    snprintf(msg, sizeof(msg), "theme %d style %d: partial render != full redraw at pixel (%d,%d), units %d",
+                             t, st, (int) ((i / 2) % RATIMOS_SCREEN_W), (int) ((i / 2) / RATIMOS_SCREEN_W),
+                             (int) ratimos_splash_units_shown());
+                    lv_display_set_default(prev_default);
+                    TEST_FAIL_MESSAGE(msg);
+                }
+            }
+            leave_splash();
+        }
+    }
+    lv_display_set_default(prev_default);
+    lv_display_delete(part);
+    TEST_ASSERT_TRUE(compares > 100);
+}
+
 int main(void)
 {
     char tmpl[] = "/tmp/ratimos-bootscreen-XXXXXX";
@@ -967,5 +1333,17 @@ int main(void)
     RUN_TEST(test_each_style_has_a_40x60_thumbnail_with_alpha);
     RUN_TEST(test_dirty_and_wave_areas_cover_every_pixel_that_changes_between_ticks);
     RUN_TEST(test_three_laps_of_style_previews_keep_the_heap_and_timers_stable);
+    RUN_TEST(test_the_catalog_has_the_4_themes_with_the_sketch_dims_and_images);
+    RUN_TEST(test_noite_boot_has_the_sky_band_and_the_moon);
+    RUN_TEST(test_noite_boot_stars_twinkle_and_nothing_else_moves);
+    RUN_TEST(test_noite_home_background_is_the_generated_static_image);
+    RUN_TEST(test_castelo_boot_sky_roof_and_blinking_windows);
+    RUN_TEST(test_castelo_home_background_is_the_static_image_with_horizon_450);
+    RUN_TEST(test_xadrez_boot_line_board_scrolls_and_sky_stays);
+    RUN_TEST(test_xadrez_home_has_horizon_70_and_brightness_085);
+    RUN_TEST(test_all_16_theme_style_combinations_finish_the_preview);
+    RUN_TEST(test_three_laps_of_theme_previews_keep_the_heap_and_timers_stable);
+    RUN_TEST(test_animated_backgrounds_create_no_lvgl_object_per_frame);
+    RUN_TEST(test_partial_rendering_equals_a_full_redraw_for_the_16_combinations);
     return UNITY_END();
 }

@@ -12,6 +12,11 @@ void ratimos_screen_set_persistent(lv_obj_t * scr)
     lv_obj_add_flag(scr, RATIMOS_SCREEN_FLAG_PERSISTENT);
 }
 
+void ratimos_screen_clear_persistent(lv_obj_t * scr)
+{
+    lv_obj_remove_flag(scr, RATIMOS_SCREEN_FLAG_PERSISTENT);
+}
+
 void ratimos_screen_load(lv_obj_t * scr)
 {
     lv_obj_t * old = lv_screen_active();
