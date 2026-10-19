@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: "02.1"
 current_phase_name: Visual Identity & Games (Simulator-Buildable Scope)
 status: executing
-stopped_at: Completed 02.1-15-PLAN.md
-last_updated: "2026-10-07T18:18:48.740Z"
-last_activity: 2026-10-06
-last_activity_desc: Phase 02.1 execution resumed (wave continue)
-state_head: a5f6281e60ddffa9527626b035ce4997291d730c
+stopped_at: Completed 02.1-16-PLAN.md
+last_updated: "2026-10-19T14:47:19.207Z"
+last_activity: 2026-10-19
+last_activity_desc: Phase 02.1 execution started
+state_head: 39d7c259f244cf41de3cc9da083b58fbd47a87b8
 progress:
   total_phases: 10
   completed_phases: 2
-  total_plans: 23
-  completed_plans: 22
+  total_plans: 24
+  completed_plans: 23
 milestone_name: milestone
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-08-26)
 ## Current Position
 
 Phase: 02.1 (Visual Identity & Games (Simulator-Buildable Scope)) — EXECUTING
-Plan: 4 of 12
+Plan: 2 of 17
 Status: Ready to execute
-Last activity: 2026-10-06 — Phase 02.1 execution resumed (wave continue)
+Last activity: 2026-10-19 — Phase 02.1 execution started
 
 Progress: [████████░░] 84%
 
@@ -75,6 +75,7 @@ Progress: [████████░░] 84%
 | Phase 02.1 P13 | 89min | 4 tasks | 9 files |
 | Phase 02.1 P14 | ~70min + checkpoint iterations | 5 tasks | 61 files |
 | Phase 02.1 P15 | 2h41m | 3 tasks | 19 files |
+| Phase 02.1 P16 | ~5h | 5 tasks | 44 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,8 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-14: Splash progress bar and 'RATIMOS' topbar brand are superseded by 02.1-16 (sketches 008-011: themed boot, configurable loading, brand 'RatimOS')
 - [Phase 02.1]: 02.1-15: app/game screens are deleted on navigate via ratimos_screen_load(); only the home is persistent (LV_OBJ_FLAG_USER_1); every *_show() rebuilds from storage and nulls static handles in LV_EVENT_DELETE
 - [Phase 02.1]: 02.1-15: dense grids are drawn in one object (DRAW_MAIN + tap by coordinate), not one lv_obj per cell; LVGL heap is measured in tests with ratimos_heap_used() (src/ratimos/heap_probe.h)
+- [Phase 02.1]: 02.1-16: tema and carregamento are independent persisted settings (NVS on device, never SD); boot background is a swappable splash_draw_background() step; letreiro follows the approved 010/011 canvas (full-column sweep)
+- [Phase 02.1]: 02.1-16: partial-render == full-redraw test is the proof of complete invalidation areas; animated boot backgrounds draw at the last bg-tick instant
 
 ### Pending Todos
 
@@ -150,6 +153,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-07T18:18:48.654Z
-Stopped at: Completed 02.1-15-PLAN.md
+Last session: 2026-10-19T14:47:19.110Z
+Stopped at: Completed 02.1-16-PLAN.md
 Resume file: None
