@@ -160,11 +160,11 @@ static lv_obj_t * first_label_child(lv_obj_t * obj)
 }
 
 /*
- * Plano 02.1-14: topbar do sketch 003-C -- marca "RATIMOS" em caixa alta,
- * mono 10px, cor de texto clara (nao mais "RatimOS" vermelho em Montserrat).
- * Arvore: row -> [brand, right]; brand -> [logo_stack, label].
+ * Plano 02.1-14: topbar do sketch 003-C -- mono 10px, cor de texto clara (nao
+ * mais vermelho em Montserrat). Plano 02.1-16: a marca e' "RatimOS" (sketch
+ * 010), nao "RATIMOS". Arvore: row -> [brand, right]; brand -> [logo_stack, label].
  */
-void test_topbar_brand_is_uppercase_mono10_text_color(void)
+void test_topbar_brand_is_ratimos_mixed_case_mono10_text_color(void)
 {
     lv_obj_t * parent = lv_obj_create(NULL);
 
@@ -174,7 +174,7 @@ void test_topbar_brand_is_uppercase_mono10_text_color(void)
     lv_obj_t * brand = lv_obj_get_child(row, 0);
     lv_obj_t * label = first_label_child(brand);
     TEST_ASSERT_NOT_NULL(label);
-    TEST_ASSERT_EQUAL_STRING("RATIMOS", lv_label_get_text(label));
+    TEST_ASSERT_EQUAL_STRING("RatimOS", lv_label_get_text(label));
     TEST_ASSERT_EQUAL_PTR(&ratimos_font_mono_10, lv_obj_get_style_text_font(label, LV_PART_MAIN));
     TEST_ASSERT_EQUAL_UINT32(lv_color_to_u32(RATIMOS_COLOR_TEXT),
                               lv_color_to_u32(lv_obj_get_style_text_color(label, LV_PART_MAIN)));
@@ -222,7 +222,7 @@ int main(void)
     RUN_TEST(test_sectionbar_two_segment_path_is_single_color);
     RUN_TEST(test_sectionbar_never_creates_a_checkmark_sibling);
     RUN_TEST(test_sectionbar_set_path_reformats_existing_label);
-    RUN_TEST(test_topbar_brand_is_uppercase_mono10_text_color);
+    RUN_TEST(test_topbar_brand_is_ratimos_mixed_case_mono10_text_color);
     RUN_TEST(test_bottombar_null_hint_creates_no_hint_label);
     return UNITY_END();
 }

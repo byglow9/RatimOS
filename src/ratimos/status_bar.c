@@ -140,10 +140,12 @@ void ratimos_topbar_create(lv_obj_t * parent)
         lv_obj_set_pos(logo_main, 0, 0);
     }
 
-    /* Marca como no sketch 003-C (`.mock-topbar`): "RATIMOS" em caixa
-     * alta, mono 10px, cor de texto clara -- o vermelho fica so' no rook. */
+    /* Marca como no sketch 003-C (`.mock-topbar`): mono 10px, cor de texto
+     * clara -- o vermelho fica so' no rook. Plano 02.1-16: a marca e'
+     * RatimOS com R, O e S maiusculos (README do sketch 010), nao mais tudo
+     * em caixa alta. */
     lv_obj_t * brand_label = lv_label_create(brand);
-    lv_label_set_text(brand_label, "RATIMOS");
+    lv_label_set_text(brand_label, "RatimOS");
     lv_obj_set_style_text_color(brand_label, RATIMOS_COLOR_TEXT, 0);
     lv_obj_set_style_text_font(brand_label, &ratimos_font_mono_10, 0);
 

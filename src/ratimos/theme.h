@@ -25,6 +25,15 @@
 #define RATIMOS_COLOR_BOOT_TEXT     lv_color_hex(0xd8cce6)
 
 /*
+ * Tokens da tela de escolha de tema/carregamento (sketch 010): "em uso" e o
+ * toast "aplicado!" em verde de confirmacao; a linha de config que abre outra
+ * tela (tema, carregamento) tem fundo mais claro que as informativas. Nao sao
+ * cores de chrome das demais telas nem de feedback de jogo.
+ */
+#define RATIMOS_COLOR_IN_USE        lv_color_hex(0x3fd06b)
+#define RATIMOS_COLOR_PANEL_TAPPABLE lv_color_hex(0x361850)
+
+/*
  * Borda externa escura do bevel retrô dos cards (D-17 revision escopada,
  * plano 02.1-09 -- ver cards-superficies.md). NAO reabre a paleta travada:
  * as 6 macros de marca/chrome acima continuam intactas, este e' um token

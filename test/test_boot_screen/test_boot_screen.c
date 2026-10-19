@@ -923,6 +923,7 @@ void test_three_laps_of_style_previews_keep_the_heap_and_timers_stable(void)
     run_styles_lap();
     size_t lap2 = run_styles_lap();
     size_t lap3 = run_styles_lap();
+    fprintf(stderr, "heap boot styles x3 laps: lap2 %u, lap3 %u bytes used\n", (unsigned) lap2, (unsigned) lap3);
     TEST_ASSERT_TRUE_MESSAGE(lap3 <= lap2 + lap2 / 50, "LVGL heap grew from lap 2 to lap 3");
     TEST_ASSERT_EQUAL_INT_MESSAGE(base_timers, count_timers(), "orphan lv_timer after the laps");
 }
@@ -1204,6 +1205,7 @@ void test_three_laps_of_theme_previews_keep_the_heap_and_timers_stable(void)
     run_themes_lap();
     size_t lap2 = run_themes_lap();
     size_t lap3 = run_themes_lap();
+    fprintf(stderr, "heap themes x3 laps: lap2 %u, lap3 %u bytes used\n", (unsigned) lap2, (unsigned) lap3);
     TEST_ASSERT_TRUE_MESSAGE(lap3 <= lap2 + lap2 / 50, "LVGL heap grew from lap 2 to lap 3 across the 4 themes");
     TEST_ASSERT_EQUAL_INT_MESSAGE(base_timers, count_timers(), "orphan lv_timer after the theme laps");
 }

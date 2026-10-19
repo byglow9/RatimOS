@@ -56,6 +56,8 @@ commands are deterministic — running them twice in a row produces byte-identic
 | `row_track` | play button in a frame |
 | `cfg_brilho` | sun (brightness) |
 | `cfg_volume` | speaker with sound waves |
+| `cfg_tema` | ink palette with a thumb hole and 3 paint spots (theme picker row, plan 02.1-16) |
+| `cfg_carregamento` | tower with a conical roof and a flag on the mast (boot-animation picker row, plan 02.1-16) |
 | `cfg_firmware` | chip with pins |
 | `cfg_armazenamento` | microSD card with contacts |
 

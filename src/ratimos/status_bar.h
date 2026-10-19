@@ -5,7 +5,7 @@
 
 /*
  * Barra superior: logo do sistema (peão-torre vermelho, resolvido via
- * ratimos_icon_by_id("system_rook")) com sombra em pixel + "RATIMOS" (mono 10) +
+ * ratimos_icon_by_id("system_rook")) com sombra em pixel + RatimOS (mono 10) +
  * relógio + bateria em ícone pixel-art. Relógio/bateria são placeholders
  * (hora do PC / percentual mockado) por enquanto — ficam "vivos" na Fase 4
  * do roadmap, quando o firmware tiver RTC (PCF85063) e PMIC (AXP2101 via

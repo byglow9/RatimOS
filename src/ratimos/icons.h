@@ -29,6 +29,8 @@ extern const lv_image_dsc_t ratimos_icon_row_playlist_desc;
 extern const lv_image_dsc_t ratimos_icon_row_track_desc;
 extern const lv_image_dsc_t ratimos_icon_cfg_brilho_desc;
 extern const lv_image_dsc_t ratimos_icon_cfg_volume_desc;
+extern const lv_image_dsc_t ratimos_icon_cfg_tema_desc;
+extern const lv_image_dsc_t ratimos_icon_cfg_carregamento_desc;
 extern const lv_image_dsc_t ratimos_icon_cfg_firmware_desc;
 extern const lv_image_dsc_t ratimos_icon_cfg_armazenamento_desc;
 

@@ -530,6 +530,7 @@ void test_row_icon_ids_used_by_apps_are_compiled_26px_icons(void)
         "game_sudoku", "game_paciencia", "game_termo", "game_cruzadinha", "game_conexo",
         "row_empty", "row_carta", "row_playlist", "row_track",
         "cfg_brilho", "cfg_volume", "cfg_firmware", "cfg_armazenamento",
+        "cfg_tema", "cfg_carregamento",
     };
     for (size_t i = 0; i < sizeof(ids) / sizeof(ids[0]); i++) {
         const lv_image_dsc_t * d = ratimos_icon_by_id(ids[i]);

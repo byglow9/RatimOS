@@ -19,6 +19,8 @@
     { "id": "row_track", "file": "row_track.png", "w": 26, "h": 26 },
     { "id": "cfg_brilho", "file": "cfg_brilho.png", "w": 26, "h": 26 },
     { "id": "cfg_volume", "file": "cfg_volume.png", "w": 26, "h": 26 },
+    { "id": "cfg_tema", "file": "cfg_tema.png", "w": 26, "h": 26 },
+    { "id": "cfg_carregamento", "file": "cfg_carregamento.png", "w": 26, "h": 26 },
     { "id": "cfg_firmware", "file": "cfg_firmware.png", "w": 26, "h": 26 },
     { "id": "cfg_armazenamento", "file": "cfg_armazenamento.png", "w": 26, "h": 26 }
   ]

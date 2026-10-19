@@ -264,6 +264,25 @@ def draw_cfg_armazenamento(im):
         d.rectangle([x, 7, x + 2, 12], fill=TEXT)
 
 
+def draw_cfg_tema(im):
+    """Paleta de tinta: prancheta oval com furo de polegar e 3 manchas (plano 02.1-16)."""
+    d = ScaledDraw(im)
+    d.ellipse([2, 5, 29, 27], fill=PANEL_ACTIVE, outline=TEXT, width=2)
+    d.ellipse([20, 18, 24, 22], fill=TRANSPARENT, outline=TEXT, width=1)
+    for (x0, y0, x1, y1) in [(6, 14, 10, 18), (12, 10, 16, 14), (19, 10, 23, 14)]:
+        d.ellipse([x0, y0, x1, y1], fill=TEXT)
+
+
+def draw_cfg_carregamento(im):
+    """Torre com telhado conico e bandeira no mastro: a marca do boot (plano 02.1-16)."""
+    d = ScaledDraw(im)
+    d.line([(16, 1), (16, 8)], fill=TEXT, width=2)
+    d.polygon([(17, 1), (27, 4), (17, 7)], fill=TEXT)
+    d.polygon([(9, 15), (23, 15), (16, 7)], fill=TEXT)
+    d.rectangle([11, 15, 21, 27], fill=PANEL_ACTIVE, outline=TEXT, width=2)
+    d.rectangle([7, 26, 25, 30], fill=TEXT)
+
+
 # id -> (funcao de desenho, tamanho final em px). home_* = launcher 32px;
 # game_*/row_*/cfg_* = linha de lista 26px (sketch 003-C).
 ICONS = {
@@ -284,6 +303,8 @@ ICONS = {
     "row_track": (draw_row_track, ROW_SIZE),
     "cfg_brilho": (draw_cfg_brilho, ROW_SIZE),
     "cfg_volume": (draw_cfg_volume, ROW_SIZE),
+    "cfg_tema": (draw_cfg_tema, ROW_SIZE),
+    "cfg_carregamento": (draw_cfg_carregamento, ROW_SIZE),
     "cfg_firmware": (draw_cfg_firmware, ROW_SIZE),
     "cfg_armazenamento": (draw_cfg_armazenamento, ROW_SIZE),
 }
