@@ -128,7 +128,13 @@ static bool s_reject_flash = false;
 static const char * s_reject_msg = NULL;
 
 #define TERMO_MSG_INCOMPLETE "complete as 5 letras"
-#define TERMO_MSG_NOT_IN_LIST "palavra fora da lista"
+#define TERMO_MSG_NOT_ACCEPTED "essa palavra não é aceita"
+
+/* Casa selecionada da linha ativa (0..4, ou RATIMOS_TERMO_CURSOR_END quando a
+ * linha esta cheia). Compartilhada por todos os tabuleiros nao resolvidos.
+ * Nao vai pro save: e' derivada ao abrir (1a casa vazia). Zerada em
+ * termo_screen_deleted_cb(). */
+static uint8_t s_cursor = 0;
 
 /* Estado por letra (a-z) do teclado, recalculado a cada render_all() a
  * partir de s_state (ratimos_termo_key_states) -- por isso ja vale pra um
@@ -160,6 +166,7 @@ static void termo_screen_deleted_cb(lv_event_t * e)
     /* Rejeicao pendente e' so' da tela que sumiu (nao vai pro save). */
     s_reject_flash = false;
     s_reject_msg = NULL;
+    s_cursor = 0;
 }
 
 static void render_all(void);
@@ -194,10 +201,9 @@ static void persist_state(void)
 
 /* Decide o estado inicial: restaura um save valido, comeca o modo termo
  * quando nao ha save, ou comeca limpo COM aviso quando o save esta
- * corrompido. Mitigacao T-02.1-02: `mode` fora de RATIMOS_TERMO_MODE_COUNT
- * ou `finished` fora de {0,1,2} e tratado como save invalido; board_count e
- * max_tries NUNCA sao confiados do disco -- sempre recalculados a partir da
- * tabela de modos, e tries_used e limitado ao max_tries recalculado. */
+ * corrompido. A validacao (T-02.1-02/T-02.1-44: mode/finished, respostas
+ * a-z de 5 letras, NULs, board_count/max_tries recalculados, linha de entrada
+ * posicional) mora no motor: ratimos_termo_state_sanitize(). */
 static bool load_or_start_state(void)
 {
     ratimos_game_state_t blob;
@@ -207,14 +213,7 @@ static bool load_or_start_state(void)
         ratimos_termo_state_t restored;
         memcpy(&restored, blob.bytes, sizeof(restored));
 
-        bool valid = restored.mode < RATIMOS_TERMO_MODE_COUNT && restored.finished <= 2;
-
-        if (valid) {
-            restored.board_count = ratimos_termo_board_count(restored.mode);
-            restored.max_tries = ratimos_termo_max_tries(restored.mode);
-            if (restored.tries_used > restored.max_tries) {
-                restored.tries_used = restored.max_tries;
-            }
+        if (ratimos_termo_state_sanitize(&restored)) {
             s_state = restored;
             status = RATIMOS_GAME_STATE_OK;
         } else {
@@ -251,6 +250,7 @@ static void switch_to_mode(ratimos_termo_mode_t mode)
     s_reject_msg = NULL;
     s_reject_flash = false;
     ratimos_termo_start_daily(&s_state, mode, ratimos_daily_index());
+    s_cursor = ratimos_termo_row_first_empty(s_state.current_guess);
     persist_state();
     /* Passa pelo helper compartilhado (status_bar.c), nunca por
      * lv_label_set_text bruto -- senao o split de cor muted/atual do
@@ -449,11 +449,19 @@ static void render_boards(void)
                     }
                     border = bg;
                 } else if (is_current_row) {
-                    /* So' o que a jogadora digitou; nenhuma casa recebe cor ou
-                     * moldura verde fora das linhas de historico. */
+                    /* So' o que a jogadora digitou (posicional); nenhuma casa
+                     * recebe cor ou moldura verde fora do historico. A casa do
+                     * cursor (compartilhada por todos os tabuleiros em jogo)
+                     * fica destacada. */
                     ch = s_state.current_guess[c];
-                    border = RATIMOS_COLOR_ACCENT;
-                    border_w = s_reject_flash ? 3 : 2;
+                    if (c == s_cursor) {
+                        bg = RATIMOS_COLOR_PANEL_ACTIVE;
+                        border = RATIMOS_COLOR_TEXT;
+                        border_w = 3;
+                    } else {
+                        border = RATIMOS_COLOR_ACCENT;
+                        border_w = s_reject_flash ? 3 : 2;
+                    }
                 }
 
                 char buf[2] = { 0, 0 };
@@ -567,45 +575,63 @@ static void render_all(void)
     render_banner();
 }
 
-/* Motivo legivel de uma rejeicao do motor (ratimos_termo_submit so'
- * devolve bool): incompleta ou fora da lista de palpites aceitos. */
-static const char * reject_reason(const char * guess)
-{
-    if (strlen(guess) != RATIMOS_TERMO_WORD_LEN) {
-        return TERMO_MSG_INCOMPLETE;
-    }
-    char lower[RATIMOS_TERMO_WORD_LEN + 1];
-    for (int i = 0; i < RATIMOS_TERMO_WORD_LEN; i++) {
-        lower[i] = (char) tolower((unsigned char) guess[i]);
-    }
-    lower[RATIMOS_TERMO_WORD_LEN] = '\0';
-    return ratimos_termo_is_accepted_guess(lower) ? NULL : TERMO_MSG_NOT_IN_LIST;
-}
-
 static void try_submit(void)
 {
-    const char * reason = reject_reason(s_state.current_guess);
-    bool ok = ratimos_termo_submit(&s_state, s_state.current_guess);
-    s_reject_flash = !ok;
-    s_reject_msg = ok ? NULL : (reason ? reason : TERMO_MSG_NOT_IN_LIST);
+    ratimos_termo_submit_result_t res = ratimos_termo_submit_row(&s_state);
 
-    if (ok) {
-        memset(s_state.current_guess, 0, sizeof(s_state.current_guess));
+    if (res == RATIMOS_TERMO_SUBMIT_FINISHED) {
+        return;
+    }
+    if (res != RATIMOS_TERMO_SUBMIT_OK) {
+        /* Linha intacta, nenhuma tentativa gasta: so' mostra o motivo. */
+        s_reject_flash = true;
+        s_reject_msg = (res == RATIMOS_TERMO_SUBMIT_INCOMPLETE) ? TERMO_MSG_INCOMPLETE : TERMO_MSG_NOT_ACCEPTED;
+        render_all();
+        return;
+    }
 
-        /* PROGRESSAO-01: credita o castelo EXATAMENTE uma vez -- o guard
-         * `daily_win_recorded` fica dentro do proprio estado persistido,
-         * entao reentrar numa sessao ja vencida apos um restart nunca soma
-         * de novo. Uma troca de modo ou um "nao foi dessa vez" nunca chega
-         * aqui. */
-        if (s_state.finished == 1 && !s_state.daily_win_recorded) {
-            if (ratimos_storage_record_daily_win(RATIMOS_GAME_TERMO, ratimos_daily_index())) {
-                s_state.daily_win_recorded = 1;
-            }
+    s_reject_flash = false;
+    s_reject_msg = NULL;
+    s_cursor = 0; /* a linha nova esta vazia */
+
+    /* PROGRESSAO-01: credita o castelo EXATAMENTE uma vez -- o guard
+     * `daily_win_recorded` fica dentro do proprio estado persistido,
+     * entao reentrar numa sessao ja vencida apos um restart nunca soma
+     * de novo. Uma troca de modo ou um "nao foi dessa vez" nunca chega
+     * aqui. */
+    if (s_state.finished == 1 && !s_state.daily_win_recorded) {
+        if (ratimos_storage_record_daily_win(RATIMOS_GAME_TERMO, ratimos_daily_index())) {
+            s_state.daily_win_recorded = 1;
         }
     }
 
     persist_state();
     render_all();
+}
+
+/* Toque numa casa da linha ativa: poe o cursor ali. UM handler por painel de
+ * tabuleiro (4 no total) recebe o clique que sobe das casas por bubbling --
+ * nunca um por casa (180), pra nao pesar no heap do LVGL. */
+static void board_panel_clicked_cb(lv_event_t * e)
+{
+    lv_obj_t * target = lv_event_get_target(e);
+    if (target == NULL || target == lv_event_get_current_target(e)) {
+        return;
+    }
+    uintptr_t packed = (uintptr_t) lv_obj_get_user_data(target);
+    if (packed == 0 || s_state.finished != 0) {
+        return; /* nao e' casa, ou a partida acabou */
+    }
+    packed--;
+    uint8_t c = (uint8_t) (packed % RATIMOS_TERMO_WORD_LEN);
+    uint8_t r = (uint8_t) ((packed / RATIMOS_TERMO_WORD_LEN) % RATIMOS_TERMO_MAX_TRIES);
+    uint8_t b = (uint8_t) (packed / (RATIMOS_TERMO_WORD_LEN * RATIMOS_TERMO_MAX_TRIES));
+
+    if (b >= s_state.board_count || s_state.boards[b].solved || r != s_state.tries_used) {
+        return; /* tabuleiro resolvido, linha futura ou de historico */
+    }
+    s_cursor = c;
+    render_boards();
 }
 
 static void keyboard_value_changed_cb(lv_event_t * e)
@@ -630,37 +656,32 @@ static void keyboard_value_changed_cb(lv_event_t * e)
         return;
     }
 
-    if (strcmp(text, TERMO_KEY_ERASE) == 0) {
-        size_t len = strlen(s_state.current_guess);
-        if (len > 0) {
-            s_state.current_guess[len - 1] = '\0';
-            s_reject_flash = false;
-            s_reject_msg = NULL;
-            persist_state();
-            render_boards();
-            render_status();
-        }
-        return;
-    }
+    char before[RATIMOS_TERMO_WORD_LEN + 1];
+    memcpy(before, s_state.current_guess, sizeof(before));
+    uint8_t cursor_before = s_cursor;
 
-    if (!isalpha((unsigned char) text[0])) {
+    if (strcmp(text, TERMO_KEY_ERASE) == 0) {
+        s_cursor = ratimos_termo_row_erase(s_state.current_guess, s_cursor);
+    } else if (isalpha((unsigned char) text[0])) {
+        s_cursor = ratimos_termo_row_type(s_state.current_guess, s_cursor, text[0]);
+    } else {
         return; /* espacador oculto / tecla sem letra */
     }
-    size_t len = strlen(s_state.current_guess);
-    if (len < RATIMOS_TERMO_WORD_LEN) {
-        s_state.current_guess[len] = (char) tolower((unsigned char) text[0]);
-        s_state.current_guess[len + 1] = '\0';
-        s_reject_flash = false;
-        s_reject_msg = NULL;
-        persist_state();
-        render_boards();
-        render_status();
+
+    if (memcmp(before, s_state.current_guess, sizeof(before)) == 0 && cursor_before == s_cursor) {
+        return; /* nada mudou (linha cheia / vazia) */
     }
+    s_reject_flash = false;
+    s_reject_msg = NULL;
+    persist_state();
+    render_boards();
+    render_status();
 }
 
 static lv_obj_t * build_termo_screen(void)
 {
     bool show_load_error = load_or_start_state();
+    s_cursor = ratimos_termo_row_first_empty(s_state.current_guess);
 
     char initial_path[TERMO_PATH_BUF_LEN];
     format_termo_path(initial_path, sizeof(initial_path), s_state.mode);
@@ -734,10 +755,13 @@ static lv_obj_t * build_termo_screen(void)
         lv_obj_set_flex_flow(panel, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_style_pad_row(panel, TERMO_TILE_GAP, 0);
         s_board_panel[b] = panel;
+        /* Um unico handler por painel; o clique das casas sobe ate aqui. */
+        lv_obj_add_event_cb(panel, board_panel_clicked_cb, LV_EVENT_CLICKED, NULL);
 
         for (uint8_t r = 0; r < RATIMOS_TERMO_MAX_TRIES; r++) {
             lv_obj_t * row = lv_obj_create(panel);
             lv_obj_remove_style_all(row);
+            lv_obj_add_flag(row, LV_OBJ_FLAG_EVENT_BUBBLE);
             lv_obj_set_width(row, LV_SIZE_CONTENT);
             lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
             lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
@@ -752,6 +776,9 @@ static lv_obj_t * build_termo_screen(void)
                 lv_obj_set_style_border_color(cell, RATIMOS_COLOR_PANEL_ACTIVE, 0);
                 lv_obj_set_style_radius(cell, 0, 0);
                 lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
+                lv_obj_add_flag(cell, LV_OBJ_FLAG_EVENT_BUBBLE);
+                /* Indice empacotado + 1 (0 = nao e' casa) pro handler do painel. */
+                lv_obj_set_user_data(cell, (void *) (uintptr_t) (((b * RATIMOS_TERMO_MAX_TRIES + r) * RATIMOS_TERMO_WORD_LEN + c) + 1));
                 s_tile[b][r][c] = cell;
 
                 lv_obj_t * label = lv_label_create(cell);

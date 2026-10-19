@@ -309,3 +309,153 @@ void ratimos_termo_key_states(const ratimos_termo_state_t * st, uint8_t out[26])
         }
     }
 }
+
+/* ------------------------------------------------------------------------
+ * Linha de entrada posicional (plano 02.1-17).
+ * ------------------------------------------------------------------------ */
+
+static bool termo_is_letter(char c)
+{
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+void ratimos_termo_row_sanitize(char row[RATIMOS_TERMO_WORD_LEN + 1])
+{
+    for (int i = 0; i < RATIMOS_TERMO_WORD_LEN; i++) {
+        char c = row[i];
+        if (c >= 'A' && c <= 'Z') {
+            c = (char) (c - 'A' + 'a');
+        }
+        row[i] = (c >= 'a' && c <= 'z') ? c : '\0';
+    }
+    row[RATIMOS_TERMO_WORD_LEN] = '\0';
+}
+
+bool ratimos_termo_row_is_full(const char * row)
+{
+    for (int i = 0; i < RATIMOS_TERMO_WORD_LEN; i++) {
+        if (row[i] == '\0') {
+            return false;
+        }
+    }
+    return true;
+}
+
+uint8_t ratimos_termo_row_first_empty(const char * row)
+{
+    for (int i = 0; i < RATIMOS_TERMO_WORD_LEN; i++) {
+        if (row[i] == '\0') {
+            return (uint8_t) i;
+        }
+    }
+    return RATIMOS_TERMO_CURSOR_END;
+}
+
+uint8_t ratimos_termo_row_type(char * row, uint8_t cursor, char letter)
+{
+    if (!termo_is_letter(letter)) {
+        return cursor;
+    }
+    if (cursor >= RATIMOS_TERMO_WORD_LEN) {
+        cursor = ratimos_termo_row_first_empty(row);
+        if (cursor >= RATIMOS_TERMO_WORD_LEN) {
+            return RATIMOS_TERMO_CURSOR_END; /* linha cheia, nada a digitar */
+        }
+    }
+
+    row[cursor] = (char) ((letter >= 'A' && letter <= 'Z') ? letter - 'A' + 'a' : letter);
+
+    for (int i = cursor + 1; i < RATIMOS_TERMO_WORD_LEN; i++) {
+        if (row[i] == '\0') {
+            return (uint8_t) i;
+        }
+    }
+    for (int i = 0; i < cursor; i++) {
+        if (row[i] == '\0') {
+            return (uint8_t) i;
+        }
+    }
+    return RATIMOS_TERMO_CURSOR_END;
+}
+
+uint8_t ratimos_termo_row_erase(char * row, uint8_t cursor)
+{
+    if (cursor < RATIMOS_TERMO_WORD_LEN && row[cursor] != '\0') {
+        row[cursor] = '\0';
+        return cursor;
+    }
+
+    int start = (cursor >= RATIMOS_TERMO_WORD_LEN) ? RATIMOS_TERMO_WORD_LEN - 1 : (int) cursor - 1;
+    for (int i = start; i >= 0; i--) {
+        if (row[i] != '\0') {
+            row[i] = '\0';
+            return (uint8_t) i;
+        }
+    }
+    return cursor;
+}
+
+ratimos_termo_submit_result_t ratimos_termo_submit_row(ratimos_termo_state_t * st)
+{
+    if (st == NULL || st->finished != 0 || st->tries_used >= st->max_tries ||
+        st->tries_used >= RATIMOS_TERMO_MAX_TRIES) {
+        return RATIMOS_TERMO_SUBMIT_FINISHED;
+    }
+    if (!ratimos_termo_row_is_full(st->current_guess)) {
+        return RATIMOS_TERMO_SUBMIT_INCOMPLETE;
+    }
+
+    char word[RATIMOS_TERMO_WORD_LEN + 1];
+    memcpy(word, st->current_guess, RATIMOS_TERMO_WORD_LEN);
+    word[RATIMOS_TERMO_WORD_LEN] = '\0';
+    if (!ratimos_termo_is_accepted_guess(word)) {
+        return RATIMOS_TERMO_SUBMIT_NOT_ACCEPTED;
+    }
+    if (!ratimos_termo_submit(st, word)) {
+        return RATIMOS_TERMO_SUBMIT_NOT_ACCEPTED; /* defensivo: o motor recusou */
+    }
+    memset(st->current_guess, 0, sizeof(st->current_guess));
+    return RATIMOS_TERMO_SUBMIT_OK;
+}
+
+bool ratimos_termo_state_sanitize(ratimos_termo_state_t * st)
+{
+    if (st == NULL || (unsigned) st->mode >= RATIMOS_TERMO_MODE_COUNT || st->finished > 2) {
+        return false;
+    }
+
+    st->board_count = ratimos_termo_board_count(st->mode);
+    st->max_tries = ratimos_termo_max_tries(st->mode);
+    if (st->tries_used > st->max_tries) {
+        st->tries_used = st->max_tries;
+    }
+
+    /* V5: strings de tamanho fixo vindas do disco podem nao ter NUL. A
+     * resposta de um tabuleiro em jogo SEM NUL invalida o save (cai em jogo
+     * novo); nos demais campos o byte 5 e' apenas forcado a 0. */
+    for (uint8_t b = 0; b < st->board_count; b++) {
+        if (st->boards[b].answer[RATIMOS_TERMO_WORD_LEN] != '\0') {
+            return false;
+        }
+    }
+    for (int b = 0; b < RATIMOS_TERMO_MAX_BOARDS; b++) {
+        st->boards[b].answer[RATIMOS_TERMO_WORD_LEN] = '\0';
+    }
+    for (uint8_t b = 0; b < st->board_count; b++) {
+        ratimos_termo_board_t * board = &st->boards[b];
+        for (int c = 0; c < RATIMOS_TERMO_WORD_LEN; c++) {
+            if (board->answer[c] < 'a' || board->answer[c] > 'z') {
+                return false;
+            }
+        }
+        board->solved = board->solved ? 1 : 0;
+        if (board->guesses_made > st->tries_used) {
+            board->guesses_made = st->tries_used;
+        }
+    }
+    for (int r = 0; r < RATIMOS_TERMO_MAX_TRIES; r++) {
+        ratimos_termo_row_sanitize(st->history[r]);
+    }
+    ratimos_termo_row_sanitize(st->current_guess);
+    return true;
+}

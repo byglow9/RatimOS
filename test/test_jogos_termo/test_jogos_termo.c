@@ -426,6 +426,206 @@ void test_submit_applies_shared_guess_to_unsolved_boards_only(void)
     TEST_ASSERT_EQUAL_UINT8(1, st.finished); /* ambos resolvidos agora */
 }
 
+/* ------------------------------------------------------------------------
+ * Linha de entrada posicional (plano 02.1-17). `_` = casa vazia.
+ * ------------------------------------------------------------------------ */
+
+static void row_set(char row[RATIMOS_TERMO_WORD_LEN + 1], const char * pat)
+{
+    for (int i = 0; i < RATIMOS_TERMO_WORD_LEN; i++) {
+        row[i] = (pat[i] == '_') ? '\0' : pat[i];
+    }
+    row[RATIMOS_TERMO_WORD_LEN] = '\0';
+}
+
+/* Linha como padrao de 5 chars ('_' = vazia) pra comparar com TEST_ASSERT_EQUAL_STRING. */
+static const char * row_str(const char row[RATIMOS_TERMO_WORD_LEN + 1])
+{
+    static char out[RATIMOS_TERMO_WORD_LEN + 1];
+    for (int i = 0; i < RATIMOS_TERMO_WORD_LEN; i++) {
+        out[i] = row[i] ? row[i] : '_';
+    }
+    out[RATIMOS_TERMO_WORD_LEN] = '\0';
+    return out;
+}
+
+void test_row_type_fills_in_order_and_ends_with_cursor_end(void)
+{
+    char row[RATIMOS_TERMO_WORD_LEN + 1];
+    row_set(row, "_____");
+    const char * word = "posse";
+    const uint8_t expect_cursor[] = { 1, 2, 3, 4, RATIMOS_TERMO_CURSOR_END };
+    uint8_t cursor = 0;
+    for (int i = 0; i < 5; i++) {
+        cursor = ratimos_termo_row_type(row, cursor, word[i]);
+        TEST_ASSERT_EQUAL_UINT8(expect_cursor[i], cursor);
+    }
+    TEST_ASSERT_EQUAL_STRING("posse", row_str(row));
+}
+
+void test_row_type_from_the_middle_wraps_to_first_empty(void)
+{
+    char row[RATIMOS_TERMO_WORD_LEN + 1];
+    row_set(row, "_____");
+    uint8_t cursor = 2;
+    cursor = ratimos_termo_row_type(row, cursor, 's');
+    TEST_ASSERT_EQUAL_STRING("__s__", row_str(row));
+    TEST_ASSERT_EQUAL_UINT8(3, cursor);
+    cursor = ratimos_termo_row_type(row, cursor, 't');
+    TEST_ASSERT_EQUAL_STRING("__st_", row_str(row));
+    TEST_ASSERT_EQUAL_UINT8(4, cursor);
+    cursor = ratimos_termo_row_type(row, cursor, 'a');
+    TEST_ASSERT_EQUAL_STRING("__sta", row_str(row));
+    TEST_ASSERT_EQUAL_UINT8(0, cursor); /* volta pra 1a vazia */
+    cursor = ratimos_termo_row_type(row, cursor, 'P'); /* maiuscula vira minuscula */
+    TEST_ASSERT_EQUAL_STRING("p_sta", row_str(row));
+    TEST_ASSERT_EQUAL_UINT8(1, cursor);
+}
+
+void test_row_type_overwrites_and_ignores_when_full_or_invalid(void)
+{
+    char row[RATIMOS_TERMO_WORD_LEN + 1];
+    row_set(row, "posse");
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_CURSOR_END, ratimos_termo_row_type(row, 1, 'a'));
+    TEST_ASSERT_EQUAL_STRING("passe", row_str(row)); /* sobrescreve */
+
+    TEST_ASSERT_EQUAL_UINT8(RATIMOS_TERMO_CURSOR_END,
+                            ratimos_termo_row_type(row, RATIMOS_TERMO_CURSOR_END, 'z'));
+    TEST_ASSERT_EQUAL_STRING("passe", row_str(row)); /* cheia + END: nada muda */
+
+    row_set(row, "_____");
+    TEST_ASSERT_EQUAL_UINT8(0, ratimos_termo_row_type(row, 0, '1'));
+    TEST_ASSERT_EQUAL_UINT8(0, ratimos_termo_row_type(row, 0, '#'));
+    TEST_ASSERT_EQUAL_UINT8(0, ratimos_termo_row_type(row, 0, (char) 0xc3));
+    TEST_ASSERT_EQUAL_STRING("_____", row_str(row));
+}
+
+void test_row_erase_follows_the_cursor_rules(void)
+{
+    char row[RATIMOS_TERMO_WORD_LEN + 1];
+
+    row_set(row, "posse");
+    uint8_t cursor = ratimos_termo_row_erase(row, RATIMOS_TERMO_CURSOR_END);
+    TEST_ASSERT_EQUAL_STRING("poss_", row_str(row));
+    TEST_ASSERT_EQUAL_UINT8(4, cursor);
+    cursor = ratimos_termo_row_erase(row, cursor); /* casa 4 vazia: apaga a 3 */
+    TEST_ASSERT_EQUAL_STRING("pos__", row_str(row));
+    TEST_ASSERT_EQUAL_UINT8(3, cursor);
+
+    row_set(row, "p_s__");
+    TEST_ASSERT_EQUAL_UINT8(0, ratimos_termo_row_erase(row, 1)); /* vazia: apaga a cheia a esquerda */
+    TEST_ASSERT_EQUAL_STRING("__s__", row_str(row));
+
+    row_set(row, "p_s__");
+    TEST_ASSERT_EQUAL_UINT8(2, ratimos_termo_row_erase(row, 2)); /* cheia: limpa e fica */
+    TEST_ASSERT_EQUAL_STRING("p____", row_str(row));
+
+    row_set(row, "_____");
+    TEST_ASSERT_EQUAL_UINT8(0, ratimos_termo_row_erase(row, 0));
+    TEST_ASSERT_EQUAL_STRING("_____", row_str(row));
+}
+
+void test_submit_row_reports_why_it_refuses_and_clears_on_ok(void)
+{
+    ratimos_termo_state_t st;
+    make_termo_state(&st, "posse");
+
+    row_set(st.current_guess, "pos_e");
+    TEST_ASSERT_EQUAL_INT(RATIMOS_TERMO_SUBMIT_INCOMPLETE, ratimos_termo_submit_row(&st));
+    TEST_ASSERT_EQUAL_STRING("pos_e", row_str(st.current_guess));
+    TEST_ASSERT_EQUAL_UINT8(0, st.tries_used);
+
+    row_set(st.current_guess, "zzzzz");
+    TEST_ASSERT_EQUAL_INT(RATIMOS_TERMO_SUBMIT_NOT_ACCEPTED, ratimos_termo_submit_row(&st));
+    TEST_ASSERT_EQUAL_STRING("zzzzz", row_str(st.current_guess));
+    TEST_ASSERT_EQUAL_UINT8(0, st.tries_used);
+
+    row_set(st.current_guess, "resto");
+    TEST_ASSERT_EQUAL_INT(RATIMOS_TERMO_SUBMIT_OK, ratimos_termo_submit_row(&st));
+    TEST_ASSERT_EQUAL_UINT8(1, st.tries_used);
+    TEST_ASSERT_EQUAL_STRING("_____", row_str(st.current_guess));
+    TEST_ASSERT_EQUAL_STRING("resto", st.history[0]);
+
+    row_set(st.current_guess, "posse");
+    TEST_ASSERT_EQUAL_INT(RATIMOS_TERMO_SUBMIT_OK, ratimos_termo_submit_row(&st));
+    TEST_ASSERT_EQUAL_UINT8(1, st.finished);
+
+    row_set(st.current_guess, "carta");
+    TEST_ASSERT_EQUAL_INT(RATIMOS_TERMO_SUBMIT_FINISHED, ratimos_termo_submit_row(&st));
+    TEST_ASSERT_EQUAL_UINT8(2, st.tries_used);
+}
+
+/* T-02.1-44: save corrompido nunca causa leitura fora do buffer. */
+void test_state_sanitize_cleans_current_guess_and_missing_nuls(void)
+{
+    ratimos_termo_state_t st;
+    make_termo_state(&st, "posse");
+    const char dirty[] = { 'P', 0x01, 's', '#', 'e', 'x' };
+    memcpy(st.current_guess, dirty, sizeof(dirty));
+    TEST_ASSERT_TRUE(ratimos_termo_state_sanitize(&st));
+    const char want[] = { 'p', 0, 's', 0, 'e', 0 };
+    TEST_ASSERT_EQUAL_MEMORY(want, st.current_guess, sizeof(want));
+
+    /* formato antigo (prefixo) continua posicional: "pe___" */
+    make_termo_state(&st, "posse");
+    memcpy(st.current_guess, "pe\0\0\0\0", 6);
+    TEST_ASSERT_TRUE(ratimos_termo_state_sanitize(&st));
+    TEST_ASSERT_EQUAL_STRING("pe___", row_str(st.current_guess));
+
+    /* historico sem NUL no byte 5 */
+    make_termo_state(&st, "posse");
+    memset(st.history, 'a', sizeof(st.history));
+    TEST_ASSERT_TRUE(ratimos_termo_state_sanitize(&st));
+    for (int r = 0; r < RATIMOS_TERMO_MAX_TRIES; r++) {
+        TEST_ASSERT_EQUAL_UINT8(0, (uint8_t) st.history[r][RATIMOS_TERMO_WORD_LEN]);
+        TEST_ASSERT_EQUAL_UINT32(5, (uint32_t) strlen(st.history[r]));
+    }
+}
+
+void test_state_sanitize_rejects_bad_answers_mode_and_finished(void)
+{
+    ratimos_termo_state_t st;
+
+    make_termo_state(&st, "posse");
+    memcpy(st.boards[0].answer, "possex", 6); /* sem NUL */
+    TEST_ASSERT_FALSE(ratimos_termo_state_sanitize(&st)); /* sem NUL: save invalido */
+
+    make_termo_state(&st, "posse");
+    st.boards[0].answer[2] = 'S'; /* fora de a-z */
+    TEST_ASSERT_FALSE(ratimos_termo_state_sanitize(&st));
+
+    make_termo_state(&st, "posse");
+    st.boards[0].answer[4] = '\0'; /* curta */
+    TEST_ASSERT_FALSE(ratimos_termo_state_sanitize(&st));
+
+    make_dueto_state(&st, "posse", "cesta");
+    st.boards[1].answer[0] = (char) 0xe3;
+    TEST_ASSERT_FALSE(ratimos_termo_state_sanitize(&st));
+
+    make_termo_state(&st, "posse");
+    st.mode = (ratimos_termo_mode_t) 9;
+    TEST_ASSERT_FALSE(ratimos_termo_state_sanitize(&st));
+
+    make_termo_state(&st, "posse");
+    st.finished = 3;
+    TEST_ASSERT_FALSE(ratimos_termo_state_sanitize(&st));
+}
+
+void test_state_sanitize_recomputes_counts_and_limits_tries(void)
+{
+    ratimos_termo_state_t st;
+    make_dueto_state(&st, "posse", "cesta");
+    st.board_count = 4;
+    st.max_tries = 200;
+    st.tries_used = 250;
+    st.boards[0].guesses_made = 99;
+    TEST_ASSERT_TRUE(ratimos_termo_state_sanitize(&st));
+    TEST_ASSERT_EQUAL_UINT8(2, st.board_count);
+    TEST_ASSERT_EQUAL_UINT8(7, st.max_tries);
+    TEST_ASSERT_EQUAL_UINT8(7, st.tries_used);
+    TEST_ASSERT_TRUE(st.boards[0].guesses_made <= st.tries_used);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -456,6 +656,15 @@ int main(void)
     RUN_TEST(test_submit_loses_when_tries_exhausted_with_unsolved_board);
     RUN_TEST(test_submit_rejects_after_finished);
     RUN_TEST(test_submit_applies_shared_guess_to_unsolved_boards_only);
+
+    RUN_TEST(test_row_type_fills_in_order_and_ends_with_cursor_end);
+    RUN_TEST(test_row_type_from_the_middle_wraps_to_first_empty);
+    RUN_TEST(test_row_type_overwrites_and_ignores_when_full_or_invalid);
+    RUN_TEST(test_row_erase_follows_the_cursor_rules);
+    RUN_TEST(test_submit_row_reports_why_it_refuses_and_clears_on_ok);
+    RUN_TEST(test_state_sanitize_cleans_current_guess_and_missing_nuls);
+    RUN_TEST(test_state_sanitize_rejects_bad_answers_mode_and_finished);
+    RUN_TEST(test_state_sanitize_recomputes_counts_and_limits_tries);
 
     return UNITY_END();
 }

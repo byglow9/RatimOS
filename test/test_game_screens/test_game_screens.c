@@ -404,6 +404,155 @@ void test_termo_board_cells_arara_against_pasta(void)
     }
 }
 
+/* Toque numa casa: o clique sobe da casa ate' o painel do tabuleiro, que
+ * tem o unico handler (bubbling). */
+static void termo_tap(lv_obj_t * scr, int b, int r, int c)
+{
+    lv_obj_send_event(termo_cell_obj(scr, b, r, c), LV_EVENT_CLICKED, NULL);
+}
+
+static bool cell_has_border(lv_obj_t * scr, int b, int r, int c, lv_color_t color, int width)
+{
+    lv_obj_t * cell = termo_cell_obj(scr, b, r, c);
+    return lv_color_eq(lv_obj_get_style_border_color(cell, LV_PART_MAIN), color) &&
+           lv_obj_get_style_border_width(cell, LV_PART_MAIN) == width;
+}
+
+/* Casa do cursor: borda TEXT 3px + fundo PANEL_ACTIVE. */
+static bool cell_is_cursor(lv_obj_t * scr, int b, int r, int c)
+{
+    return cell_has_border(scr, b, r, c, RATIMOS_COLOR_TEXT, 3) &&
+           lv_color_eq(lv_obj_get_style_bg_color(termo_cell_obj(scr, b, r, c), LV_PART_MAIN),
+                       RATIMOS_COLOR_PANEL_ACTIVE);
+}
+
+/* Linha 0 do board 0: so' a casa `cursor` destacada; as outras com borda
+ * ACCENT 2px (cursor -1 = nenhuma destacada). */
+static void assert_cursor_only_at(lv_obj_t * scr, int b, int r, int cursor, const char * what)
+{
+    for (int c = 0; c < 5; c++) {
+        if (c == cursor) {
+            TEST_ASSERT_TRUE_MESSAGE(cell_is_cursor(scr, b, r, c), what);
+        } else {
+            TEST_ASSERT_TRUE_MESSAGE(cell_has_border(scr, b, r, c, RATIMOS_COLOR_ACCENT, 2), what);
+        }
+    }
+}
+
+/*
+ * UAT 02.1-17, cursor livre: tocar numa casa da linha ativa poe o cursor ali
+ * (casa destacada) e a proxima letra vai pra ela; backspace apaga a casa do
+ * cursor ou, se vazia, a preenchida mais proxima a esquerda; enter so' envia
+ * com 5 letras.
+ */
+void test_termo_tap_moves_the_cursor_and_typing_follows_it(void)
+{
+    ratimos_termo_state_t st;
+    termo_seed(&st, RATIMOS_TERMO_MODE_TERMO, "posse", "", "", "");
+    lv_obj_t * scr = termo_open_with_state(&st);
+    lv_obj_t * content = lv_obj_get_child(scr, 3);
+    lv_obj_t * kb = lv_obj_get_child(content, 4);
+    lv_obj_t * status = lv_obj_get_child(content, 2);
+
+    assert_cursor_only_at(scr, 0, 0, 0, "opens with the cursor on the first cell");
+
+    termo_tap(scr, 0, 0, 2);
+    termo_press(kb, "S");
+    assert_row(scr, 0, "__S__");
+    assert_cursor_only_at(scr, 0, 0, 3, "cursor advances after typing");
+
+    termo_tap(scr, 0, 0, 0);
+    termo_press(kb, "P");
+    assert_row(scr, 0, "P_S__");
+    termo_press(kb, "O");
+    termo_press(kb, "S");
+    termo_press(kb, "E");
+    assert_row(scr, 0, "POSSE");
+    assert_cursor_only_at(scr, 0, 0, -1, "full row has no highlight");
+
+    termo_press(kb, LV_SYMBOL_BACKSPACE);
+    assert_row(scr, 0, "POSS_");
+    termo_tap(scr, 0, 0, 1);
+    termo_press(kb, LV_SYMBOL_BACKSPACE);
+    assert_row(scr, 0, "P_SS_");
+    termo_press(kb, LV_SYMBOL_BACKSPACE); /* casa 1 vazia: apaga a P da esquerda */
+    assert_row(scr, 0, "__SS_");
+
+    termo_press(kb, "enter");
+    TEST_ASSERT_EQUAL_STRING("complete as 5 letras", lv_label_get_text(status));
+    assert_row(scr, 0, "__SS_");
+
+    /* Toque numa linha futura nao muda o cursor (que esta na casa 0). */
+    termo_tap(scr, 0, 1, 3);
+    TEST_ASSERT_TRUE_MESSAGE(cell_is_cursor(scr, 0, 0, 0), "tap on a future row is ignored");
+    TEST_ASSERT_FALSE(cell_is_cursor(scr, 0, 1, 3));
+    termo_press(kb, "A");
+    assert_row(scr, 0, "A_SS_");
+}
+
+/* Mensagens do enter: palavra que nao esta no dicionario nao e' enviada, a linha fica e a
+ * tentativa nao e' gasta; a proxima tecla volta ao "tentativa N de M". */
+void test_termo_not_accepted_word_keeps_the_row_and_the_try(void)
+{
+    ratimos_termo_state_t st;
+    termo_seed(&st, RATIMOS_TERMO_MODE_TERMO, "posse", "", "", "");
+    lv_obj_t * scr = termo_open_with_state(&st);
+    lv_obj_t * content = lv_obj_get_child(scr, 3);
+    lv_obj_t * kb = lv_obj_get_child(content, 4);
+    lv_obj_t * status = lv_obj_get_child(content, 2);
+
+    termo_type(kb, "zzzzz");
+    termo_press(kb, "enter");
+    TEST_ASSERT_EQUAL_STRING("essa palavra não é aceita", lv_label_get_text(status));
+    assert_row(scr, 0, "ZZZZZ");
+    TEST_ASSERT_TRUE(cell_has_border(scr, 0, 0, 0, RATIMOS_COLOR_ACCENT, 3)); /* flash */
+
+    ratimos_game_state_t blob;
+    TEST_ASSERT_EQUAL_INT(RATIMOS_GAME_STATE_OK, ratimos_storage_get_game_state(RATIMOS_GAME_TERMO, &blob));
+    ratimos_termo_state_t saved;
+    memcpy(&saved, blob.bytes, sizeof(saved));
+    TEST_ASSERT_EQUAL_UINT8(0, saved.tries_used);
+
+    termo_press(kb, LV_SYMBOL_BACKSPACE);
+    TEST_ASSERT_EQUAL_STRING("tentativa 1 de 6", lv_label_get_text(status));
+    assert_row(scr, 0, "ZZZZ_");
+}
+
+/*
+ * Dueto: o toque vale pra linha ativa do tabuleiro tocado e o cursor e'
+ * compartilhado -- a letra aparece nos DOIS tabuleiros. Com o tabuleiro 0
+ * resolvido, tocar nele nao muda o cursor.
+ */
+void test_termo_dueto_tap_is_per_board_and_the_cursor_is_shared(void)
+{
+    ratimos_termo_state_t st;
+    termo_seed(&st, RATIMOS_TERMO_MODE_DUETO, "posse", "cesta", "", "");
+    lv_obj_t * scr = termo_open_with_state(&st);
+    lv_obj_t * kb = lv_obj_get_child(lv_obj_get_child(scr, 3), 4);
+
+    termo_tap(scr, 1, 0, 3);
+    termo_press(kb, "T");
+    for (int b = 0; b < 2; b++) {
+        TEST_ASSERT_EQUAL_STRING_MESSAGE("T", termo_cell(scr, b, 0, 3), "letter mirrored on both boards");
+    }
+
+    /* Com o board 0 resolvido (POSSE): so' o board 1 tem linha ativa. */
+    ratimos_termo_state_t st2;
+    termo_seed(&st2, RATIMOS_TERMO_MODE_DUETO, "posse", "cesta", "", "");
+    TEST_ASSERT_TRUE(ratimos_termo_submit(&st2, "posse"));
+    scr = termo_open_with_state(&st2);
+    TEST_ASSERT_TRUE(cell_is_cursor(scr, 1, 1, 0));
+
+    termo_tap(scr, 0, 1, 3); /* board resolvido */
+    TEST_ASSERT_TRUE_MESSAGE(cell_is_cursor(scr, 1, 1, 0), "tap on the solved board is ignored");
+    termo_tap(scr, 1, 0, 2); /* linha de historico */
+    TEST_ASSERT_TRUE_MESSAGE(cell_is_cursor(scr, 1, 1, 0), "tap on a history row is ignored");
+
+    termo_tap(scr, 1, 1, 4);
+    TEST_ASSERT_TRUE(cell_is_cursor(scr, 1, 1, 4));
+    TEST_ASSERT_FALSE(cell_is_cursor(scr, 1, 1, 0));
+}
+
 /* Linha (board b, r) inteira dentro da area visivel do painel do board. */
 static bool termo_row_visible(lv_obj_t * scr, int b, int r)
 {
@@ -499,7 +648,8 @@ void test_termo_enter_submits_and_rejections_are_visible(void)
     /* Fora da lista: motivo na tela, ainda tentativa 2. */
     termo_type(kb, "zzzzz");
     termo_press(kb, "enter");
-    TEST_ASSERT_EQUAL_STRING("palavra fora da lista", lv_label_get_text(status));
+    TEST_ASSERT_EQUAL_STRING("essa palavra não é aceita", lv_label_get_text(status));
+    assert_row(scr, 1, "ZZZZZ");
     termo_press(kb, LV_SYMBOL_BACKSPACE);
     TEST_ASSERT_EQUAL_STRING("tentativa 2 de 6", lv_label_get_text(status));
 }
@@ -896,6 +1046,9 @@ int main(void)
     UNITY_BEGIN();
     RUN_TEST(test_termo_keyboard_reflects_letter_states_and_resets);
     RUN_TEST(test_termo_board_cells_arara_against_pasta);
+    RUN_TEST(test_termo_tap_moves_the_cursor_and_typing_follows_it);
+    RUN_TEST(test_termo_not_accepted_word_keeps_the_row_and_the_try);
+    RUN_TEST(test_termo_dueto_tap_is_per_board_and_the_cursor_is_shared);
     RUN_TEST(test_termo_quarteto_boards_start_at_top_and_follow_active_row);
     /* Sem pool extra de heap: desde o plano 02.1-15 cada tela de jogo e'
      * deletada ao navegar pra outra (ratimos_screen_load), entao o heap

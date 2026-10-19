@@ -57,9 +57,12 @@ typedef struct {
     uint8_t tries_used;
     uint8_t finished;
     uint8_t daily_win_recorded;
-    /* Linha de entrada em andamento: as letras que a jogadora DIGITOU, nunca
-     * pre-preenchida pelo jogo (UAT 02.1-17: ela digita toda letra, como no
-     * term.ooo). */
+    /* Linha de entrada em andamento, POSICIONAL (plano 02.1-17, imitando o
+     * term.ooo): os bytes 0..4 sao 'a'..'z' ou 0 (casa vazia) e o byte 5 e'
+     * sempre 0. So' o que a jogadora DIGITOU -- nunca pre-preenchida pelo
+     * jogo. O tamanho da struct nao mudou: saves antigos (prefixo "pe" +
+     * zeros, que ja e' posicional, e o formato do 2c292eb, que pode ter
+     * letras em outras casas -- inofensivo) continuam carregando. */
     char current_guess[RATIMOS_TERMO_WORD_LEN + 1];
 } ratimos_termo_state_t;
 
@@ -109,6 +112,54 @@ typedef enum {
 } ratimos_termo_key_state_t;
 
 void ratimos_termo_key_states(const ratimos_termo_state_t * st, uint8_t out[26]);
+
+/*
+ * Linha de entrada posicional (plano 02.1-17). Notacao: `_` = casa vazia.
+ * `cursor` e' o indice 0..4 da casa selecionada, ou RATIMOS_TERMO_CURSOR_END
+ * quando a linha esta cheia / nao ha casa selecionada.
+ */
+#define RATIMOS_TERMO_CURSOR_END RATIMOS_TERMO_WORD_LEN
+
+/* Maiuscula vira minuscula; qualquer byte fora de a-z vira 0 (casa vazia); o
+ * byte 5 vira 0. Nunca le alem de 6 bytes. */
+void ratimos_termo_row_sanitize(char row[RATIMOS_TERMO_WORD_LEN + 1]);
+
+bool ratimos_termo_row_is_full(const char * row);
+
+/* Primeira casa vazia, ou RATIMOS_TERMO_CURSOR_END se a linha esta cheia. */
+uint8_t ratimos_termo_row_first_empty(const char * row);
+
+/* Digita `letter` (a-z/A-Z; outro caractere nao faz nada) na casa do cursor,
+ * sobrescrevendo. Cursor END usa a 1a vazia; linha cheia com cursor END nao
+ * muda nada. Devolve o novo cursor: a 1a vazia em cursor+1..4; senao a 1a
+ * vazia em 0..cursor-1; senao END. */
+uint8_t ratimos_termo_row_type(char * row, uint8_t cursor, char letter);
+
+/* Apaga: se a casa do cursor esta cheia, limpa e mantem o cursor; senao limpa
+ * a casa cheia mais proxima a ESQUERDA (a partir da 4 quando o cursor e' END)
+ * e devolve a posicao dela; se nao ha nenhuma, nao faz nada. */
+uint8_t ratimos_termo_row_erase(char * row, uint8_t cursor);
+
+typedef enum {
+    RATIMOS_TERMO_SUBMIT_OK = 0,
+    RATIMOS_TERMO_SUBMIT_INCOMPLETE,
+    RATIMOS_TERMO_SUBMIT_NOT_ACCEPTED,
+    RATIMOS_TERMO_SUBMIT_FINISHED
+} ratimos_termo_submit_result_t;
+
+/* Envia st->current_guess. Ordem das recusas: FINISHED (partida encerrada),
+ * INCOMPLETE (linha nao cheia), NOT_ACCEPTED (fora da lista). Em toda recusa
+ * a linha fica intacta e nenhuma tentativa e' gasta. No OK chama
+ * ratimos_termo_submit e ZERA a linha. */
+ratimos_termo_submit_result_t ratimos_termo_submit_row(ratimos_termo_state_t * st);
+
+/* Valida/normaliza um estado vindo do disco (T-02.1-02/T-02.1-44): false se
+ * mode/finished sao invalidos ou se a resposta de algum dos board_count
+ * tabuleiros nao tem 5 letras a-z; senao recalcula board_count/max_tries,
+ * limita tries_used, forca NUL no byte 5 de todo campo de string, normaliza
+ * o historico e a linha de entrada. Nunca le fora dos buffers, mesmo com
+ * bytes corrompidos. */
+bool ratimos_termo_state_sanitize(ratimos_termo_state_t * st);
 
 uint8_t ratimos_termo_board_count(ratimos_termo_mode_t mode);
 uint8_t ratimos_termo_max_tries(ratimos_termo_mode_t mode);
