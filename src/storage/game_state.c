@@ -24,12 +24,12 @@
 #include <sys/stat.h>
 
 #include "content_api.h"
+#include "save_io.h"
 
 #define RATIMOS_SAVE_MAGIC          0x524d4753u  /* "RMGS" */
 #define RATIMOS_SAVE_FORMAT_VERSION 1u
 
-#define SAVE_DIR       "assets/save"
-#define SAVE_PATH_MAX  64
+#define SAVE_DIR       RATIMOS_SAVE_DIR
 
 /* Tabela fixa de caminhos, indexada por ratimos_game_kind_t. A ordem TEM de
  * espelhar o enum — o _Static_assert abaixo trava isso em tempo de compilacao. */
@@ -117,59 +117,8 @@ static void write_header_magic(uint32_t * magic, uint16_t * format_version)
     *format_version = RATIMOS_SAVE_FORMAT_VERSION;
 }
 
-/*
- * Escrita atomica: grava em "<path>.tmp", fecha, e so entao renomeia por cima
- * do caminho final. rename() e atomico dentro do mesmo diretorio, entao um
- * processo morto no meio da escrita deixa no maximo um .tmp orfao — o save
- * anterior, completo, continua intacto (ameaca T-02.1-04).
- */
-static bool write_atomic(const char * path, const void * data, size_t size)
-{
-    char tmp[SAVE_PATH_MAX + 8];
-
-    if (snprintf(tmp, sizeof(tmp), "%s.tmp", path) >= (int) sizeof(tmp)) {
-        return false;
-    }
-
-    FILE * f = fopen(tmp, "wb");
-    if (!f) {
-        return false;
-    }
-
-    bool ok = (fwrite(data, 1, size, f) == size) && (fflush(f) == 0);
-
-    if (fclose(f) != 0) {
-        ok = false;
-    }
-
-    if (!ok || rename(tmp, path) != 0) {
-        remove(tmp);
-        return false;
-    }
-
-    return true;
-}
-
-/* Le exatamente `size` bytes. Um arquivo maior OU menor que isso e recusado:
- * truncamento e lixo extra sao os dois lados da mesma falha. */
-static bool read_exact(const char * path, void * out, size_t size, bool * out_missing)
-{
-    *out_missing = false;
-
-    FILE * f = fopen(path, "rb");
-    if (!f) {
-        *out_missing = true;
-        return false;
-    }
-
-    size_t got = fread(out, 1, size, f);
-    /* fgetc extra: se ainda houver byte depois de `size`, o arquivo e maior
-     * que o registro esperado e portanto invalido. */
-    bool has_trailing = (fgetc(f) != EOF);
-    fclose(f);
-
-    return got == size && !has_trailing;
-}
+/* Escrita atomica e leitura exata vivem em save_io.c (compartilhadas com
+ * settings.c, plano 02.1-16). */
 
 /* ------------------------------------------------------------------------
  * FRONTEIRA DE ENTRADA NAO CONFIAVEL (ASVS V5, ameacas T-02.1-01/T-02.1-02).
@@ -205,15 +154,9 @@ static bool validate_record(const save_record_t * rec, ratimos_game_kind_t reque
 
 void ratimos_storage_index_game_state(void)
 {
-    /* Cria assets/ e assets/save/ se ainda nao existirem. Um EEXIST e o caso
-     * normal (segundo boot em diante), nao um erro. */
-    if (mkdir("assets", 0777) != 0 && errno != EEXIST) {
-        /* sem diretorio, os saves simplesmente falham de forma silenciosa e
-         * o jogador cai no caminho ABSENT — nunca um crash. */
-    }
-    if (mkdir(SAVE_DIR, 0777) != 0 && errno != EEXIST) {
-        /* idem */
-    }
+    /* Cria assets/ e assets/save/ se ainda nao existirem (EEXIST e' o caso
+     * normal, nao um erro). */
+    ratimos_save_ensure_dir();
 }
 
 /*
@@ -242,7 +185,7 @@ static ratimos_game_state_status_t load_game_state_record(ratimos_game_kind_t ga
     }
 
     bool missing = false;
-    if (!read_exact(s_state_paths[game], rec, sizeof(*rec), &missing)) {
+    if (!ratimos_save_read_exact(s_state_paths[game], rec, sizeof(*rec), &missing)) {
         return missing ? RATIMOS_GAME_STATE_ABSENT : RATIMOS_GAME_STATE_INVALID;
     }
 
@@ -296,7 +239,7 @@ bool ratimos_storage_save_game_state(ratimos_game_kind_t game, const ratimos_gam
     memcpy(rec.bytes, state->bytes, RATIMOS_GAME_STATE_BLOB_SIZE);
     rec.checksum = additive_checksum(rec.bytes, RATIMOS_GAME_STATE_BLOB_SIZE);
 
-    return write_atomic(s_state_paths[game], &rec, sizeof(rec));
+    return ratimos_save_write_atomic(s_state_paths[game], &rec, sizeof(rec));
 }
 
 bool ratimos_storage_clear_game_state(ratimos_game_kind_t game)
@@ -335,7 +278,7 @@ bool ratimos_storage_get_progression(ratimos_progression_state_t * out)
     progression_record_t rec;
     bool missing = false;
 
-    if (!read_exact(s_progression_path, &rec, sizeof(rec), &missing)) {
+    if (!ratimos_save_read_exact(s_progression_path, &rec, sizeof(rec), &missing)) {
         return false;
     }
     if (!magic_ok(rec.magic) || rec.format_version != RATIMOS_SAVE_FORMAT_VERSION) {
@@ -375,7 +318,7 @@ bool ratimos_storage_save_progression(const ratimos_progression_state_t * state)
     uint32_t payload_len = (uint32_t) (sizeof(rec) - payload_offset);
     rec.checksum = additive_checksum(((const uint8_t *) &rec) + payload_offset, payload_len);
 
-    return write_atomic(s_progression_path, &rec, sizeof(rec));
+    return ratimos_save_write_atomic(s_progression_path, &rec, sizeof(rec));
 }
 
 bool ratimos_storage_record_daily_win(ratimos_game_kind_t game, uint32_t day_index)

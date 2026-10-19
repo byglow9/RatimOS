@@ -18,6 +18,13 @@
 #define RATIMOS_COLOR_TEXT_MUTED    lv_color_hex(0xa997ba)
 
 /*
+ * Texto do percentual da tela de boot (sketch 010): lavanda clara que fica
+ * legivel sobre o fundo de QUALQUER tema (com sombra preta de 1px). Token de
+ * texto do boot sobre fundo de tema, nao cor de chrome das demais telas.
+ */
+#define RATIMOS_COLOR_BOOT_TEXT     lv_color_hex(0xd8cce6)
+
+/*
  * Borda externa escura do bevel retrô dos cards (D-17 revision escopada,
  * plano 02.1-09 -- ver cards-superficies.md). NAO reabre a paleta travada:
  * as 6 macros de marca/chrome acima continuam intactas, este e' um token

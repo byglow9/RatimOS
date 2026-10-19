@@ -37,11 +37,41 @@ typedef struct {
     char title[64];
 } ratimos_game_t;
 
+/*
+ * Tema e carregamento (plano 02.1-16, sketch 010): duas escolhas
+ * INDEPENDENTES, persistidas. Os valores sao FIXOS e nunca renumerados -- sao
+ * gravados em disco/NVS, entao um id aposentado nunca e' reutilizado (mesma
+ * regra de ratimos_game_kind_t). Qualquer valor lido do armazenamento passa
+ * por checagem de intervalo antes do uso (ASVS V5).
+ *   tema        = fundo do boot + fundo do sistema (src/ratimos/theme_catalog.h)
+ *   carregamento = uma das 4 animacoes da tela de boot (boot_styles.h)
+ */
+typedef enum {
+    RATIMOS_THEME_CLASSICO = 0,
+    RATIMOS_THEME_NOITE = 1,
+    RATIMOS_THEME_CASTELO = 2,
+    RATIMOS_THEME_XADREZ = 3,
+    RATIMOS_THEME_COUNT
+} ratimos_theme_id_t;
+
+typedef enum {
+    RATIMOS_BOOT_STYLE_BANDEIRA = 0,
+    RATIMOS_BOOT_STYLE_AMEIAS = 1,
+    RATIMOS_BOOT_STYLE_LETREIRO = 2,
+    RATIMOS_BOOT_STYLE_TORRES = 3,
+    RATIMOS_BOOT_STYLE_COUNT
+} ratimos_boot_style_t;
+
+#define RATIMOS_THEME_DEFAULT      RATIMOS_THEME_CLASSICO
+#define RATIMOS_BOOT_STYLE_DEFAULT RATIMOS_BOOT_STYLE_BANDEIRA
+
 typedef struct {
     int brightness_pct;
     int volume_pct;
     char firmware_version[16];
     char storage_used_label[32];
+    ratimos_theme_id_t theme_id;       /* persistido (ver abaixo) */
+    ratimos_boot_style_t boot_style;   /* persistido (ver abaixo) */
 } ratimos_settings_t;
 
 /* Monta o backend de storage (mock/native nesta fase). Deve ser chamada uma
@@ -67,10 +97,31 @@ size_t ratimos_storage_list_games(ratimos_game_t * out, size_t max_count);
 ratimos_settings_t ratimos_storage_get_settings(void);
 
 /* ------------------------------------------------------------------------
+ * Dominio `settings`: tema e carregamento PERSISTIDOS (plano 02.1-16, D-10).
+ *
+ * Ate o 02.1-15 `settings` era so' leitura e so' em memoria. Estes dois
+ * campos sao a excecao: sobrevivem a reinicio, de forma independente um do
+ * outro. No dispositivo ficam em NVS (Preferences, namespace "ratimos",
+ * chaves "theme_id" e "boot_style") -- NUNCA no SD, que e' removivel. No
+ * simulador o arquivo assets/save/settings.bin faz o papel do NVS.
+ *
+ * Os getters NAO dependem de ratimos_storage_mount() nem de
+ * ratimos_storage_index_settings(): o boot precisa deles ANTES do primeiro
+ * passo. Valor ausente/corrompido/fora do intervalo cai no padrao (Classico
+ * e bandeira) SO' daquele campo. Os setters retornam false (e nao tocam em
+ * nada) para valor fora do intervalo.
+ * ------------------------------------------------------------------------ */
+ratimos_theme_id_t ratimos_storage_get_theme_id(void);
+bool ratimos_storage_set_theme_id(ratimos_theme_id_t id);
+ratimos_boot_style_t ratimos_storage_get_boot_style(void);
+bool ratimos_storage_set_boot_style(ratimos_boot_style_t style);
+
+/* ------------------------------------------------------------------------
  * Dominio `game_state` — o PRIMEIRO dominio de escrita da Storage API (D-10).
  *
- * Os 5 dominios acima (letters/photos/tracks/games/settings) sao somente
- * leitura: indexam fixtures uma vez e nunca escrevem nada. Este dominio
+ * Os dominios letters/photos/tracks/games (e o placeholder de settings) sao
+ * somente leitura: indexam fixtures uma vez e nunca escrevem nada. (settings
+ * ganhou 2 campos persistidos no 02.1-16, ver acima.) Este dominio
  * quebra essa simetria de proposito — o progresso de um jogo precisa
  * sobreviver a um reboot, e o cache de tela em memoria (build-once) nao
  * sobrevive. Continua valendo a regra central: nenhum arquivo em
