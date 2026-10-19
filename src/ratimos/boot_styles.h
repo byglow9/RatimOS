@@ -56,6 +56,11 @@ void ratimos_boot_style_format_pct(ratimos_boot_style_t style, int32_t units, ch
 /* "hastear a bandeira", "ameias do castelo", "letreiro que acende", "fileira de torres". */
 const char * ratimos_boot_style_name(ratimos_boot_style_t style);
 
+/* Miniatura 40x60 com alfa do carregamento (o quadro a 60% do progresso, sem
+ * texto), para os seletores de config. Em runtime fica por cima da miniatura de
+ * fundo de boot do tema em uso. */
+const lv_image_dsc_t * ratimos_boot_style_thumb(ratimos_boot_style_t style);
+
 /* Subida da bandeira da variante BANDEIRA, em px: floor(units*64/UNITS/2)*2
  * (par, 0..64). Funcao pura do progresso. */
 int32_t ratimos_boot_flag_rise_px(int32_t units);

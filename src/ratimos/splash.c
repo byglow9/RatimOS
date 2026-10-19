@@ -319,7 +319,11 @@ static void splash_bg_cb(lv_timer_t * t)
 
 static void screen_deleted_cb(lv_event_t * e)
 {
-    (void) e;
+    /* Uma splash antiga deletada por uma NOVA (ratimos_screen_load dentro de
+     * splash_play) nao pode zerar os ponteiros da nova. */
+    if (lv_event_get_target(e) != s_screen) {
+        return;
+    }
     /* A tela e' deletada pelo mecanismo do 02.1-15 (ratimos_screen_load da
      * proxima tela). Aqui so' limpa: timers, animacao e ponteiros. */
     stop_all_timers();
