@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>007 — Barra de carregamento do boot</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  :root {
+    --logo-red: #c8101e;
+    --logo-red-hi: #ff3a3a;
+    --logo-red-lo: #6e0710;
+    --logo-purple: #450195;
+    --logo-purple-hi: #7a2fd0;
+    --slot: #160a22;
+    --slot-hi: #241236;
+    --muted: #8f7aa6;
+  }
+  body { background: #0a0a0f; padding: 64px 16px 40px; margin: 0; color: var(--ratimos-text); font-family: var(--font-mono); }
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0a0a0f; border-bottom: 1px solid #2a2a3a; padding: 8px 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .variant-tab { background: #1c1c28; color: #cfcfe0; border: 1px solid #35354a; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-family: var(--font-mono); font-size: 12px; transition: all .15s ease; }
+  .variant-tab:hover { border-color: #6a6a8a; }
+  .variant-tab.active { background: var(--ratimos-accent); color: #fff; border-color: var(--ratimos-accent); }
+  .grid { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .cell h3 { font-size: 13px; margin: 0; color: #dcdce8; font-weight: 500; }
+  .cell p { max-width: 320px; font-size: 11.5px; color: #9a9ab0; line-height: 1.5; margin: 0; text-align: center; }
+  .screen { width: 320px; height: 480px; background: #000; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; image-rendering: pixelated; }
+  .logo { width: 256px; height: 171px; image-rendering: pixelated; display: block; }
+  .px { font-family: var(--font-display); }
+  .controls { display: flex; gap: 8px; justify-content: center; margin: 0 0 24px; flex-wrap: wrap; }
+  .controls button { background: #1c1c28; color: #cfcfe0; border: 1px solid #35354a; padding: 6px 12px; cursor: pointer; font-family: var(--font-mono); font-size: 12px; transition: all .15s ease; }
+  .controls button:hover { background: #2a2a3c; }
+  .controls button.on { border-color: var(--ratimos-accent); color: #fff; }
+
+  /* ---------- A: torre que enche ---------- */
+  .a-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .a-word { width: 256px; height: 60px; background: url('logo_256.png') 0 -111px / 256px 171px no-repeat; image-rendering: pixelated; }
+  .a-rook { image-rendering: pixelated; }
+  .a-pct { font-family: var(--font-display); font-size: 8px; color: var(--muted); letter-spacing: 1px; }
+  .a-steps { font-family: var(--font-mono); font-size: 10px; color: #5e4d72; height: 12px; }
+
+  /* ---------- B: cartucho chanfrado ---------- */
+  .b-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .b-title { font-family: var(--font-display); font-size: 8px; color: var(--ratimos-text); letter-spacing: 1px; width: 216px; display: flex; justify-content: space-between; }
+  .b-frame { position: relative; width: 216px; height: 22px; background: #000;
+    /* moldura pixel com cantos chanfrados (1 px "comido" em cada canto) */
+    box-shadow:
+      0 -2px 0 0 #e6e0f0, 0 2px 0 0 #e6e0f0, -2px 0 0 0 #e6e0f0, 2px 0 0 0 #e6e0f0,
+      0 -4px 0 0 #000, 0 4px 0 0 #000, -4px 0 0 0 #000, 4px 0 0 0 #000;
+    padding: 3px; box-sizing: border-box; display: flex; gap: 2px; }
+  .b-blk { flex: 1; height: 100%; background: var(--slot); position: relative; }
+  .b-blk.on::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: rgba(255,255,255,0.35); }
+  .b-blk.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgba(0,0,0,0.35); }
+  .b-hint { font-family: var(--font-mono); font-size: 10px; color: #5e4d72; }
+
+  /* ---------- C: janela de boot (bevel 003-C) ---------- */
+  .c-win { width: 264px; background: rgba(42,18,63,0.68); border: 2px solid #0d0515; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15), inset 0 0 0 3px rgba(0,0,0,0.35); }
+  .c-title { display: flex; align-items: center; gap: 6px; background: linear-gradient(90deg, var(--logo-red), var(--logo-purple)); padding: 3px 6px; margin: 3px; }
+  .c-title img { width: 10px; height: 14px; image-rendering: pixelated; }
+  .c-title span { font-family: var(--font-display); font-size: 7px; color: #fff; flex: 1; letter-spacing: 1px; }
+  .c-title i { width: 9px; height: 9px; background: #2a123f; border: 1px solid #0d0515; box-shadow: inset 1px 1px 0 rgba(255,255,255,.3); display: inline-block; }
+  .c-body { padding: 6px 10px 10px; font-family: var(--font-mono); font-size: 10px; line-height: 15px; color: #cbbfdb; }
+  .c-log { height: 75px; overflow: hidden; white-space: pre; }
+  .c-log .ok { color: #3fd06b; }
+  .c-bar { margin-top: 6px; white-space: pre; color: var(--ratimos-text); }
+  .c-bar b { color: var(--logo-red-hi); font-weight: 400; }
+  .c-bar u { color: #3b2a50; text-decoration: none; }
+  .c-cursor { display: inline-block; width: 6px; height: 11px; background: #cbbfdb; vertical-align: -2px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ---------- D: bandeira na ponta ---------- */
+  .d-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 232px; }
+  .d-top { display: flex; justify-content: space-between; width: 100%; font-family: var(--font-display); font-size: 8px; color: var(--muted); }
+  .d-track { position: relative; width: 100%; height: 10px; margin-top: 18px; }
+  .d-track::before, .d-track::after { content: ""; position: absolute; top: -3px; width: 4px; height: 16px; border: 2px solid #e6e0f0; }
+  .d-track::before { left: -6px; border-right: none; }
+  .d-track::after { right: -6px; border-left: none; }
+  .d-rail { position: absolute; inset: 3px 0; background: #1a0e28; }
+  .d-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: repeating-linear-gradient(90deg, var(--logo-red) 0 6px, var(--logo-red-lo) 6px 8px); box-shadow: inset 0 2px 0 rgba(255,255,255,.3); }
+  .d-flag { position: absolute; top: -20px; width: 20px; height: 22px; transform: translateX(-2px); image-rendering: pixelated; }
+  .d-ticks { display: flex; justify-content: space-between; width: 100%; font-family: var(--font-mono); font-size: 9px; color: #4e3f60; }
+
+  .done-flash { animation: flash .4s steps(2) 2; }
+  @keyframes flash { 50% { filter: brightness(1.8); } }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showVariant('all', this)">Todas lado a lado</button>
+  <button class="variant-tab" onclick="showVariant('a', this)">A: Torre que enche</button>
+  <button class="variant-tab" onclick="showVariant('b', this)">B: Cartucho chanfrado</button>
+  <button class="variant-tab" onclick="showVariant('c', this)">C: Janela de boot</button>
+  <button class="variant-tab" onclick="showVariant('d', this)">D: Bandeira na ponta</button>
+</div>
+
+<div class="controls">
+  <button onclick="restart()">▶ recomeçar boot</button>
+  <button id="sp-n" class="on" onclick="setSpeed(1, this)">velocidade normal</button>
+  <button id="sp-s" onclick="setSpeed(3, this)">câmera lenta</button>
+  <button onclick="toggleStall(this)" id="stall">simular passo lento: off</button>
+</div>
+
+<div class="grid">
+
+  <!-- A -->
+  <div class="cell variant" data-v="a">
+    <h3>A: Torre que enche</h3>
+    <div class="screen">
+      <div class="a-wrap">
+        <canvas class="a-rook" id="a-canvas" width="57" height="80" style="width:114px;height:160px"></canvas>
+        <div class="a-word"></div>
+        <div class="a-pct" id="a-pct">000%</div>
+        <div class="a-steps" id="a-step">iniciando...</div>
+      </div>
+    </div>
+    <p>A própria torre do logo é a barra: ela "acende" de baixo pra cima em linhas de pixel, do roxo do wordmark ao vermelho da bandeira. Zero elemento extra; a marca é o indicador.</p>
+  </div>
+
+  <!-- B -->
+  <div class="cell variant" data-v="b">
+    <h3>B: Cartucho chanfrado</h3>
+    <div class="screen">
+      <img class="logo" src="logo_256.png" alt="">
+      <div class="b-wrap">
+        <div class="b-title"><span id="b-label">LOADING</span><span id="b-pct">0%</span></div>
+        <div class="b-frame" id="b-frame"></div>
+        <div class="b-hint" id="b-step">iniciando...</div>
+      </div>
+    </div>
+    <p>A clássica dos refs (LOADING em pixel + blocos dentro de moldura branca com cantos chanfrados). Blocos em degradê vermelho→roxo, igual ao wordmark, com brilho/sombra de 2px.</p>
+  </div>
+
+  <!-- C -->
+  <div class="cell variant" data-v="c">
+    <h3>C: Janela de boot</h3>
+    <div class="screen">
+      <img class="logo" src="logo_256.png" alt="" style="width:192px;height:128px">
+      <div class="c-win">
+        <div class="c-title"><img src="../assets/icons/system_rook_32.png" alt=""><span>RATIMOS.SYS</span><i></i><i></i></div>
+        <div class="c-body">
+          <div class="c-log" id="c-log"></div>
+          <div class="c-bar" id="c-bar"></div>
+        </div>
+      </div>
+    </div>
+    <p>Janelinha estilo Win95/terminal com a moldura bevel dos cards (003-C). Mostra os passos reais do boot como log, e a barra em caracteres de bloco. Conversa com o "./home" do sistema.</p>
+  </div>
+
+  <!-- D -->
+  <div class="cell variant" data-v="d">
+    <h3>D: Bandeira na ponta</h3>
+    <div class="screen">
+      <img class="logo" src="logo_256.png" alt="">
+      <div class="d-wrap">
+        <div class="d-top"><span id="d-label">carregando</span><span id="d-pct">000</span></div>
+        <div class="d-track">
+          <div class="d-rail"></div>
+          <div class="d-fill" id="d-fill"></div>
+          <canvas class="d-flag" id="d-flag" width="10" height="11"></canvas>
+        </div>
+        <div class="d-ticks"><span>0</span><span>·</span><span>50</span><span>·</span><span>100</span></div>
+      </div>
+    </div>
+    <p>Barra fina entre colchetes pixel; na ponta do preenchimento, a bandeira da torre (mesma do logo) tremulando, como o coração/raio dos refs. Quando chega a 100% ela "finca" no fim.</p>
+  </div>
+
+</div>
+
+<div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
+  sketch 007 · tela real 320×480 · <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+/* ---------------- modelo de progresso: igual ao firmware ----------------
+ * O alvo vem de PASSOS REAIS do boot (durações desiguais); a barra mostrada
+ * anda 1 bloco por tick em direção ao alvo e nunca passa dele. */
+const STEPS = [
+  ["montando cartão sd", 500],
+  ["lendo configurações", 300],
+  ["carregando fontes", 700],
+  ["carregando ícones", 600],
+  ["verificando cartas novas", 900],
+  ["preparando jogos", 500],
+  ["abrindo o castelo", 400],
+];
+let speed = 1, stall = false, target = 0, shown = 0, stepIdx = 0, timers = [];
+const BLOCKS = 25, TICK = 60;
+
+function lerp(a, b, t) { return a.map((v, i) => Math.round(v + (b[i] - v) * t)); }
+const RED = [200, 16, 30], PURPLE = [69, 1, 149], PINK = [200, 31, 76];
+function rgb(c) { return `rgb(${c[0]},${c[1]},${c[2]})`; }
+function blockColor(i, n) { const t = i / (n - 1); return t < .5 ? lerp(PURPLE, PINK, t * 2) : lerp(PINK, RED, (t - .5) * 2); }
+
+function restart() {
+  timers.forEach(clearTimeout); timers.forEach(clearInterval); timers = [];
+  target = 0; shown = 0; stepIdx = 0;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('done-flash'));
+  render(); runStep();
+  timers.push(setInterval(tick, TICK * speed));
+}
+function runStep() {
+  if (stepIdx >= STEPS.length) return;
+  let [, dur] = STEPS[stepIdx];
+  if (stall && stepIdx === 4) dur *= 5;
+  timers.push(setTimeout(() => { stepIdx++; target = stepIdx / STEPS.length; runStep(); }, dur * speed));
+}
+function tick() {
+  const goal = Math.floor(target * BLOCKS);
+  if (shown < goal) { shown++; render(); }
+  if (shown === BLOCKS) { timers.forEach(clearInterval); document.querySelectorAll('.screen').forEach(s => s.classList.add('done-flash')); timers.push(setTimeout(restart, 2200 * speed)); }
+}
+function setSpeed(s, el) { speed = s; document.querySelectorAll('#sp-n,#sp-s').forEach(b => b.classList.remove('on')); el.classList.add('on'); restart(); }
+function toggleStall(el) { stall = !stall; el.textContent = 'simular passo lento: ' + (stall ? 'on' : 'off'); el.classList.toggle('on', stall); restart(); }
+function stepText() { return stepIdx < STEPS.length ? STEPS[stepIdx][0] + '...' : 'pronto!'; }
+function pct() { return Math.round(shown / BLOCKS * 100); }
+const pad3 = n => String(n).padStart(3, '0');
+
+/* ---------------- A: torre que enche ---------------- */
+const aCan = document.getElementById('a-canvas'), aCtx = aCan.getContext('2d');
+const rookImg = new Image(); rookImg.src = '../assets/icons/system_rook.png';
+const aOff = document.createElement('canvas'); aOff.width = 57; aOff.height = 80;
+function drawA() {
+  const W = 57, H = 80, ctx = aCtx;
+  ctx.clearRect(0, 0, W, H);
+  if (!rookImg.complete) return;
+  // silhueta apagada
+  const o = aOff.getContext('2d');
+  o.clearRect(0, 0, W, H); o.imageSmoothingEnabled = false;
+  o.drawImage(rookImg, 0, 0, W, H);
+  o.globalCompositeOperation = 'source-in'; o.fillStyle = '#1e0f2e'; o.fillRect(0, 0, W, H);
+  // preenchimento em linhas de pixel, de baixo pra cima, roxo -> vermelho
+  const rows = Math.round(shown / BLOCKS * H);
+  for (let r = 0; r < rows; r++) {
+    const y = H - 1 - r, t = r / (H - 1);
+    o.fillStyle = rgb(t < .5 ? lerp(PURPLE, PINK, t * 2) : lerp(PINK, RED, (t - .5) * 2));
+    o.fillRect(0, y, W, 1);
+  }
+  if (rows > 0 && rows < H) { o.fillStyle = 'rgba(255,255,255,0.55)'; o.fillRect(0, H - rows, W, 1); }
+  o.globalCompositeOperation = 'source-over';
+  ctx.imageSmoothingEnabled = false; ctx.drawImage(aOff, 0, 0);
+  document.getElementById('a-pct').textContent = pad3(pct()) + '%';
+  document.getElementById('a-step').textContent = stepText();
+}
+rookImg.onload = drawA;
+
+/* ---------------- B: cartucho ---------------- */
+const bFrame = document.getElementById('b-frame');
+for (let i = 0; i < 20; i++) { const d = document.createElement('div'); d.className = 'b-blk'; bFrame.appendChild(d); }
+let dots = 0; setInterval(() => { dots = (dots + 1) % 4; document.getElementById('b-label').textContent = 'LOADING' + '.'.repeat(dots); }, 400);
+function drawB() {
+  const n = Math.round(shown / BLOCKS * 20);
+  [...bFrame.children].forEach((b, i) => { b.classList.toggle('on', i < n); b.style.background = i < n ? rgb(blockColor(i, 20)) : ''; });
+  document.getElementById('b-pct').textContent = pct() + '%';
+  document.getElementById('b-step').textContent = stepText();
+}
+
+/* ---------------- C: janela de boot ---------------- */
+function drawC() {
+  const lines = [];
+  for (let i = 0; i < Math.min(stepIdx + 1, STEPS.length); i++) {
+    const name = STEPS[i][0].padEnd(24, '.');
+    lines.push(i < stepIdx ? `> ${name} <span class="ok">ok</span>` : `> ${STEPS[i][0]}<span class="c-cursor"></span>`);
+  }
+  document.getElementById('c-log').innerHTML = lines.slice(-5).join('\n');
+  const n = Math.round(shown / BLOCKS * 22);
+  document.getElementById('c-bar').innerHTML = `[<b>${'█'.repeat(n)}</b><u>${'░'.repeat(22 - n)}</u>] ${pad3(pct())}%`;
+}
+
+/* ---------------- D: bandeira na ponta ---------------- */
+const fCan = document.getElementById('d-flag'), fCtx = fCan.getContext('2d');
+let wave = 0; setInterval(() => { wave ^= 1; drawFlag(); }, 260);
+function drawFlag() {
+  const c = fCtx; c.clearRect(0, 0, 10, 11);
+  c.fillStyle = '#d9d0e6'; c.fillRect(0, 0, 1, 11);            // mastro
+  c.fillStyle = '#e6010f';
+  const rows = wave ? [7, 7, 6, 5, 3] : [6, 7, 7, 5, 2];        // bandeira tremulando
+  rows.forEach((w, y) => c.fillRect(1, y + 1, w, 1));
+  c.fillStyle = '#ff5a5a'; c.fillRect(1, 1, rows[0] - 1, 1);    // brilho
+}
+function drawD() {
+  const p = shown / BLOCKS;
+  document.getElementById('d-fill').style.width = (Math.floor(p * 58) * 4) + 'px';
+  document.getElementById('d-flag').style.left = (Math.floor(p * 58) * 4) + 'px';
+  document.getElementById('d-pct').textContent = pad3(pct());
+  document.getElementById('d-label').textContent = shown === BLOCKS ? 'pronto!' : 'carregando';
+}
+
+function render() { drawA(); drawB(); drawC(); drawD(); }
+
+function showVariant(v, el) {
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.variant').forEach(c => c.style.display = (v === 'all' || c.dataset.v === v) ? '' : 'none');
+}
+
+drawFlag(); restart();
+</script>
+</body>
+</html>

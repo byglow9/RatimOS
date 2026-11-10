@@ -1,0 +1,232 @@
+<title>005 — Castelo, layout geral</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 56px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+
+  #variant-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: #0a0a0f; border-bottom: 1px solid #2a2a3a;
+    padding: 8px 16px; display: flex; gap: 8px; font-family: var(--font-mono);
+    flex-wrap: wrap;
+  }
+  .variant-tab {
+    background: #1c1c28; color: #cfcfe0; border: 1px solid #35354a;
+    padding: 6px 12px; border-radius: 4px; cursor: pointer; font-family: var(--font-mono); font-size: 12px;
+  }
+  .variant-tab.active { background: var(--ratimos-accent); color: white; border-color: var(--ratimos-accent); }
+  .variant { display: none; flex-direction: column; align-items: center; gap: 24px; }
+  .variant.active { display: flex; }
+
+  .device-frame { background-image: url('../themes/bg-dither-scan.png'); background-size: cover; }
+
+  .topbar {
+    height: 26px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 10px; font-size: 10px; color: var(--ratimos-text); background: rgba(0,0,0,0.4);
+  }
+  .topbar img { height: 15px; width: auto; image-rendering: pixelated; filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.7)); }
+  .topbar .logo { display:flex; align-items:center; gap:5px; }
+  .pixel-battery { display:inline-flex; align-items:center; gap:2px; }
+  .pixel-battery .cell { width: 16px; height: 8px; border: 1px solid var(--ratimos-text); position: relative; }
+  .pixel-battery .cell::after { content:""; position:absolute; right:-3px; top:2px; width:2px; height:2px; background: var(--ratimos-text); }
+  .pixel-battery .fill { position:absolute; left:1px; top:1px; bottom:1px; background: var(--ratimos-game-correct); width: 70%; }
+  .sectionbar {
+    height: 24px; display: flex; align-items: center; padding: 0 10px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--ratimos-text); background: rgba(0,0,0,0.18);
+  }
+  .sectionbar .seg-muted { color: var(--ratimos-text-muted); }
+
+  .bottombar {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 10px; font-family: var(--font-mono); font-size: 9px; color: var(--ratimos-text-muted);
+    background: rgba(0,0,0,0.4);
+  }
+  .bottombar .voltar { color: var(--ratimos-accent); }
+
+  .content { padding: 10px; display: flex; flex-direction: column; gap: 10px; position: relative; height: 100%; box-sizing: border-box; }
+
+  /* shared bevel-card (winner from sketch 003-C) */
+  .bevel {
+    border-radius: 0;
+    background: rgba(42,18,63,0.68);
+    border: 2px solid #0d0515;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15), inset 0 0 0 3px rgba(0,0,0,0.35);
+  }
+
+  .note { max-width: 340px; font-size: 12px; color: #9a9ab0; line-height: 1.5; text-align: center; }
+  h3.vlabel { font-family: var(--font-mono); font-size: 13px; color: #dcdce8; margin: 0 0 4px; text-align:center; }
+  .frames-row { display:flex; gap:24px; flex-wrap:wrap; justify-content:center; }
+
+  /* ===== VARIANT A: hero stage image ===== */
+  .a-hero { padding: 6px; display:flex; align-items:center; justify-content:center; height: 180px; overflow:hidden; }
+  .a-hero img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.5)); }
+  .a-caption { text-align:center; padding: 8px 4px; }
+  .a-caption .t { font-family: var(--font-display); font-size: 10px; color: var(--ratimos-text); display:block; margin-bottom:4px; }
+  .a-caption .d { font-family: var(--font-mono); font-size: 10px; color: var(--ratimos-text-muted); }
+  .a-achievements { padding: 8px; display:flex; align-items:center; justify-content:space-between; }
+  .a-achievements .icon-slot { width: 28px; height: 28px; display:flex; align-items:center; justify-content:center; }
+  .a-achievements img { width: 24px; height: 24px; image-rendering: pixelated; filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.7)); }
+  .a-achievements .locked { opacity: 0.28; filter: grayscale(1); }
+  .a-achievements .icon-label { font-family: var(--font-mono); font-size: 7px; color: var(--ratimos-text-muted); text-align:center; margin-top:2px; }
+
+  /* ===== VARIANT B: modular stacked cards ===== */
+  .b-image-card { padding: 6px; height: 130px; overflow:hidden; }
+  .b-image-card img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.5)); }
+  .b-status-card { padding: 10px; }
+  .b-status-card .row1 { display:flex; justify-content:space-between; align-items:baseline; margin-bottom: 6px; }
+  .b-status-card .day { font-family: var(--font-display); font-size: 10px; color: var(--ratimos-text); }
+  .b-status-card .caption { font-family: var(--font-mono); font-size: 9px; color: var(--ratimos-text-muted); }
+  .pixel-bar { display:flex; gap: 2px; }
+  .pixel-bar .seg { width: 14px; height: 10px; border: 1px solid #0d0515; background: rgba(0,0,0,0.35); }
+  .pixel-bar .seg.filled { background: var(--ratimos-accent); }
+  .b-ach-card { padding: 10px; }
+  .b-ach-card .label { font-family: var(--font-mono); font-size: 9px; color: var(--ratimos-text-muted); margin-bottom: 8px; display:block; }
+  .b-ach-grid { display:flex; justify-content:space-between; }
+  .b-ach-grid .slot {
+    width: 44px; height: 44px; border: 1px solid #0d0515; background: rgba(0,0,0,0.25);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .b-ach-grid img { width: 26px; height: 26px; image-rendering: pixelated; filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.7)); }
+  .b-ach-grid .locked { opacity: 0.25; filter: grayscale(1); }
+
+  /* ===== VARIANT C: garden journal / scrapbook ===== */
+  .c-journal { padding: 6px 6px 0; }
+  .c-journal .photo { height: 150px; overflow:hidden; border-bottom: 3px solid #0d0515; }
+  .c-journal .photo img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+  .c-journal .caption-strip { padding: 8px 4px 10px; text-align:center; }
+  .c-journal .caption-strip .t { font-family: var(--font-display); font-size: 9px; color: var(--ratimos-text); }
+  .c-vine { display:flex; align-items:center; gap: 10px; padding: 10px; }
+  .c-vine .label { font-family: var(--font-mono); font-size: 9px; color: var(--ratimos-text-muted); white-space:nowrap; }
+  .c-vine-track { display:flex; gap: 3px; flex: 1; }
+  .c-vine-track .leaf { width: 10px; height: 14px; background: var(--ratimos-game-correct); clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+  .c-vine-track .leaf.empty { background: rgba(255,255,255,0.08); }
+  .c-shelf { padding: 10px; }
+  .c-shelf .label { font-family: var(--font-mono); font-size: 9px; color: var(--ratimos-text-muted); display:block; margin-bottom: 8px; }
+  .c-pedestals { display:flex; justify-content:space-between; align-items:flex-end; }
+  .c-pedestal { display:flex; flex-direction:column; align-items:center; gap: 3px; }
+  .c-pedestal img { width: 24px; height: 24px; image-rendering: pixelated; filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.7)); }
+  .c-pedestal .locked { opacity: 0.22; filter: grayscale(1); }
+  .c-pedestal .base { width: 26px; height: 5px; background: #0d0515; }
+</style>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showVariant('a')">A: Imagem-herói dominante</button>
+  <button class="variant-tab" onclick="showVariant('b')">B: Cards modulares</button>
+  <button class="variant-tab" onclick="showVariant('c')">C: Diário de jardim</button>
+</div>
+
+<div class="device-frame-label" style="margin-top:8px">sketch 005 — castelo, layout geral (3 composições completas)</div>
+
+<!-- VARIANT A -->
+<div id="variant-a" class="variant active">
+  <h3 class="vlabel">A: Imagem-herói dominante, status abaixo, conquistas em faixa fina no rodapé</h3>
+  <div class="frames-row"><div>
+    <div class="device-frame" style="position:relative;">
+      <div class="topbar"><span class="logo"><img src="../assets/icons/system_rook_32.png">RATIMOS</span><span>14:32 <span class="pixel-battery"><span class="cell"><span class="fill"></span></span></span></span></div>
+      <div class="sectionbar"><span class="seg-muted">./home/</span><span>castelo</span></div>
+      <div class="content" style="padding-bottom: 32px;">
+        <div class="bevel a-hero"><img src="../assets/progress/castle_stage_03_torres_florindo.png"></div>
+        <div class="bevel a-caption">
+          <span class="t">dia 14 de 30</span>
+          <span class="d">torres florescendo — continue jogando!</span>
+        </div>
+        <div class="bevel a-achievements">
+          <div><div class="icon-slot"><img src="../assets/progress/unlock_sudoku_roseira.png"></div><div class="icon-label">sudoku</div></div>
+          <div><div class="icon-slot"><img class="locked" src="../assets/progress/unlock_paciencia_bandeira.png"></div><div class="icon-label">paciência</div></div>
+          <div><div class="icon-slot"><img src="../assets/progress/unlock_termo_arvore.png"></div><div class="icon-label">termo</div></div>
+          <div><div class="icon-slot"><img class="locked" src="../assets/progress/unlock_cruzadinha_fonte.png"></div><div class="icon-label">cruzad.</div></div>
+          <div><div class="icon-slot"><img class="locked" src="../assets/progress/unlock_conexo_portao.png"></div><div class="icon-label">conexo</div></div>
+        </div>
+      </div>
+      <div class="bottombar"><span class="voltar">‹ voltar</span><span>seu jardim</span></div>
+    </div>
+    <div class="device-frame-label">castelo — variante A</div>
+  </div></div>
+  <p class="note">Mantém a hierarquia mais parecida com a tela atual (imagem grande no topo), mas com o novo kit: moldura bevel, sem retângulo vazio, ícones de conquista soltos (desbloqueados = cor cheia + sombra pixel, bloqueados = dessaturado/apagado). Conquistas ganham legenda (nome do jogo) que não existia antes.</p>
+</div>
+
+<!-- VARIANT B -->
+<div id="variant-b" class="variant">
+  <h3 class="vlabel">B: Três cards separados — imagem / status+barra / conquistas em grade</h3>
+  <div class="frames-row"><div>
+    <div class="device-frame" style="position:relative;">
+      <div class="topbar"><span class="logo">RATIMOS</span><span>14:32 <span class="pixel-battery"><span class="cell"><span class="fill"></span></span></span></span></div>
+      <div class="sectionbar"><span class="seg-muted">./home/</span><span>castelo</span></div>
+      <div class="content" style="padding-bottom: 32px;">
+        <div class="bevel b-image-card"><img src="../assets/progress/castle_stage_03_torres_florindo.png"></div>
+        <div class="bevel b-status-card">
+          <div class="row1"><span class="day">dia 14 de 30</span><span class="caption">torres florescendo</span></div>
+          <div class="pixel-bar">
+            <span class="seg filled"></span><span class="seg filled"></span><span class="seg filled"></span><span class="seg filled"></span><span class="seg filled"></span>
+            <span class="seg filled"></span><span class="seg filled"></span>
+            <span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span>
+          </div>
+        </div>
+        <div class="bevel b-ach-card">
+          <span class="label">conquistas</span>
+          <div class="b-ach-grid">
+            <div class="slot"><img src="../assets/progress/unlock_sudoku_roseira.png"></div>
+            <div class="slot"><img class="locked" src="../assets/progress/unlock_paciencia_bandeira.png"></div>
+            <div class="slot"><img src="../assets/progress/unlock_termo_arvore.png"></div>
+            <div class="slot"><img class="locked" src="../assets/progress/unlock_cruzadinha_fonte.png"></div>
+            <div class="slot"><img class="locked" src="../assets/progress/unlock_conexo_portao.png"></div>
+          </div>
+        </div>
+      </div>
+      <div class="bottombar"><span class="voltar">‹ voltar</span><span>seu jardim</span></div>
+    </div>
+    <div class="device-frame-label">castelo — variante B</div>
+  </div></div>
+  <p class="note">Reaproveita o mesmo padrão de "cards empilhados" usado no resto do app (jogos, home) — consistência visual mais forte entre telas. Barra de progresso em blocos pixel (estilo HP bar de RPG) deixa "dia 14 de 30" mais tangível que só o número. Conquistas em slots quadrados individuais (moldura própria por ícone) em vez de soltos numa fileira.</p>
+</div>
+
+<!-- VARIANT C -->
+<div id="variant-c" class="variant">
+  <h3 class="vlabel">C: Diário de jardim — foto com legenda, trilha de "folhas", prateleira de medalhas</h3>
+  <div class="frames-row"><div>
+    <div class="device-frame" style="position:relative;">
+      <div class="topbar"><span class="logo">RATIMOS</span><span>14:32 <span class="pixel-battery"><span class="cell"><span class="fill"></span></span></span></span></div>
+      <div class="sectionbar"><span class="seg-muted">./home/</span><span>castelo</span></div>
+      <div class="content" style="padding-bottom: 32px;">
+        <div class="bevel c-journal">
+          <div class="photo"><img src="../assets/progress/castle_stage_03_torres_florindo.png"></div>
+          <div class="caption-strip"><span class="t">dia 14 de 30 — torres florescendo</span></div>
+        </div>
+        <div class="bevel c-vine">
+          <span class="label">progresso</span>
+          <div class="c-vine-track">
+            <span class="leaf"></span><span class="leaf"></span><span class="leaf"></span><span class="leaf"></span><span class="leaf"></span>
+            <span class="leaf"></span><span class="leaf"></span>
+            <span class="leaf empty"></span><span class="leaf empty"></span><span class="leaf empty"></span><span class="leaf empty"></span><span class="leaf empty"></span><span class="leaf empty"></span><span class="leaf empty"></span>
+          </div>
+        </div>
+        <div class="bevel c-shelf">
+          <span class="label">prateleira de conquistas</span>
+          <div class="c-pedestals">
+            <div class="c-pedestal"><img src="../assets/progress/unlock_sudoku_roseira.png"><div class="base"></div></div>
+            <div class="c-pedestal"><img class="locked" src="../assets/progress/unlock_paciencia_bandeira.png"><div class="base"></div></div>
+            <div class="c-pedestal"><img src="../assets/progress/unlock_termo_arvore.png"><div class="base"></div></div>
+            <div class="c-pedestal"><img class="locked" src="../assets/progress/unlock_cruzadinha_fonte.png"><div class="base"></div></div>
+            <div class="c-pedestal"><img class="locked" src="../assets/progress/unlock_conexo_portao.png"><div class="base"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="bottombar"><span class="voltar">‹ voltar</span><span>seu jardim</span></div>
+    </div>
+    <div class="device-frame-label">castelo — variante C</div>
+  </div></div>
+  <p class="note">Puxa mais pro tema "jardim que cresce com vocês dois" já presente no texto do rodapé ("seu jardim") — a imagem vira uma "foto" com legenda tipo álbum, o progresso vira uma trilha de folhinhas em vez de barra genérica, e as conquistas ganham "pedestais" (mais trabalho visual, mas mais afetivo/temático — combina com o espírito de presente pessoal do projeto).</p>
+</div>
+
+<div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
+  sketch 005 · castelo, layout geral
+</div>
+
+<script>
+function showVariant(id) {
+  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('variant-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>

@@ -1,0 +1,180 @@
+<title>006 — Castelo, revelação progressiva</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 56px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+
+  #variant-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: #0a0a0f; border-bottom: 1px solid #2a2a3a;
+    padding: 8px 16px; display: flex; gap: 8px; font-family: var(--font-mono);
+    flex-wrap: wrap; align-items: center;
+  }
+  .variant-tab {
+    background: #1c1c28; color: #cfcfe0; border: 1px solid #35354a;
+    padding: 6px 12px; border-radius: 4px; cursor: pointer; font-family: var(--font-mono); font-size: 12px;
+  }
+  .variant-tab.active { background: var(--ratimos-accent); color: white; border-color: var(--ratimos-accent); }
+
+  .device-frame { background-image: url('../themes/bg-dither-scan.png'); background-size: cover; position: relative; }
+
+  .topbar {
+    height: 26px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 10px; font-size: 10px; color: var(--ratimos-text); background: rgba(0,0,0,0.4);
+  }
+  .topbar img { height: 15px; width: auto; image-rendering: pixelated; filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.7)); }
+  .topbar .logo { display:flex; align-items:center; gap:5px; }
+  .pixel-battery .cell { width: 16px; height: 8px; border: 1px solid var(--ratimos-text); position: relative; display:inline-block; }
+  .pixel-battery .cell::after { content:""; position:absolute; right:-3px; top:2px; width:2px; height:2px; background: var(--ratimos-text); }
+  .pixel-battery .fill { position:absolute; left:1px; top:1px; bottom:1px; background: var(--ratimos-game-correct); width: 70%; }
+  .sectionbar {
+    height: 24px; display: flex; align-items: center; padding: 0 10px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--ratimos-text); background: rgba(0,0,0,0.18);
+  }
+  .sectionbar .seg-muted { color: var(--ratimos-text-muted); }
+
+  .bottombar {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 10px; font-family: var(--font-mono); font-size: 9px; color: var(--ratimos-text-muted);
+    background: rgba(0,0,0,0.4);
+  }
+  .bottombar .voltar { color: var(--ratimos-accent); }
+
+  .content { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+
+  .bevel {
+    border-radius: 0;
+    background: rgba(42,18,63,0.55);
+    border: 2px solid #0d0515;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15), inset 0 0 0 3px rgba(0,0,0,0.35);
+  }
+
+  .stage-frame { padding: 4px; height: 180px; position: relative; overflow: hidden; }
+  .stage-frame canvas { width: 100%; height: 100%; image-rendering: pixelated; display:block; }
+
+  .caption { padding: 8px; text-align:center; }
+  .caption .t { font-family: var(--font-display); font-size: 10px; color: var(--ratimos-text); display:block; margin-bottom:4px; }
+  .caption .d { font-family: var(--font-mono); font-size: 9px; color: var(--ratimos-text-muted); }
+
+  .day-controls { display:flex; gap: 6px; justify-content:center; flex-wrap:wrap; margin-top: 4px; }
+  .day-controls button {
+    background: #1c1c28; color: #cfcfe0; border: 1px solid #35354a;
+    padding: 5px 10px; cursor: pointer; font-family: var(--font-mono); font-size: 11px;
+  }
+  .day-controls button.active { background: var(--ratimos-accent); color: white; border-color: var(--ratimos-accent); }
+
+  .note { max-width: 360px; font-size: 12px; color: #9a9ab0; line-height: 1.5; text-align: center; }
+  h3.vlabel { font-family: var(--font-mono); font-size: 13px; color: #dcdce8; margin: 0 0 4px; text-align:center; }
+  .wrap { display:flex; flex-direction:column; align-items:center; gap: 10px; }
+</style>
+
+<div id="variant-nav">
+  <span style="color:#8a8a9a; font-size:12px;">Prototipo: 1 imagem gerada por IA, revelação progressiva por dithering (dia a dia)</span>
+</div>
+
+<div class="device-frame-label" style="margin-top:8px">sketch 006 — mesma imagem do castelo em todos os "dias", só a máscara de revelação muda (zero risco de inconsistência de estilo)</div>
+
+<div class="wrap">
+  <div class="device-frame" style="position:relative;">
+    <div class="topbar"><span class="logo"><img src="../assets/icons/system_rook_32.png">RATIMOS</span><span>14:32 <span class="pixel-battery"><span class="cell"><span class="fill"></span></span></span></span></div>
+    <div class="sectionbar"><span class="seg-muted">./home/</span><span>castelo</span></div>
+    <div class="content" style="padding-bottom: 32px;">
+      <div class="bevel stage-frame"><canvas id="stageCanvas" width="292" height="172"></canvas></div>
+      <div class="bevel caption">
+        <span class="t" id="dayLabel">dia 5 de 30</span>
+        <span class="d" id="captionLabel">o terreno está pronto — as fundações começam a subir</span>
+      </div>
+    </div>
+    <div class="bottombar"><span class="voltar">‹ voltar</span><span>seu jardim</span></div>
+  </div>
+
+  <div class="day-controls" id="dayButtons"></div>
+</div>
+
+<p class="note">Clique nos "dias" acima. O quadro é sempre do mesmo tamanho e a mesma composição — nunca aparece vazio/fundo. Dia 1 é só grama (recortada da sua própria imagem, pra combinar). Dia 8 revela onde tem caminho de pedra, dia 16 soma o rio e a ponte, dia 23 os muros e a entrada, dia 30 o castelo inteiro com torres e bandeiras — sempre "nos lugares que tem que ter", nunca fundo vazio.</p>
+
+<p class="note">Isso é só o protótipo do CONCEITO com 1 imagem. Pra ficar como sua referência (estrada → ponte → rio → muros → torres, cada elemento aparecendo em ordem/lugar específico, não uma revelação genérica de baixo pra cima), o ideal é ter 2-3 imagens-chave da IA (ex: "só terreno", "meio-construído", "completo" — o que você já gerou) e eu ajusto a máscara pra favorecer cada região na ordem certa. Me diz se quer que eu já monte isso com o que você gerou, ou se prefere gerar mais 1-2 imagens intermediárias primeiro.</p>
+
+<script>
+const img = new Image();
+img.src = 'castle_ai_full.png';
+
+const grassImg = new Image();
+grassImg.src = 'grass_swatch.png';
+
+const canvas = document.getElementById('stageCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+let imagesReady = 0;
+function onAssetReady() {
+  imagesReady++;
+  if (imagesReady === 2) renderDay(1);
+}
+img.onload = onAssetReady;
+grassImg.onload = onAssetReady;
+
+// Cumulative reveal bands, calibrated by eye against THIS specific generated
+// image (bottom-up matches its real composition: foreground path lowest,
+// moat/bridge just above it, walls+gate mid-frame, towers+flags on top) —
+// not a generic wipe. `from` is the top edge of the revealed band (0 = top
+// of frame, 1 = bottom), so revealed area is always [from, 1].
+const DAYS = [
+  { day: 1,  from: 1.00, title: 'dia 1 de 30',  caption: 'o terreno está apenas começando — só grama' },
+  { day: 8,  from: 0.84, title: 'dia 8 de 30',  caption: 'os caminhos de pedra foram traçados' },
+  { day: 16, from: 0.62, title: 'dia 16 de 30', caption: 'o rio e a ponte estão prontos' },
+  { day: 23, from: 0.30, title: 'dia 23 de 30', caption: 'os muros e a entrada ganharam forma' },
+  { day: 30, from: 0.00, title: 'dia 30 de 30', caption: 'castelo completo — torres e bandeiras! parabéns' },
+];
+
+function coverRect(image, frameW, frameH) {
+  const imgRatio = image.width / image.height;
+  const frameRatio = frameW / frameH;
+  let dw, dh, dx, dy;
+  if (imgRatio > frameRatio) {
+    dh = frameH; dw = frameH * imgRatio; dx = (frameW - dw) / 2; dy = 0;
+  } else {
+    dw = frameW; dh = frameW / imgRatio; dx = 0; dy = (frameH - dh) / 2;
+  }
+  return { dw, dh, dx, dy };
+}
+
+function drawStage(from) {
+  ctx.clearRect(0, 0, W, H);
+
+  // 1) base layer: the SAME frame footprint, always, filled with grass
+  // tiled from a real patch of this castle image — never empty/see-through,
+  // matching "sempre a imagem toda, no começo só com grama em tudo".
+  const pattern = ctx.createPattern(grassImg, 'repeat');
+  ctx.fillStyle = pattern;
+  ctx.fillRect(0, 0, W, H);
+
+  // 2) reveal the built castle only within the region for this day, clipped
+  // to a rectangle in place — clip() unions fine for a single rect, and
+  // avoids the destination-in re-intersection bug entirely.
+  if (from >= 1) return; // day 1: nothing built yet, grass only
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, Math.round(H * from), W, H - Math.round(H * from));
+  ctx.clip();
+  const { dw, dh, dx, dy } = coverRect(img, W, H);
+  ctx.drawImage(img, dx, dy, dw, dh);
+  ctx.restore();
+}
+
+function renderDay(idx) {
+  const d = DAYS[idx];
+  document.getElementById('dayLabel').textContent = d.title;
+  document.getElementById('captionLabel').textContent = d.caption;
+  document.querySelectorAll('#dayButtons button').forEach((b, i) => b.classList.toggle('active', i === idx));
+  drawStage(d.from);
+}
+
+const btnRow = document.getElementById('dayButtons');
+DAYS.forEach((d, i) => {
+  const b = document.createElement('button');
+  b.textContent = d.title;
+  b.onclick = () => renderDay(i);
+  btnRow.appendChild(b);
+});
+</script>

@@ -1,0 +1,63 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": "v1.0",
+  "phases": [
+    {
+      "number": "1",
+      "name": "Shell, Storage API & Simulator-First App Shells",
+      "status": "complete"
+    },
+    {
+      "number": "2",
+      "name": "Sync Protocol, Security Model & Cloud Backend",
+      "status": "complete"
+    },
+    {
+      "number": "02.1",
+      "name": "Visual Identity & Games (Simulator-Buildable Scope) *(INSERTED)*",
+      "status": "in_progress"
+    },
+    {
+      "number": "3",
+      "name": "Hardware Bring-Up — Display, Touch, Boot & Partition Scheme",
+      "status": "pending"
+    },
+    {
+      "number": "4",
+      "name": "Power Management — Battery, PMIC, RTC",
+      "status": "pending"
+    },
+    {
+      "number": "5",
+      "name": "Audio, Storage & Camera Bring-Up",
+      "status": "pending"
+    },
+    {
+      "number": "6",
+      "name": "WiFi Provisioning & Settings",
+      "status": "pending"
+    },
+    {
+      "number": "7",
+      "name": "Cloud Content Sync",
+      "status": "pending"
+    },
+    {
+      "number": "8",
+      "name": "OTA & Concurrent Integration Stress Test",
+      "status": "pending"
+    },
+    {
+      "number": "9",
+      "name": "Security Hardening (Secure Boot + Flash Encryption)",
+      "status": "pending"
+    }
+  ],
+  "next": {
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step",
+    "reason": "Phase 02.1 of 10 · executing"
+  },
+  "updated_at": "2026-10-19T14:47:17.983Z"
+}
